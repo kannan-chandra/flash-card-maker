@@ -35,3 +35,13 @@ test('generates downloadable PDF for Tamil text without runtime errors', async (
   await expect(page.getByText(/PDF generated/i)).toBeVisible();
   expect(pageErrors).toEqual([]);
 });
+
+test('flags long unbroken words as overflow', async ({ page }) => {
+  await page.goto('/');
+
+  await page.locator('textarea').first().fill('word,subtitle\nBabyBabyBabyBabyBabyBabyBabyBabyBaby,Demo');
+  await page.getByRole('button', { name: 'Import CSV' }).click();
+
+  const statusCell = page.locator('tbody tr').first().locator('td').nth(3);
+  await expect(statusCell).toContainText('Word overflow');
+});

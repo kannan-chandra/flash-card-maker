@@ -1,13 +1,20 @@
 import type { CardTemplate, FlashcardRow, RowValidation, TextElement } from '../types';
 
-function splitLinesToFit(text: string, textElement: TextElement): string[] {
+function getMeasureContext(textElement: TextElement): CanvasRenderingContext2D | null {
   const canvas = document.createElement('canvas');
   const context = canvas.getContext('2d');
   if (!context) {
+    return null;
+  }
+  context.font = `${textElement.fontSize}px ${textElement.fontFamily}`;
+  return context;
+}
+
+function splitLinesToFit(text: string, textElement: TextElement): string[] {
+  const context = getMeasureContext(textElement);
+  if (!context) {
     return [text];
   }
-
-  context.font = `${textElement.fontSize}px ${textElement.fontFamily}`;
   const words = text.split(/\s+/).filter(Boolean);
   if (!words.length) {
     return [''];
@@ -33,8 +40,11 @@ function splitLinesToFit(text: string, textElement: TextElement): string[] {
 
 function hasOverflow(text: string, textElement: TextElement): boolean {
   const lines = splitLinesToFit(text, textElement);
+  const context = getMeasureContext(textElement);
   const lineHeightPx = textElement.fontSize * textElement.lineHeight;
-  return lines.length * lineHeightPx > textElement.height;
+  const verticalOverflow = lines.length * lineHeightPx > textElement.height;
+  const horizontalOverflow = context ? lines.some((line) => context.measureText(line).width > textElement.width) : false;
+  return verticalOverflow || horizontalOverflow;
 }
 
 export function validateRows(template: CardTemplate, rows: FlashcardRow[]): RowValidation[] {
