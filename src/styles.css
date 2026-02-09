@@ -143,12 +143,29 @@ main {
   background: #f8fafc;
 }
 
-.card-detail-panel .emoji-prompt {
-  margin: 10px 0;
+.card-detail-panel .image-options,
+.card-detail-panel .image-selected-state {
+  margin-top: 8px;
   border: 1px solid #cbd5e1;
   border-radius: 8px;
   background: #eef2ff;
   padding: 8px;
+}
+
+.emoji-options {
+  margin-top: 8px;
+}
+
+.emoji-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.emoji-choice {
+  font-size: 24px;
+  line-height: 1;
+  padding: 8px 4px;
 }
 
 label {

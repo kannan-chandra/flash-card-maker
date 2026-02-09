@@ -8,8 +8,8 @@ Frontend-only flashcard generator for GitHub Pages. Users design one master card
 - Text settings: role mapping (`word` or `subtitle`), font, size, alignment
 - Row list management via CSV paste/import (header or no-header) and manual edits
 - Dedicated selected-card detail editor for quick per-row iteration (word, subtitle, image URL, local image upload)
-- Emoji assist: when a selected row has no image and a word match exists, one-click emoji image generation is offered (expanded noun coverage from Unicode emoji data for animals, foods, vehicles/places, activities, and objects; includes Tamil keyword matching via CLDR annotations)
-- Optional follow-up to apply emoji images across all rows missing images with matching words
+- Image selection model: if a row has no image, show three first-class options (URL, upload, emoji choices); if an image is set, show a single remove-image action
+- Emoji assist: shows up to 5 best matches for the selected word (English + Tamil keywords), and selected emoji is converted to a local PNG image
 - Per-row image sources:
   - URL (web image)
   - Local file upload (stored locally as data URL)

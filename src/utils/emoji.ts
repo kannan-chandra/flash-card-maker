@@ -93,6 +93,8 @@ function singularize(word: string): string {
 }
 
 const keywordToEmoji = new Map<string, string>();
+const keywordToEmojis = new Map<string, Set<string>>();
+const emojiToKeywords = new Map<string, Set<string>>();
 
 function getTamilKeywords(emoji: string): string[] {
   const exact = tamilByEmoji[emoji];
@@ -100,6 +102,15 @@ function getTamilKeywords(emoji: string): string[] {
   const withVs = tamilByEmoji[`${emoji}\uFE0F`];
   const keywords = [...(exact?.default ?? []), ...(withoutVs?.default ?? []), ...(withVs?.default ?? [])];
   return keywords;
+}
+
+function addKeywordEmoji(keyword: string, emoji: string) {
+  if (!keywordToEmoji.has(keyword)) {
+    keywordToEmoji.set(keyword, emoji);
+  }
+  const set = keywordToEmojis.get(keyword) ?? new Set<string>();
+  set.add(emoji);
+  keywordToEmojis.set(keyword, set);
 }
 
 for (const item of records) {
@@ -121,49 +132,70 @@ for (const item of records) {
   }
 
   keywordSet.forEach((keyword) => {
-    if (!keywordToEmoji.has(keyword)) {
-      keywordToEmoji.set(keyword, item.emoji);
-    }
+    addKeywordEmoji(keyword, item.emoji);
     const singular = singularize(keyword);
-    if (!keywordToEmoji.has(singular)) {
-      keywordToEmoji.set(singular, item.emoji);
-    }
+    addKeywordEmoji(singular, item.emoji);
   });
+  emojiToKeywords.set(item.emoji, keywordSet);
 }
 
 for (const override of NOUN_PERSON_OVERRIDES) {
   for (const keyword of override.keywords) {
     const normalized = normalizeWord(keyword);
-    keywordToEmoji.set(normalized, override.emoji);
+    addKeywordEmoji(normalized, override.emoji);
+    const existing = emojiToKeywords.get(override.emoji) ?? new Set<string>();
+    existing.add(normalized);
+    emojiToKeywords.set(override.emoji, existing);
   }
 }
 
 export function findEmojiForWord(word: string): string | null {
+  return findTopEmojiMatches(word, 1)[0]?.emoji ?? null;
+}
+
+export function findTopEmojiMatches(word: string, limit = 5): Array<{ emoji: string; keywords: string[] }> {
   const normalized = normalizeWord(word);
   if (!normalized) {
-    return null;
+    return [];
   }
 
-  if (keywordToEmoji.has(normalized)) {
-    return keywordToEmoji.get(normalized) ?? null;
-  }
-
+  const score = new Map<string, number>();
   const parts = normalized.split(' ').filter(Boolean);
+
+  const bump = (emoji: string, points: number) => {
+    score.set(emoji, (score.get(emoji) ?? 0) + points);
+  };
+
+  const exactMatches = keywordToEmojis.get(normalized);
+  for (const emoji of exactMatches ?? []) {
+    bump(emoji, 100);
+  }
+
   for (const part of parts) {
     const singular = singularize(part);
-    const match = keywordToEmoji.get(part) ?? keywordToEmoji.get(singular);
-    if (match) {
-      return match;
+    for (const emoji of keywordToEmojis.get(part) ?? []) {
+      bump(emoji, 60);
+    }
+    for (const emoji of keywordToEmojis.get(singular) ?? []) {
+      bump(emoji, 50);
     }
   }
 
-  for (const [keyword, emoji] of keywordToEmoji.entries()) {
+  for (const [keyword, emojis] of keywordToEmojis.entries()) {
     if (normalized.includes(keyword)) {
-      return emoji;
+      for (const emoji of emojis) {
+        bump(emoji, 20);
+      }
     }
   }
 
-  return null;
+  return [...score.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, Math.max(0, limit))
+    .map(([emoji]) => ({
+      emoji,
+      keywords: [...(emojiToKeywords.get(emoji) ?? [])].slice(0, 8)
+    }));
 }
 
 export function createEmojiImageDataUrl(emoji: string, size = 512): string {

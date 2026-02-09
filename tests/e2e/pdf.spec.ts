@@ -46,17 +46,21 @@ test('flags long unbroken words as overflow', async ({ page }) => {
   await expect(statusCell).toContainText('Word overflow');
 });
 
-test('can use emoji image for selected row and suggest bulk apply', async ({ page }) => {
+test('can set emoji image for selected row and then remove image', async ({ page }) => {
   await page.goto('/');
 
   await page.locator('textarea').first().fill('word,subtitle\nbaby,one\nlion,two');
   await page.getByRole('button', { name: 'Import CSV' }).click();
 
-  await page.getByRole('button', { name: /Use emoji for image/i }).click();
-  await expect(page.getByText(/Apply emoji images for/i)).toBeVisible();
+  await page.getByRole('button', { name: /^Use emoji / }).first().click();
+  await expect(page.getByRole('button', { name: 'Remove image' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Set image from URL' })).toHaveCount(0);
+
+  await page.getByRole('button', { name: 'Remove image' }).click();
+  await expect(page.getByRole('button', { name: 'Set image from URL' })).toBeVisible();
 
   const firstStatus = page.locator('tbody tr').first().locator('td').nth(3);
-  await expect(firstStatus).toContainText('Fits');
+  await expect(firstStatus).toContainText('Missing image');
 });
 
 test('offers emoji button for noun objects and vehicles', async ({ page }) => {
@@ -65,7 +69,10 @@ test('offers emoji button for noun objects and vehicles', async ({ page }) => {
   await page.locator('textarea').first().fill('word,subtitle\nhammer,tool\nbus,vehicle');
   await page.getByRole('button', { name: 'Import CSV' }).click();
 
-  await expect(page.getByRole('button', { name: /Use emoji for image/i })).toBeVisible();
+  const emojiChoices = page.getByRole('button', { name: /^Use emoji / });
+  const count = await emojiChoices.count();
+  expect(count).toBeGreaterThan(0);
+  expect(count).toBeLessThanOrEqual(5);
 });
 
 test('offers emoji button for Tamil keyword matches', async ({ page }) => {
@@ -74,5 +81,8 @@ test('offers emoji button for Tamil keyword matches', async ({ page }) => {
   await page.locator('textarea').first().fill('word,subtitle\nநாய்,செல்லப்பிராணி');
   await page.getByRole('button', { name: 'Import CSV' }).click();
 
-  await expect(page.getByRole('button', { name: /Use emoji for image/i })).toBeVisible();
+  const emojiChoices = page.getByRole('button', { name: /^Use emoji / });
+  const count = await emojiChoices.count();
+  expect(count).toBeGreaterThan(0);
+  expect(count).toBeLessThanOrEqual(5);
 });

@@ -17,7 +17,7 @@ import type {
 } from './types';
 import { loadWorkspace, saveWorkspace } from './storage';
 import { parseCsvInput } from './utils/csv';
-import { createEmojiImageDataUrl, findEmojiForWord } from './utils/emoji';
+import { createEmojiImageDataUrl, findTopEmojiMatches } from './utils/emoji';
 import { splitTextForPdf, validateRows } from './utils/layout';
 
 const FONT_FAMILIES: FontFamily[] = ['Arial', 'Verdana', 'Times New Roman', 'Georgia', 'Courier New', 'Noto Sans Tamil'];
@@ -159,10 +159,10 @@ export default function App() {
   const [newSetName, setNewSetName] = useState('');
   const [setsMenuOpen, setSetsMenuOpen] = useState(false);
   const [csvInput, setCsvInput] = useState('');
+  const [imageUrlDraft, setImageUrlDraft] = useState('');
   const [selectedElement, setSelectedElement] = useState<string>('image');
   const [loading, setLoading] = useState(true);
   const [pdfStatus, setPdfStatus] = useState<string>('');
-  const [emojiBulkPrompt, setEmojiBulkPrompt] = useState<{ emoji: string; count: number } | null>(null);
   const [pdfProgress, setPdfProgress] = useState<{ active: boolean; percent: number; stage: string }>({
     active: false,
     percent: 0,
@@ -190,13 +190,8 @@ export default function App() {
     }
     return project.rows.find((row) => row.id === project.selectedRowId) ?? project.rows[0];
   }, [project]);
-  const selectedRowEmoji = useMemo(() => findEmojiForWord(selectedRow?.word ?? ''), [selectedRow?.word]);
-  const canUseEmojiForSelectedRow = useMemo(() => {
-    if (!selectedRow || !selectedRowEmoji) {
-      return false;
-    }
-    return !selectedRow.imageUrl && !selectedRow.localImageDataUrl;
-  }, [selectedRow, selectedRowEmoji]);
+  const selectedRowHasImage = Boolean(selectedRow?.imageUrl || selectedRow?.localImageDataUrl);
+  const selectedRowEmojiMatches = useMemo(() => findTopEmojiMatches(selectedRow?.word ?? '', 5), [selectedRow?.word]);
   const selectedRowIndex = useMemo(
     () => (project ? project.rows.findIndex((row) => row.id === selectedRow?.id) : -1),
     [project, selectedRow?.id]
@@ -250,6 +245,10 @@ export default function App() {
     transformerRef.current.nodes(nodes);
     transformerRef.current.getLayer()?.batchDraw();
   }, [selectedElement, project]);
+
+  useEffect(() => {
+    setImageUrlDraft(selectedRow?.imageUrl ?? '');
+  }, [selectedRow?.id, selectedRow?.imageUrl]);
 
   function updateActiveSet(updater: (current: FlashcardSet) => FlashcardSet) {
     setSets((currentSets) =>
@@ -383,49 +382,28 @@ export default function App() {
     }));
   }
 
-  function countRowsEligibleForEmoji() {
-    if (!project) {
-      return 0;
-    }
-    return project.rows.filter((row) => !row.imageUrl && !row.localImageDataUrl && Boolean(findEmojiForWord(row.word))).length;
-  }
-
   function applyEmojiToRow(rowId: string, emoji: string) {
     const dataUrl = createEmojiImageDataUrl(emoji);
     updateRow(rowId, { localImageDataUrl: dataUrl, imageUrl: '' });
   }
 
-  function onUseEmojiForSelectedRow() {
-    if (!selectedRow || !selectedRowEmoji) {
+  function onApplySelectedImageUrl() {
+    if (!selectedRow) {
       return;
     }
-
-    applyEmojiToRow(selectedRow.id, selectedRowEmoji);
-    const eligibleCount = countRowsEligibleForEmoji();
-    const others = Math.max(eligibleCount - 1, 0);
-    if (others > 0) {
-      setEmojiBulkPrompt({ emoji: selectedRowEmoji, count: others });
-    } else {
-      setEmojiBulkPrompt(null);
+    const trimmed = imageUrlDraft.trim();
+    if (!trimmed) {
+      return;
     }
+    updateRow(selectedRow.id, { imageUrl: trimmed, localImageDataUrl: undefined });
   }
 
-  function onApplyEmojiToAllMissingImages() {
-    updateActiveSet((current) => ({
-      ...current,
-      rows: current.rows.map((row) => {
-        if (row.imageUrl || row.localImageDataUrl) {
-          return row;
-        }
-        const emoji = findEmojiForWord(row.word);
-        if (!emoji) {
-          return row;
-        }
-        return { ...row, localImageDataUrl: createEmojiImageDataUrl(emoji), imageUrl: '' };
-      })
-    }));
-    setEmojiBulkPrompt(null);
-    setPdfStatus('Applied emoji images to rows with matching words and no image.');
+  function onRemoveSelectedRowImage() {
+    if (!selectedRow) {
+      return;
+    }
+    updateRow(selectedRow.id, { imageUrl: '', localImageDataUrl: undefined });
+    setImageUrlDraft('');
   }
 
   async function generatePdf() {
@@ -917,10 +895,7 @@ export default function App() {
                     Word
                     <input
                       value={selectedRow.word}
-                      onChange={(event) => {
-                        setEmojiBulkPrompt(null);
-                        updateRow(selectedRow.id, { word: event.target.value });
-                      }}
+                      onChange={(event) => updateRow(selectedRow.id, { word: event.target.value })}
                       aria-label="Selected row word"
                     />
                   </label>
@@ -932,52 +907,68 @@ export default function App() {
                       aria-label="Selected row subtitle"
                     />
                   </label>
-                  <label>
-                    Image URL
-                    <input
-                      value={selectedRow.imageUrl}
-                      onChange={(event) => updateRow(selectedRow.id, { imageUrl: event.target.value })}
-                      aria-label="Selected row image URL"
-                      placeholder="https://..."
-                    />
-                  </label>
-                  {canUseEmojiForSelectedRow && (
-                    <button type="button" onClick={onUseEmojiForSelectedRow}>
-                      Use emoji for image ({selectedRowEmoji})
-                    </button>
-                  )}
-                  {emojiBulkPrompt && (
-                    <div className="emoji-prompt">
-                      <p>
-                        Apply emoji images for {emojiBulkPrompt.count} other rows with missing images and available matches?
-                      </p>
-                      <div className="row-buttons">
-                        <button type="button" onClick={onApplyEmojiToAllMissingImages}>
-                          Yes, apply to all
-                        </button>
-                        <button type="button" onClick={() => setEmojiBulkPrompt(null)}>
-                          Not now
-                        </button>
+                  {selectedRowHasImage ? (
+                    <div className="image-selected-state">
+                      <p>Image is set for this row.</p>
+                      <button type="button" className="danger" onClick={onRemoveSelectedRowImage}>
+                        Remove image
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="image-options">
+                      <label>
+                        Image URL
+                        <input
+                          value={imageUrlDraft}
+                          onChange={(event) => setImageUrlDraft(event.target.value)}
+                          aria-label="Selected row image URL"
+                          placeholder="https://..."
+                        />
+                      </label>
+                      <button type="button" onClick={onApplySelectedImageUrl} disabled={!imageUrlDraft.trim()}>
+                        Set image from URL
+                      </button>
+                      <div className="drop-zone large" onDragOver={(event) => event.preventDefault()} onDrop={(event) => void onSelectedRowImageDrop(event)}>
+                        Drop image here
+                      </div>
+                      <label>
+                        Upload local image
+                        <input
+                          type="file"
+                          accept="image/*"
+                          aria-label="Selected row image upload"
+                          onChange={(event) => {
+                            const file = event.target.files?.[0];
+                            if (file) {
+                              onSelectedRowImageUpload(file);
+                            }
+                          }}
+                        />
+                      </label>
+
+                      <div className="emoji-options">
+                        <p>Emoji choices</p>
+                        {selectedRowEmojiMatches.length > 0 ? (
+                          <div className="emoji-grid">
+                            {selectedRowEmojiMatches.map((match) => (
+                              <button
+                                type="button"
+                                key={match.emoji}
+                                className="emoji-choice"
+                                aria-label={`Use emoji ${match.emoji}`}
+                                title={`Keywords: ${match.keywords.join(', ')}`}
+                                onClick={() => applyEmojiToRow(selectedRow.id, match.emoji)}
+                              >
+                                {match.emoji}
+                              </button>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="hint">No emoji matches found for this word.</p>
+                        )}
                       </div>
                     </div>
                   )}
-                  <div className="drop-zone large" onDragOver={(event) => event.preventDefault()} onDrop={(event) => void onSelectedRowImageDrop(event)}>
-                    Drop image here
-                  </div>
-                  <label>
-                    Upload local image
-                    <input
-                      type="file"
-                      accept="image/*"
-                      aria-label="Selected row image upload"
-                      onChange={(event) => {
-                        const file = event.target.files?.[0];
-                        if (file) {
-                          onSelectedRowImageUpload(file);
-                        }
-                      }}
-                    />
-                  </label>
                 </>
               ) : (
                 <p>Select a row from the list to edit details.</p>
@@ -1110,8 +1101,8 @@ export default function App() {
           {pdfStatus && <p className="status">{pdfStatus}</p>}
 
           <p className="hint">
-            If a web image fails due to CORS/restrictions, save it to your computer and upload it in the row’s “Upload
-            Image” field.
+            If a web image fails due to CORS/restrictions, save it to your computer and upload it in Selected Card
+            Details.
           </p>
         </section>
       </main>
