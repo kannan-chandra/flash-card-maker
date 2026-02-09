@@ -1,74 +1,47 @@
-const EMOJI_KEYWORDS: Array<{ emoji: string; keywords: string[] }> = [
+import emojiData from 'emojibase-data/en/data.json';
+
+interface EmojiRecord {
+  emoji: string;
+  label?: string;
+  tags?: string[];
+  group?: number;
+  type?: number;
+}
+
+const NOUN_GROUPS = new Set<number>([
+  3, // animals & nature
+  4, // food & drink
+  5, // travel & places
+  6, // activities
+  7 // objects
+]);
+
+// Keep a few person nouns explicitly, without pulling in gesture-heavy groups.
+const NOUN_PERSON_OVERRIDES: Array<{ emoji: string; keywords: string[] }> = [
   { emoji: '👶', keywords: ['baby', 'infant', 'newborn'] },
   { emoji: '👦', keywords: ['boy'] },
   { emoji: '👧', keywords: ['girl'] },
   { emoji: '👨', keywords: ['man'] },
   { emoji: '👩', keywords: ['woman'] },
   { emoji: '👨‍🏫', keywords: ['teacher'] },
-  { emoji: '👩‍⚕️', keywords: ['doctor', 'nurse'] },
-  { emoji: '🐶', keywords: ['dog', 'puppy'] },
-  { emoji: '🐱', keywords: ['cat', 'kitten'] },
-  { emoji: '🐭', keywords: ['mouse'] },
-  { emoji: '🐰', keywords: ['rabbit', 'bunny'] },
-  { emoji: '🦁', keywords: ['lion'] },
-  { emoji: '🐯', keywords: ['tiger'] },
-  { emoji: '🐻', keywords: ['bear'] },
-  { emoji: '🐼', keywords: ['panda'] },
-  { emoji: '🐮', keywords: ['cow'] },
-  { emoji: '🐷', keywords: ['pig'] },
-  { emoji: '🐵', keywords: ['monkey'] },
-  { emoji: '🐔', keywords: ['chicken'] },
-  { emoji: '🦆', keywords: ['duck'] },
-  { emoji: '🦉', keywords: ['owl'] },
-  { emoji: '🐸', keywords: ['frog'] },
-  { emoji: '🐟', keywords: ['fish'] },
-  { emoji: '🐬', keywords: ['dolphin'] },
-  { emoji: '🦈', keywords: ['shark'] },
-  { emoji: '🐘', keywords: ['elephant'] },
-  { emoji: '🦒', keywords: ['giraffe'] },
-  { emoji: '🦓', keywords: ['zebra'] },
-  { emoji: '🍎', keywords: ['apple'] },
-  { emoji: '🍌', keywords: ['banana'] },
-  { emoji: '🍇', keywords: ['grape', 'grapes'] },
-  { emoji: '🍓', keywords: ['strawberry'] },
-  { emoji: '🍉', keywords: ['watermelon'] },
-  { emoji: '🥕', keywords: ['carrot'] },
-  { emoji: '🥦', keywords: ['broccoli'] },
-  { emoji: '🌽', keywords: ['corn'] },
-  { emoji: '🍞', keywords: ['bread'] },
-  { emoji: '🥚', keywords: ['egg'] },
-  { emoji: '🧀', keywords: ['cheese'] },
-  { emoji: '🍚', keywords: ['rice'] },
-  { emoji: '🍪', keywords: ['cookie'] },
-  { emoji: '🏠', keywords: ['house', 'home'] },
-  { emoji: '🏫', keywords: ['school'] },
-  { emoji: '🚗', keywords: ['car'] },
-  { emoji: '🚌', keywords: ['bus'] },
-  { emoji: '🚲', keywords: ['bicycle', 'bike'] },
-  { emoji: '✈️', keywords: ['airplane', 'plane'] },
-  { emoji: '🚂', keywords: ['train'] },
-  { emoji: '⛵', keywords: ['boat', 'ship'] },
-  { emoji: '🌳', keywords: ['tree'] },
-  { emoji: '🌸', keywords: ['flower'] },
-  { emoji: '☀️', keywords: ['sun'] },
-  { emoji: '🌙', keywords: ['moon'] },
-  { emoji: '⭐', keywords: ['star'] },
-  { emoji: '☁️', keywords: ['cloud'] },
-  { emoji: '🌧️', keywords: ['rain'] },
-  { emoji: '⚽', keywords: ['football', 'soccer'] },
-  { emoji: '🏀', keywords: ['basketball'] },
-  { emoji: '⚾', keywords: ['baseball'] },
-  { emoji: '🎾', keywords: ['tennis'] },
-  { emoji: '📚', keywords: ['book', 'books'] },
-  { emoji: '✏️', keywords: ['pencil'] },
-  { emoji: '🧮', keywords: ['abacus', 'math'] },
-  { emoji: '🔢', keywords: ['number', 'numbers'] },
-  { emoji: '🔤', keywords: ['alphabet', 'letters'] },
-  { emoji: '❤️', keywords: ['heart', 'love'] },
-  { emoji: '😊', keywords: ['happy', 'smile'] },
-  { emoji: '😢', keywords: ['sad', 'cry'] },
-  { emoji: '😡', keywords: ['angry'] }
+  { emoji: '👩‍⚕️', keywords: ['doctor', 'nurse'] }
 ];
+
+const STOPWORDS = new Set<string>([
+  'and',
+  'or',
+  'with',
+  'without',
+  'the',
+  'a',
+  'an',
+  'face',
+  'symbol',
+  'sign',
+  'button'
+]);
+
+const records = emojiData as EmojiRecord[];
 
 function normalizeWord(value: string): string {
   return value
@@ -78,25 +51,82 @@ function normalizeWord(value: string): string {
     .replace(/\s+/g, ' ');
 }
 
+function splitKeywords(value: string): string[] {
+  return normalizeWord(value)
+    .split(' ')
+    .map((part) => part.trim())
+    .filter((part) => part.length > 1 && !STOPWORDS.has(part));
+}
+
+function singularize(word: string): string {
+  if (word.endsWith('ies') && word.length > 4) {
+    return `${word.slice(0, -3)}y`;
+  }
+  if (word.endsWith('s') && word.length > 3) {
+    return word.slice(0, -1);
+  }
+  return word;
+}
+
+const keywordToEmoji = new Map<string, string>();
+
+for (const item of records) {
+  if (item.type !== 1 || !item.emoji || item.group === undefined || !NOUN_GROUPS.has(item.group)) {
+    continue;
+  }
+
+  const keywordSet = new Set<string>();
+  if (item.label) {
+    splitKeywords(item.label).forEach((keyword) => keywordSet.add(keyword));
+  }
+  for (const tag of item.tags ?? []) {
+    splitKeywords(tag).forEach((keyword) => keywordSet.add(keyword));
+  }
+
+  keywordSet.forEach((keyword) => {
+    if (!keywordToEmoji.has(keyword)) {
+      keywordToEmoji.set(keyword, item.emoji);
+    }
+    const singular = singularize(keyword);
+    if (!keywordToEmoji.has(singular)) {
+      keywordToEmoji.set(singular, item.emoji);
+    }
+  });
+}
+
+for (const override of NOUN_PERSON_OVERRIDES) {
+  for (const keyword of override.keywords) {
+    const normalized = normalizeWord(keyword);
+    keywordToEmoji.set(normalized, override.emoji);
+  }
+}
+
 export function findEmojiForWord(word: string): string | null {
   const normalized = normalizeWord(word);
   if (!normalized) {
     return null;
   }
 
-  const exact = EMOJI_KEYWORDS.find((item) => item.keywords.includes(normalized));
-  if (exact) {
-    return exact.emoji;
+  if (keywordToEmoji.has(normalized)) {
+    return keywordToEmoji.get(normalized) ?? null;
   }
 
-  const token = normalized.split(' ')[0];
-  const tokenMatch = EMOJI_KEYWORDS.find((item) => item.keywords.includes(token));
-  if (tokenMatch) {
-    return tokenMatch.emoji;
+  const parts = normalized.split(' ').filter(Boolean);
+  for (const part of parts) {
+    const singular = singularize(part);
+    const match = keywordToEmoji.get(part) ?? keywordToEmoji.get(singular);
+    if (match) {
+      return match;
+    }
   }
 
-  const includes = EMOJI_KEYWORDS.find((item) => item.keywords.some((keyword) => normalized.includes(keyword)));
-  return includes?.emoji ?? null;
+  for (const [keyword, emoji] of keywordToEmoji.entries()) {
+    if (normalized.includes(keyword)) {
+      return emoji;
+    }
+  }
+
+  return null;
 }
 
 export function createEmojiImageDataUrl(emoji: string, size = 512): string {

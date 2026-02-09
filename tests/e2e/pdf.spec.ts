@@ -58,3 +58,12 @@ test('can use emoji image for selected row and suggest bulk apply', async ({ pag
   const firstStatus = page.locator('tbody tr').first().locator('td').nth(3);
   await expect(firstStatus).toContainText('Fits');
 });
+
+test('offers emoji button for noun objects and vehicles', async ({ page }) => {
+  await page.goto('/');
+
+  await page.locator('textarea').first().fill('word,subtitle\nhammer,tool\nbus,vehicle');
+  await page.getByRole('button', { name: 'Import CSV' }).click();
+
+  await expect(page.getByRole('button', { name: /Use emoji for image/i })).toBeVisible();
+});
