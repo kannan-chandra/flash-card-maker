@@ -908,9 +908,6 @@ export default function App() {
             </aside>
           </div>
 
-          {currentValidation && (currentValidation.wordOverflow || currentValidation.subtitleOverflow) && (
-            <p className="warn">This row has text overflow in one or more text boxes.</p>
-          )}
         </section>
 
         <section className="panel data-panel">
