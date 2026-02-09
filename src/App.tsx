@@ -1,13 +1,16 @@
 import { useEffect, useMemo, useRef, useState, type DragEvent } from 'react';
 import { Image as KonvaImage, Layer, Rect, Stage, Text, Transformer } from 'react-konva';
-import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
+import { PDFDocument, StandardFonts, type PDFFont, rgb } from 'pdf-lib';
+import fontkit from '@pdf-lib/fontkit';
+import tamilFontUrl from '@fontsource/noto-sans-tamil/files/noto-sans-tamil-tamil-400-normal.woff?url';
+import '@fontsource/noto-sans-tamil/400.css';
 import type Konva from 'konva';
 import type { CardPreset, CardTemplate, FlashcardRow, FontFamily, ProjectData, RowValidation, TextElement } from './types';
 import { loadProject, saveProject } from './storage';
 import { parseCsvInput } from './utils/csv';
 import { splitTextForPdf, validateRows } from './utils/layout';
 
-const FONT_FAMILIES: FontFamily[] = ['Arial', 'Verdana', 'Times New Roman', 'Georgia', 'Courier New'];
+const FONT_FAMILIES: FontFamily[] = ['Arial', 'Verdana', 'Times New Roman', 'Georgia', 'Courier New', 'Noto Sans Tamil'];
 
 const DEFAULT_TEMPLATE: CardTemplate = {
   width: 700,
@@ -79,6 +82,10 @@ function mapFontForPdf(fontFamily: string): StandardFonts {
   if (fontFamily === 'Courier New') return StandardFonts.Courier;
   if (fontFamily === 'Times New Roman' || fontFamily === 'Georgia') return StandardFonts.TimesRoman;
   return StandardFonts.Helvetica;
+}
+
+function hasTamil(text: string): boolean {
+  return /[\u0b80-\u0bff]/i.test(text);
 }
 
 function useImage(src?: string): HTMLImageElement | undefined {
@@ -270,6 +277,16 @@ export default function App() {
     setImageIssues({});
 
     const doc = await PDFDocument.create();
+    doc.registerFontkit(fontkit);
+    let tamilFont: PDFFont | null = null;
+    try {
+      const tamilFontBytes = await fetch(tamilFontUrl).then((response) => response.arrayBuffer());
+      tamilFont = await doc.embedFont(tamilFontBytes, { subset: true });
+    } catch {
+      setPdfStatus('Failed to load Tamil font for PDF export.');
+      return;
+    }
+    const standardFontCache = new Map<StandardFonts, PDFFont>();
     const grid = getPresetGrid(project.preset);
     const pageWidth = 612;
     const pageHeight = 792;
@@ -340,7 +357,6 @@ export default function App() {
       for (const textElement of project.template.textElements) {
         const rawText = fitTextValue(row, textElement.role);
         const lines = splitTextForPdf(rawText, textElement);
-        const font = await doc.embedFont(mapFontForPdf(textElement.fontFamily));
 
         const scaledFontSize = (textElement.fontSize / project.template.width) * cardWidth;
         const lineHeight = scaledFontSize * textElement.lineHeight;
@@ -353,7 +369,16 @@ export default function App() {
         const boxW = (textElement.width / project.template.width) * cardWidth;
 
         clipped.forEach((line, lineIndex) => {
-          const lineWidth = font.widthOfTextAtSize(line, scaledFontSize);
+          const shouldUseTamilFont = textElement.fontFamily === 'Noto Sans Tamil' || hasTamil(line);
+          const standardFontName = mapFontForPdf(textElement.fontFamily);
+          let font = standardFontCache.get(standardFontName);
+          if (!font) {
+            font = doc.embedStandardFont(standardFontName);
+            standardFontCache.set(standardFontName, font);
+          }
+          const activeFont = shouldUseTamilFont ? tamilFont! : font;
+
+          const lineWidth = activeFont.widthOfTextAtSize(line, scaledFontSize);
           let x = textX;
           if (textElement.align === 'center') {
             x = textX + Math.max((boxW - lineWidth) / 2, 0);
@@ -365,7 +390,7 @@ export default function App() {
             x,
             y: textYTop - lineHeight * (lineIndex + 1),
             size: scaledFontSize,
-            font,
+            font: activeFont,
             color: rgb(0.1, 0.1, 0.1)
           });
         });

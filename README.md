@@ -4,7 +4,7 @@ Frontend-only flashcard generator for GitHub Pages. Users design one master card
 
 ## Features
 - Master card editor with drag/resize for one image and two text boxes
-- Text settings: role mapping (`word` or `subtitle`), web-safe font, size, alignment
+- Text settings: role mapping (`word` or `subtitle`), font, size, alignment
 - Row list management via CSV paste/import (header or no-header) and manual edits
 - Per-row image sources:
   - URL (web image)
@@ -40,8 +40,9 @@ Supported formats:
 - Stack: `React + TypeScript + Vite` for lightweight static deployment.
 - Canvas editor: `react-konva` for direct drag/drop/resize interactions.
 - PDF generation: `pdf-lib` fully client-side, no server rendering.
+- Unicode text in PDF: embeds `Noto Sans Tamil` for Tamil script support.
 - Storage: `IndexedDB` (`idb-keyval`) for offline/local persistence.
-- Fonts: web-safe/system fonts only for reliability and simple PDF standard-font mapping.
+- Fonts: web-safe/system fonts plus bundled Tamil font for Unicode PDF support.
 - Simpler offline phase: no service worker/PWA yet; app still works with local persistence after load.
 - Fixed print layout: US Letter only and fixed 6/8/12 grid presets for initial scope.
 
