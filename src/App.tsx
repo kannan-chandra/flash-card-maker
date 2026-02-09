@@ -703,76 +703,79 @@ export default function App() {
             <div>
               <div className="editor-controls">
                 <label>
-                  Background
+                  Card Background
                   <input
                     type="color"
                     value={project.template.backgroundColor}
                     onChange={(event) => patchTemplate({ backgroundColor: event.target.value })}
                   />
                 </label>
-
-                <label>
-                  Selected element
-                  <select value={selectedElement} onChange={(event) => setSelectedElement(event.target.value)}>
-                    <option value="image">Image</option>
-                    <option value="text1">Text 1 ({project.template.textElements[0].role})</option>
-                    <option value="text2">Text 2 ({project.template.textElements[1].role})</option>
-                  </select>
-                </label>
+                {(() => {
+                  const selectedText =
+                    selectedElement === 'text1'
+                      ? project.template.textElements[0]
+                      : selectedElement === 'text2'
+                        ? project.template.textElements[1]
+                        : project.template.textElements[0];
+                  const textControlsDisabled = selectedElement === 'image';
+                  return (
+                    <>
+                      <label>
+                        Font
+                        <select
+                          disabled={textControlsDisabled}
+                          value={selectedText.fontFamily}
+                          onChange={(event) =>
+                            patchTextElement(selectedText.id, { fontFamily: event.target.value as FontFamily })
+                          }
+                        >
+                          {FONT_FAMILIES.map((font) => (
+                            <option key={font} value={font}>
+                              {font}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <label>
+                        Size
+                        <input
+                          disabled={textControlsDisabled}
+                          type="number"
+                          min={10}
+                          max={120}
+                          value={selectedText.fontSize}
+                          onChange={(event) =>
+                            patchTextElement(selectedText.id, { fontSize: Number(event.target.value) || 10 })
+                          }
+                        />
+                      </label>
+                      <label>
+                        Align
+                        <select
+                          disabled={textControlsDisabled}
+                          value={selectedText.align}
+                          onChange={(event) =>
+                            patchTextElement(selectedText.id, { align: event.target.value as TextElement['align'] })
+                          }
+                        >
+                          <option value="left">Left</option>
+                          <option value="center">Center</option>
+                          <option value="right">Right</option>
+                        </select>
+                      </label>
+                      <label>
+                        Text Color
+                        <input
+                          disabled={textControlsDisabled}
+                          type="color"
+                          value={selectedText.color}
+                          onChange={(event) => patchTextElement(selectedText.id, { color: event.target.value })}
+                        />
+                      </label>
+                    </>
+                  );
+                })()}
               </div>
-
-              {selectedElement !== 'image' && (
-                <div className="text-controls">
-                  {(() => {
-                    const selectedText =
-                      selectedElement === 'text1' ? project.template.textElements[0] : project.template.textElements[1];
-                    return (
-                      <>
-                        <label>
-                          Font
-                          <select
-                            value={selectedText.fontFamily}
-                            onChange={(event) =>
-                              patchTextElement(selectedText.id, { fontFamily: event.target.value as FontFamily })
-                            }
-                          >
-                            {FONT_FAMILIES.map((font) => (
-                              <option key={font} value={font}>
-                                {font}
-                              </option>
-                            ))}
-                          </select>
-                        </label>
-                        <label>
-                          Size
-                          <input
-                            type="number"
-                            min={10}
-                            max={120}
-                            value={selectedText.fontSize}
-                            onChange={(event) =>
-                              patchTextElement(selectedText.id, { fontSize: Number(event.target.value) || 10 })
-                            }
-                          />
-                        </label>
-                        <label>
-                          Align
-                          <select
-                            value={selectedText.align}
-                            onChange={(event) =>
-                              patchTextElement(selectedText.id, { align: event.target.value as TextElement['align'] })
-                            }
-                          >
-                            <option value="left">Left</option>
-                            <option value="center">Center</option>
-                            <option value="right">Right</option>
-                          </select>
-                        </label>
-                      </>
-                    );
-                  })()}
-                </div>
-              )}
 
               <Stage width={project.template.width} height={project.template.height} className="stage">
                 <Layer>

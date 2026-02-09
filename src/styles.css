@@ -121,8 +121,7 @@ main {
   grid-row: 3;
 }
 
-.editor-controls,
-.text-controls {
+.editor-controls {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
@@ -188,6 +187,12 @@ select {
   border: 1px solid #9ca3af;
   border-radius: 6px;
   padding: 6px;
+}
+
+input[type='color'] {
+  padding: 0;
+  width: 52px;
+  height: 36px;
 }
 
 .stage {
