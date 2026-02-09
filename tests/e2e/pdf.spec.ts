@@ -86,3 +86,15 @@ test('offers emoji button for Tamil keyword matches', async ({ page }) => {
   expect(count).toBeGreaterThan(0);
   expect(count).toBeLessThanOrEqual(5);
 });
+
+test('uses subtitle emoji keywords when word has no match', async ({ page }) => {
+  await page.goto('/');
+
+  await page.locator('textarea').first().fill('word,subtitle\nperro,நாய்');
+  await page.getByRole('button', { name: 'Import CSV' }).click();
+
+  const emojiChoices = page.getByRole('button', { name: /^Use emoji / });
+  const count = await emojiChoices.count();
+  expect(count).toBeGreaterThan(0);
+  expect(count).toBeLessThanOrEqual(5);
+});

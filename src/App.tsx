@@ -191,7 +191,25 @@ export default function App() {
     return project.rows.find((row) => row.id === project.selectedRowId) ?? project.rows[0];
   }, [project]);
   const selectedRowHasImage = Boolean(selectedRow?.imageUrl || selectedRow?.localImageDataUrl);
-  const selectedRowEmojiMatches = useMemo(() => findTopEmojiMatches(selectedRow?.word ?? '', 5), [selectedRow?.word]);
+  const selectedRowEmojiMatches = useMemo(() => {
+    if (!selectedRow) {
+      return [];
+    }
+
+    const wordMatches = findTopEmojiMatches(selectedRow.word ?? '', 10);
+    if (wordMatches.length >= 5) {
+      return wordMatches.slice(0, 5);
+    }
+
+    const subtitleMatches = findTopEmojiMatches(selectedRow.subtitle ?? '', 10);
+    const merged = [...wordMatches];
+    for (const match of subtitleMatches) {
+      if (!merged.some((item) => item.emoji === match.emoji)) {
+        merged.push(match);
+      }
+    }
+    return merged.slice(0, 5);
+  }, [selectedRow]);
   const selectedRowIndex = useMemo(
     () => (project ? project.rows.findIndex((row) => row.id === selectedRow?.id) : -1),
     [project, selectedRow?.id]
