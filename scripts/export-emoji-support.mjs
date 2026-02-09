@@ -1,12 +1,14 @@
 import fs from 'node:fs';
 import emojiData from 'emojibase-data/en/data.json' with { type: 'json' };
 import emojiMessages from 'emojibase-data/en/messages.json' with { type: 'json' };
+import taAnnotationsJson from 'cldr-annotations-full/annotations/ta/annotations.json' with { type: 'json' };
 
 const NOUN_GROUPS = new Set([3, 4, 5, 6, 7]);
 const PERSON_SUBGROUP_KEYS = new Set(['person-role', 'person-activity', 'person-sport', 'person-resting']);
 const PERSON_SUBGROUP_ORDERS = new Set(
   emojiMessages.subgroups.filter((entry) => PERSON_SUBGROUP_KEYS.has(entry.key)).map((entry) => entry.order)
 );
+const tamilByEmoji = taAnnotationsJson.annotations.annotations;
 const OVERRIDES = [
   { emoji: '👶', keywords: ['baby', 'infant', 'newborn'] },
   { emoji: '👦', keywords: ['boy'] },
@@ -22,7 +24,7 @@ const normalizeWord = (value) =>
   value
     .toLowerCase()
     .trim()
-    .replace(/[^a-z0-9\s]/g, ' ')
+    .replace(/[^\p{L}\p{M}\p{N}\s]/gu, ' ')
     .replace(/\s+/g, ' ');
 
 const splitKeywords = (value) =>
@@ -32,9 +34,17 @@ const splitKeywords = (value) =>
     .filter((part) => part.length > 1 && !STOPWORDS.has(part));
 
 const singularize = (word) => {
+  if (!/^[a-z]+$/.test(word)) return word;
   if (word.endsWith('ies') && word.length > 4) return `${word.slice(0, -3)}y`;
   if (word.endsWith('s') && word.length > 3) return word.slice(0, -1);
   return word;
+};
+
+const getTamilKeywords = (emoji) => {
+  const exact = tamilByEmoji[emoji];
+  const withoutVs = tamilByEmoji[emoji.replace(/\uFE0F/g, '')];
+  const withVs = tamilByEmoji[`${emoji}\uFE0F`];
+  return [...(exact?.default ?? []), ...(withoutVs?.default ?? []), ...(withVs?.default ?? [])];
 };
 
 const emojiToKeywords = new Map();
@@ -47,6 +57,7 @@ for (const item of emojiData) {
   const set = emojiToKeywords.get(item.emoji) ?? new Set();
   if (item.label) splitKeywords(item.label).forEach((k) => set.add(k));
   for (const tag of item.tags ?? []) splitKeywords(tag).forEach((k) => set.add(k));
+  for (const taKeyword of getTamilKeywords(item.emoji)) splitKeywords(taKeyword).forEach((k) => set.add(k));
   emojiToKeywords.set(item.emoji, set);
 }
 

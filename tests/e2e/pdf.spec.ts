@@ -67,3 +67,12 @@ test('offers emoji button for noun objects and vehicles', async ({ page }) => {
 
   await expect(page.getByRole('button', { name: /Use emoji for image/i })).toBeVisible();
 });
+
+test('offers emoji button for Tamil keyword matches', async ({ page }) => {
+  await page.goto('/');
+
+  await page.locator('textarea').first().fill('word,subtitle\nநாய்,செல்லப்பிராணி');
+  await page.getByRole('button', { name: 'Import CSV' }).click();
+
+  await expect(page.getByRole('button', { name: /Use emoji for image/i })).toBeVisible();
+});

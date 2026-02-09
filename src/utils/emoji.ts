@@ -1,5 +1,6 @@
 import emojiData from 'emojibase-data/en/data.json';
 import emojiMessages from 'emojibase-data/en/messages.json';
+import taAnnotationsJson from 'cldr-annotations-full/annotations/ta/annotations.json';
 
 interface EmojiRecord {
   emoji: string;
@@ -23,7 +24,15 @@ const PERSON_SUBGROUP_KEYS = new Set<string>(['person-role', 'person-activity', 
 interface EmojiMessages {
   subgroups: Array<{ key: string; order: number }>;
 }
+
+interface TamilAnnotations {
+  annotations: {
+    annotations: Record<string, { default?: string[]; tts?: string[] }>;
+  };
+}
 const messages = emojiMessages as EmojiMessages;
+const tamilAnnotations = taAnnotationsJson as TamilAnnotations;
+const tamilByEmoji = tamilAnnotations.annotations.annotations;
 const PERSON_SUBGROUP_ORDERS = new Set<number>(
   messages.subgroups.filter((entry) => PERSON_SUBGROUP_KEYS.has(entry.key)).map((entry) => entry.order)
 );
@@ -59,7 +68,7 @@ function normalizeWord(value: string): string {
   return value
     .toLowerCase()
     .trim()
-    .replace(/[^a-z0-9\s]/g, ' ')
+    .replace(/[^\p{L}\p{M}\p{N}\s]/gu, ' ')
     .replace(/\s+/g, ' ');
 }
 
@@ -71,6 +80,9 @@ function splitKeywords(value: string): string[] {
 }
 
 function singularize(word: string): string {
+  if (!/^[a-z]+$/.test(word)) {
+    return word;
+  }
   if (word.endsWith('ies') && word.length > 4) {
     return `${word.slice(0, -3)}y`;
   }
@@ -81,6 +93,14 @@ function singularize(word: string): string {
 }
 
 const keywordToEmoji = new Map<string, string>();
+
+function getTamilKeywords(emoji: string): string[] {
+  const exact = tamilByEmoji[emoji];
+  const withoutVs = tamilByEmoji[emoji.replace(/\uFE0F/g, '')];
+  const withVs = tamilByEmoji[`${emoji}\uFE0F`];
+  const keywords = [...(exact?.default ?? []), ...(withoutVs?.default ?? []), ...(withVs?.default ?? [])];
+  return keywords;
+}
 
 for (const item of records) {
   const inNounGroup = item.group !== undefined && NOUN_GROUPS.has(item.group);
@@ -95,6 +115,9 @@ for (const item of records) {
   }
   for (const tag of item.tags ?? []) {
     splitKeywords(tag).forEach((keyword) => keywordSet.add(keyword));
+  }
+  for (const taKeyword of getTamilKeywords(item.emoji)) {
+    splitKeywords(taKeyword).forEach((keyword) => keywordSet.add(keyword));
   }
 
   keywordSet.forEach((keyword) => {
