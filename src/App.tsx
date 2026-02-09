@@ -344,13 +344,27 @@ export default function App() {
     }));
   }
 
-  async function onRowImageDrop(event: DragEvent<HTMLTableRowElement>, rowId: string) {
+  async function onRowImageDrop(event: DragEvent<HTMLElement>, rowId: string) {
     event.preventDefault();
     const file = event.dataTransfer.files?.[0];
     if (!file || !file.type.startsWith('image/')) {
       return;
     }
     await onRowImageUpload(rowId, file);
+  }
+
+  async function onSelectedRowImageUpload(file: File) {
+    if (!selectedRow) {
+      return;
+    }
+    await onRowImageUpload(selectedRow.id, file);
+  }
+
+  async function onSelectedRowImageDrop(event: DragEvent<HTMLDivElement>) {
+    if (!selectedRow) {
+      return;
+    }
+    await onRowImageDrop(event, selectedRow.id);
   }
 
   function updateRow(rowId: string, patch: Partial<FlashcardRow>) {
@@ -611,232 +625,297 @@ export default function App() {
           <h2>Master Card Layout</h2>
           <p>Drag and resize elements. Changes affect all generated cards.</p>
 
-          <div className="editor-controls">
-            <label>
-              Background
-              <input
-                type="color"
-                value={project.template.backgroundColor}
-                onChange={(event) => patchTemplate({ backgroundColor: event.target.value })}
-              />
-            </label>
+          <div className="editor-layout">
+            <div>
+              <div className="editor-controls">
+                <label>
+                  Background
+                  <input
+                    type="color"
+                    value={project.template.backgroundColor}
+                    onChange={(event) => patchTemplate({ backgroundColor: event.target.value })}
+                  />
+                </label>
 
-            <label>
-              Selected element
-              <select value={selectedElement} onChange={(event) => setSelectedElement(event.target.value)}>
-                <option value="image">Image</option>
-                <option value="text1">Text 1 ({project.template.textElements[0].role})</option>
-                <option value="text2">Text 2 ({project.template.textElements[1].role})</option>
-              </select>
-            </label>
-          </div>
+                <label>
+                  Selected element
+                  <select value={selectedElement} onChange={(event) => setSelectedElement(event.target.value)}>
+                    <option value="image">Image</option>
+                    <option value="text1">Text 1 ({project.template.textElements[0].role})</option>
+                    <option value="text2">Text 2 ({project.template.textElements[1].role})</option>
+                  </select>
+                </label>
+              </div>
 
-          {selectedElement !== 'image' && (
-            <div className="text-controls">
-              {(() => {
-                const selectedText =
-                  selectedElement === 'text1' ? project.template.textElements[0] : project.template.textElements[1];
-                return (
-                  <>
-                    <label>
-                      Text role
-                      <select
-                        value={selectedText.role}
-                        onChange={(event) =>
-                          patchTextElement(selectedText.id, { role: event.target.value as TextElement['role'] })
-                        }
-                      >
-                        <option value="word">Word</option>
-                        <option value="subtitle">Subtitle</option>
-                      </select>
-                    </label>
-                    <label>
-                      Font
-                      <select
-                        value={selectedText.fontFamily}
-                        onChange={(event) => patchTextElement(selectedText.id, { fontFamily: event.target.value as FontFamily })}
-                      >
-                        {FONT_FAMILIES.map((font) => (
-                          <option key={font} value={font}>
-                            {font}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    <label>
-                      Size
-                      <input
-                        type="number"
-                        min={10}
-                        max={120}
-                        value={selectedText.fontSize}
-                        onChange={(event) => patchTextElement(selectedText.id, { fontSize: Number(event.target.value) || 10 })}
-                      />
-                    </label>
-                    <label>
-                      Align
-                      <select
-                        value={selectedText.align}
-                        onChange={(event) =>
-                          patchTextElement(selectedText.id, { align: event.target.value as TextElement['align'] })
-                        }
-                      >
-                        <option value="left">Left</option>
-                        <option value="center">Center</option>
-                        <option value="right">Right</option>
-                      </select>
-                    </label>
-                  </>
-                );
-              })()}
-            </div>
-          )}
+              {selectedElement !== 'image' && (
+                <div className="text-controls">
+                  {(() => {
+                    const selectedText =
+                      selectedElement === 'text1' ? project.template.textElements[0] : project.template.textElements[1];
+                    return (
+                      <>
+                        <label>
+                          Text role
+                          <select
+                            value={selectedText.role}
+                            onChange={(event) =>
+                              patchTextElement(selectedText.id, { role: event.target.value as TextElement['role'] })
+                            }
+                          >
+                            <option value="word">Word</option>
+                            <option value="subtitle">Subtitle</option>
+                          </select>
+                        </label>
+                        <label>
+                          Font
+                          <select
+                            value={selectedText.fontFamily}
+                            onChange={(event) =>
+                              patchTextElement(selectedText.id, { fontFamily: event.target.value as FontFamily })
+                            }
+                          >
+                            {FONT_FAMILIES.map((font) => (
+                              <option key={font} value={font}>
+                                {font}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                        <label>
+                          Size
+                          <input
+                            type="number"
+                            min={10}
+                            max={120}
+                            value={selectedText.fontSize}
+                            onChange={(event) =>
+                              patchTextElement(selectedText.id, { fontSize: Number(event.target.value) || 10 })
+                            }
+                          />
+                        </label>
+                        <label>
+                          Align
+                          <select
+                            value={selectedText.align}
+                            onChange={(event) =>
+                              patchTextElement(selectedText.id, { align: event.target.value as TextElement['align'] })
+                            }
+                          >
+                            <option value="left">Left</option>
+                            <option value="center">Center</option>
+                            <option value="right">Right</option>
+                          </select>
+                        </label>
+                      </>
+                    );
+                  })()}
+                </div>
+              )}
 
-          <Stage width={project.template.width} height={project.template.height} className="stage">
-            <Layer>
-              <Rect
-                x={0}
-                y={0}
-                width={project.template.width}
-                height={project.template.height}
-                fill={project.template.backgroundColor}
-                stroke="#d1d5db"
-                strokeWidth={1}
-              />
+              <Stage width={project.template.width} height={project.template.height} className="stage">
+                <Layer>
+                  <Rect
+                    x={0}
+                    y={0}
+                    width={project.template.width}
+                    height={project.template.height}
+                    fill={project.template.backgroundColor}
+                    stroke="#d1d5db"
+                    strokeWidth={1}
+                  />
 
-              <KonvaImage
-                ref={imageRef}
-                image={previewImage}
-                x={project.template.image.x}
-                y={project.template.image.y}
-                width={project.template.image.width}
-                height={project.template.image.height}
-                draggable
-                onClick={() => setSelectedElement('image')}
-                onTap={() => setSelectedElement('image')}
-                onDragEnd={(event) =>
-                  patchTemplate({
-                    image: {
-                      ...project.template.image,
-                      x: event.target.x(),
-                      y: event.target.y()
-                    }
-                  })
-                }
-                onTransformEnd={(event) => {
-                  const node = event.target;
-                  const scaleX = node.scaleX();
-                  const scaleY = node.scaleY();
-                  patchTemplate({
-                    image: {
-                      x: node.x(),
-                      y: node.y(),
-                      width: Math.max(20, node.width() * scaleX),
-                      height: Math.max(20, node.height() * scaleY)
-                    }
-                  });
-                  node.scaleX(1);
-                  node.scaleY(1);
-                }}
-                stroke={selectedElement === 'image' ? '#2563eb' : undefined}
-                strokeWidth={selectedElement === 'image' ? 2 : 0}
-              />
-
-              {project.template.textElements.map((textElement, index) => {
-                const textValue = selectedRow ? fitTextValue(selectedRow, textElement.role) : `[${textElement.role}]`;
-                return (
-                  <Text
-                    key={textElement.id}
-                    ref={index === 0 ? text1Ref : text2Ref}
-                    text={textValue}
-                    x={textElement.x}
-                    y={textElement.y}
-                    width={textElement.width}
-                    height={textElement.height}
-                    fontSize={textElement.fontSize}
-                    fontFamily={textElement.fontFamily}
-                    fill={textElement.color}
-                    align={textElement.align}
-                    lineHeight={textElement.lineHeight}
-                    verticalAlign="middle"
-                    padding={4}
-                    ellipsis
-                    wrap="word"
+                  <KonvaImage
+                    ref={imageRef}
+                    image={previewImage}
+                    x={project.template.image.x}
+                    y={project.template.image.y}
+                    width={project.template.image.width}
+                    height={project.template.image.height}
                     draggable
-                    onClick={() => setSelectedElement(textElement.id)}
-                    onTap={() => setSelectedElement(textElement.id)}
+                    onClick={() => setSelectedElement('image')}
+                    onTap={() => setSelectedElement('image')}
                     onDragEnd={(event) =>
-                      patchTextElement(textElement.id, {
-                        x: event.target.x(),
-                        y: event.target.y()
+                      patchTemplate({
+                        image: {
+                          ...project.template.image,
+                          x: event.target.x(),
+                          y: event.target.y()
+                        }
                       })
                     }
                     onTransformEnd={(event) => {
                       const node = event.target;
                       const scaleX = node.scaleX();
                       const scaleY = node.scaleY();
-                      patchTextElement(textElement.id, {
-                        x: node.x(),
-                        y: node.y(),
-                        width: Math.max(40, node.width() * scaleX),
-                        height: Math.max(30, node.height() * scaleY)
+                      patchTemplate({
+                        image: {
+                          x: node.x(),
+                          y: node.y(),
+                          width: Math.max(20, node.width() * scaleX),
+                          height: Math.max(20, node.height() * scaleY)
+                        }
                       });
                       node.scaleX(1);
                       node.scaleY(1);
                     }}
-                    stroke={selectedElement === textElement.id ? '#2563eb' : '#9ca3af'}
-                    strokeWidth={1}
+                    stroke={selectedElement === 'image' ? '#2563eb' : undefined}
+                    strokeWidth={selectedElement === 'image' ? 2 : 0}
                   />
-                );
-              })}
 
-              <Transformer ref={transformerRef} rotateEnabled={false} flipEnabled={false} keepRatio={false} />
-            </Layer>
-          </Stage>
+                  {project.template.textElements.map((textElement, index) => {
+                    const textValue = selectedRow ? fitTextValue(selectedRow, textElement.role) : `[${textElement.role}]`;
+                    return (
+                      <Text
+                        key={textElement.id}
+                        ref={index === 0 ? text1Ref : text2Ref}
+                        text={textValue}
+                        x={textElement.x}
+                        y={textElement.y}
+                        width={textElement.width}
+                        height={textElement.height}
+                        fontSize={textElement.fontSize}
+                        fontFamily={textElement.fontFamily}
+                        fill={textElement.color}
+                        align={textElement.align}
+                        lineHeight={textElement.lineHeight}
+                        verticalAlign="middle"
+                        padding={4}
+                        ellipsis
+                        wrap="word"
+                        draggable
+                        onClick={() => setSelectedElement(textElement.id)}
+                        onTap={() => setSelectedElement(textElement.id)}
+                        onDragEnd={(event) =>
+                          patchTextElement(textElement.id, {
+                            x: event.target.x(),
+                            y: event.target.y()
+                          })
+                        }
+                        onTransformEnd={(event) => {
+                          const node = event.target;
+                          const scaleX = node.scaleX();
+                          const scaleY = node.scaleY();
+                          patchTextElement(textElement.id, {
+                            x: node.x(),
+                            y: node.y(),
+                            width: Math.max(40, node.width() * scaleX),
+                            height: Math.max(30, node.height() * scaleY)
+                          });
+                          node.scaleX(1);
+                          node.scaleY(1);
+                        }}
+                        stroke={selectedElement === textElement.id ? '#2563eb' : '#9ca3af'}
+                        strokeWidth={1}
+                      />
+                    );
+                  })}
 
-          <div className="preview-meta">
-            <h3>Row preview</h3>
-            {selectedRow ? (
-              <p>
-                Previewing: <strong>{selectedRow.word || '(empty word)'}</strong>
-              </p>
-            ) : (
-              <p>No rows yet.</p>
-            )}
-            <div className="row-buttons">
-              <button
-                onClick={() =>
-                  updateActiveSet((current) => ({
-                    ...current,
-                    selectedRowId: current.rows[Math.max((selectedRowIndex || 0) - 1, 0)]?.id
-                  }))
-                }
-                disabled={selectedRowIndex <= 0}
-              >
-                Previous
-              </button>
-              <button
-                onClick={() =>
-                  updateActiveSet((current) => ({
-                    ...current,
-                    selectedRowId:
-                      current.rows[Math.min((selectedRowIndex || 0) + 1, Math.max(current.rows.length - 1, 0))]?.id
-                  }))
-                }
-                disabled={selectedRowIndex < 0 || selectedRowIndex >= project.rows.length - 1}
-              >
-                Next
-              </button>
+                  <Transformer ref={transformerRef} rotateEnabled={false} flipEnabled={false} keepRatio={false} />
+                </Layer>
+              </Stage>
+
+              <div className="preview-meta">
+                <h3>Row preview</h3>
+                {selectedRow ? (
+                  <p>
+                    Previewing: <strong>{selectedRow.word || '(empty word)'}</strong>
+                  </p>
+                ) : (
+                  <p>No rows yet.</p>
+                )}
+                <div className="row-buttons">
+                  <button
+                    onClick={() =>
+                      updateActiveSet((current) => ({
+                        ...current,
+                        selectedRowId: current.rows[Math.max((selectedRowIndex || 0) - 1, 0)]?.id
+                      }))
+                    }
+                    disabled={selectedRowIndex <= 0}
+                  >
+                    Previous
+                  </button>
+                  <button
+                    onClick={() =>
+                      updateActiveSet((current) => ({
+                        ...current,
+                        selectedRowId:
+                          current.rows[Math.min((selectedRowIndex || 0) + 1, Math.max(current.rows.length - 1, 0))]?.id
+                      }))
+                    }
+                    disabled={selectedRowIndex < 0 || selectedRowIndex >= project.rows.length - 1}
+                  >
+                    Next
+                  </button>
+                </div>
+                {currentValidation && (currentValidation.wordOverflow || currentValidation.subtitleOverflow) && (
+                  <p className="warn">This row has text overflow in one or more text boxes.</p>
+                )}
+              </div>
             </div>
-            {currentValidation && (currentValidation.wordOverflow || currentValidation.subtitleOverflow) && (
-              <p className="warn">This row has text overflow in one or more text boxes.</p>
-            )}
+
+            <aside className="card-detail-panel">
+              <h3>Selected Card Details</h3>
+              <p>Edit fields for the currently highlighted row.</p>
+              {selectedRow ? (
+                <>
+                  <label>
+                    Word
+                    <input
+                      value={selectedRow.word}
+                      onChange={(event) => updateRow(selectedRow.id, { word: event.target.value })}
+                      aria-label="Selected row word"
+                    />
+                  </label>
+                  <label>
+                    Subtitle
+                    <input
+                      value={selectedRow.subtitle}
+                      onChange={(event) => updateRow(selectedRow.id, { subtitle: event.target.value })}
+                      aria-label="Selected row subtitle"
+                    />
+                  </label>
+                  <label>
+                    Image URL
+                    <input
+                      value={selectedRow.imageUrl}
+                      onChange={(event) => updateRow(selectedRow.id, { imageUrl: event.target.value })}
+                      aria-label="Selected row image URL"
+                      placeholder="https://..."
+                    />
+                  </label>
+                  <div className="drop-zone large" onDragOver={(event) => event.preventDefault()} onDrop={(event) => void onSelectedRowImageDrop(event)}>
+                    Drop image here
+                  </div>
+                  <label>
+                    Upload local image
+                    <input
+                      type="file"
+                      accept="image/*"
+                      aria-label="Selected row image upload"
+                      onChange={(event) => {
+                        const file = event.target.files?.[0];
+                        if (file) {
+                          onSelectedRowImageUpload(file);
+                        }
+                      }}
+                    />
+                  </label>
+                </>
+              ) : (
+                <p>Select a row from the list to edit details.</p>
+              )}
+            </aside>
           </div>
+
+          {currentValidation && (currentValidation.wordOverflow || currentValidation.subtitleOverflow) && (
+            <p className="warn">This row has text overflow in one or more text boxes.</p>
+          )}
         </section>
 
         <section className="panel data-panel">
           <h2>Word & Image List</h2>
-          <p>Columns: `word`, `subtitle`, `imageUrl`. Header row is optional.</p>
+          <p>Columns: `word`, `subtitle`, `imageUrl`. Header row is optional. Select a row to edit details at left.</p>
           <textarea
             value={csvInput}
             onChange={(event) => setCsvInput(event.target.value)}
@@ -857,7 +936,6 @@ export default function App() {
                   <th>Word</th>
                   <th>Subtitle</th>
                   <th>Image URL</th>
-                  <th>Upload Image</th>
                   <th>Status</th>
                 </tr>
               </thead>
@@ -872,8 +950,6 @@ export default function App() {
                       key={row.id}
                       className={row.id === selectedRow?.id ? 'selected' : undefined}
                       onClick={() => updateActiveSet((current) => ({ ...current, selectedRowId: row.id }))}
-                      onDragOver={(event) => event.preventDefault()}
-                      onDrop={(event) => void onRowImageDrop(event, row.id)}
                     >
                       <td>
                         <input
@@ -895,19 +971,6 @@ export default function App() {
                           onChange={(event) => updateRow(row.id, { imageUrl: event.target.value })}
                           aria-label="Image URL"
                           placeholder="https://..."
-                        />
-                      </td>
-                      <td>
-                        <div className="drop-zone">Drop image here or choose file</div>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={(event) => {
-                            const file = event.target.files?.[0];
-                            if (file) {
-                              onRowImageUpload(row.id, file);
-                            }
-                          }}
                         />
                       </td>
                       <td>

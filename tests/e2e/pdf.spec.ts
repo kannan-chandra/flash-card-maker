@@ -14,7 +14,7 @@ test('generates downloadable PDF for Tamil text without runtime errors', async (
   await page.locator('textarea').first().fill('word,subtitle\nசிங்கம்,விலங்கு');
   await page.getByRole('button', { name: 'Import CSV' }).click();
 
-  const upload = page.locator('tbody input[type="file"]').first();
+  const upload = page.getByLabel('Selected row image upload');
   await upload.setInputFiles({
     name: 'lion.png',
     mimeType: 'image/png',

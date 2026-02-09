@@ -7,6 +7,7 @@ Frontend-only flashcard generator for GitHub Pages. Users design one master card
 - Multiple flashcard sets stored locally, with set browser/create/delete
 - Text settings: role mapping (`word` or `subtitle`), font, size, alignment
 - Row list management via CSV paste/import (header or no-header) and manual edits
+- Dedicated selected-card detail editor for quick per-row iteration (word, subtitle, image URL, local image upload)
 - Per-row image sources:
   - URL (web image)
   - Local file upload (stored locally as data URL)

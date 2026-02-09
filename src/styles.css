@@ -127,6 +127,20 @@ main {
   margin-bottom: 10px;
 }
 
+.editor-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 280px;
+  gap: 12px;
+  align-items: start;
+}
+
+.card-detail-panel {
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 10px;
+  background: #f8fafc;
+}
+
 label {
   display: flex;
   flex-direction: column;
@@ -265,6 +279,12 @@ td input:not([type]) {
   text-align: center;
 }
 
+.drop-zone.large {
+  padding: 16px;
+  margin: 8px 0;
+  font-size: 13px;
+}
+
 tr.selected {
   background: #eff6ff;
 }
@@ -340,6 +360,10 @@ tr.selected {
   .editor-panel {
     grid-column: auto;
     grid-row: auto;
+  }
+
+  .editor-layout {
+    grid-template-columns: 1fr;
   }
 
   .stage {
