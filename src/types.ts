@@ -1,0 +1,58 @@
+export type CardPreset = 6 | 8 | 12;
+
+export type FontFamily = 'Arial' | 'Verdana' | 'Times New Roman' | 'Georgia' | 'Courier New';
+
+export type TextRole = 'word' | 'subtitle';
+
+export interface ImageElement {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+export interface TextElement {
+  id: 'text1' | 'text2';
+  role: TextRole;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  fontFamily: FontFamily;
+  fontSize: number;
+  color: string;
+  align: 'left' | 'center' | 'right';
+  lineHeight: number;
+}
+
+export interface CardTemplate {
+  width: number;
+  height: number;
+  backgroundColor: string;
+  image: ImageElement;
+  textElements: [TextElement, TextElement];
+}
+
+export interface FlashcardRow {
+  id: string;
+  word: string;
+  subtitle: string;
+  imageUrl: string;
+  localImageDataUrl?: string;
+}
+
+export interface RowValidation {
+  rowId: string;
+  wordOverflow: boolean;
+  subtitleOverflow: boolean;
+  imageIssue?: string;
+}
+
+export interface ProjectData {
+  template: CardTemplate;
+  rows: FlashcardRow[];
+  preset: CardPreset;
+  showCutGuides: boolean;
+  selectedRowId?: string;
+  updatedAt: number;
+}

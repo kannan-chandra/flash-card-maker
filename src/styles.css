@@ -1,0 +1,198 @@
+:root {
+  font-family: 'Trebuchet MS', Verdana, sans-serif;
+  color: #111827;
+  background: radial-gradient(circle at top left, #eff6ff, #f8fafc 55%);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+.app {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+header {
+  margin-bottom: 18px;
+}
+
+h1,
+h2,
+h3 {
+  margin: 0 0 8px;
+}
+
+p {
+  margin: 6px 0;
+}
+
+.local-only {
+  background: #fef9c3;
+  border: 1px solid #facc15;
+  border-radius: 8px;
+  padding: 8px 10px;
+  max-width: 700px;
+}
+
+main {
+  display: grid;
+  grid-template-columns: 1.45fr 1.15fr;
+  gap: 16px;
+}
+
+.panel {
+  background: #ffffff;
+  border: 1px solid #d1d5db;
+  border-radius: 12px;
+  padding: 14px;
+}
+
+.editor-panel {
+  grid-column: 1;
+  grid-row: span 2;
+}
+
+.editor-controls,
+.text-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 14px;
+}
+
+input,
+textarea,
+select,
+button {
+  font: inherit;
+}
+
+textarea,
+input,
+select {
+  border: 1px solid #9ca3af;
+  border-radius: 6px;
+  padding: 6px;
+}
+
+.stage {
+  border: 1px dashed #94a3b8;
+  max-width: 100%;
+  overflow: auto;
+}
+
+.preview-meta {
+  margin-top: 8px;
+}
+
+.row-buttons {
+  margin: 10px 0;
+  display: flex;
+  gap: 8px;
+}
+
+button {
+  padding: 8px 12px;
+  border-radius: 7px;
+  border: 1px solid #9ca3af;
+  background: #f3f4f6;
+  cursor: pointer;
+}
+
+button.primary {
+  background: #2563eb;
+  border-color: #1d4ed8;
+  color: #ffffff;
+}
+
+button.danger {
+  background: #fee2e2;
+  border-color: #ef4444;
+  color: #7f1d1d;
+}
+
+.list-table {
+  max-height: 420px;
+  overflow: auto;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  border-bottom: 1px solid #e5e7eb;
+  padding: 6px;
+  font-size: 13px;
+  vertical-align: top;
+}
+
+td input[type='text'],
+td input:not([type]) {
+  width: 100%;
+}
+
+tr.selected {
+  background: #eff6ff;
+}
+
+.warn {
+  color: #b91c1c;
+}
+
+.ok {
+  color: #065f46;
+}
+
+.checkbox-row {
+  margin-top: 10px;
+  flex-direction: row;
+  align-items: center;
+}
+
+.status {
+  margin-top: 10px;
+  font-weight: 600;
+}
+
+.hint {
+  margin-top: 8px;
+  color: #334155;
+}
+
+.loading {
+  padding: 40px;
+}
+
+@media (max-width: 1180px) {
+  main {
+    grid-template-columns: 1fr;
+  }
+
+  .editor-panel {
+    grid-column: auto;
+    grid-row: auto;
+  }
+
+  .stage {
+    width: 100%;
+    overflow-x: auto;
+  }
+}
