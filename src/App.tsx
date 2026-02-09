@@ -156,6 +156,7 @@ export default function App() {
   const [sets, setSets] = useState<FlashcardSet[]>([]);
   const [activeSetId, setActiveSetId] = useState<string>('');
   const [newSetName, setNewSetName] = useState('');
+  const [setsMenuOpen, setSetsMenuOpen] = useState(false);
   const [csvInput, setCsvInput] = useState('');
   const [selectedElement, setSelectedElement] = useState<string>('image');
   const [loading, setLoading] = useState(true);
@@ -257,6 +258,7 @@ export default function App() {
       const nextSet = makeNewSet(newSetName, currentSets.length + 1);
       setActiveSetId(nextSet.id);
       setNewSetName('');
+      setSetsMenuOpen(false);
       return [...currentSets, nextSet];
     });
   }
@@ -547,6 +549,17 @@ export default function App() {
   return (
     <div className="app">
       <header>
+        <button
+          type="button"
+          className="hamburger-btn"
+          onClick={() => setSetsMenuOpen((current) => !current)}
+          aria-label="Toggle flash card sets menu"
+          aria-expanded={setsMenuOpen}
+        >
+          <span />
+          <span />
+          <span />
+        </button>
         <h1>Flash Card Maker</h1>
         <p>Design one master card layout. Every row in your list uses the same layout.</p>
         <p className="local-only">
@@ -554,34 +567,46 @@ export default function App() {
         </p>
       </header>
 
-      <main>
-        <section className="panel sets-panel">
+      {setsMenuOpen && <button type="button" className="menu-backdrop" onClick={() => setSetsMenuOpen(false)} aria-label="Close sets menu" />}
+      <aside className={`panel sets-drawer ${setsMenuOpen ? 'open' : ''}`} aria-hidden={!setsMenuOpen}>
+        <div className="sets-drawer-header">
           <h2>Flash Card Sets</h2>
-          <p>Browse and switch between locally stored sets.</p>
-          <div className="set-create">
-            <input
-              value={newSetName}
-              onChange={(event) => setNewSetName(event.target.value)}
-              placeholder="New set name"
-              aria-label="New set name"
-            />
-            <button onClick={createSet}>Create Set</button>
-          </div>
-          <div className="set-list">
-            {sets.map((setItem) => (
-              <div key={setItem.id} className={`set-item ${setItem.id === project.id ? 'active' : ''}`}>
-                <button className="set-select" onClick={() => setActiveSetId(setItem.id)}>
-                  <strong>{setItem.name}</strong>
-                  <span>{setItem.rows.length} rows</span>
-                </button>
-                <button className="danger" onClick={() => deleteSet(setItem.id)}>
-                  Delete
-                </button>
-              </div>
-            ))}
-          </div>
-        </section>
+          <button type="button" onClick={() => setSetsMenuOpen(false)}>
+            Close
+          </button>
+        </div>
+        <p>Browse and switch between locally stored sets.</p>
+        <div className="set-create">
+          <input
+            value={newSetName}
+            onChange={(event) => setNewSetName(event.target.value)}
+            placeholder="New set name"
+            aria-label="New set name"
+          />
+          <button onClick={createSet}>Create Set</button>
+        </div>
+        <div className="set-list">
+          {sets.map((setItem) => (
+            <div key={setItem.id} className={`set-item ${setItem.id === project.id ? 'active' : ''}`}>
+              <button
+                className="set-select"
+                onClick={() => {
+                  setActiveSetId(setItem.id);
+                  setSetsMenuOpen(false);
+                }}
+              >
+                <strong>{setItem.name}</strong>
+                <span>{setItem.rows.length} rows</span>
+              </button>
+              <button className="danger" onClick={() => deleteSet(setItem.id)}>
+                Delete
+              </button>
+            </div>
+          ))}
+        </div>
+      </aside>
 
+      <main>
         <section className="panel editor-panel">
           <h2>Master Card Layout</h2>
           <p>Drag and resize elements. Changes affect all generated cards.</p>

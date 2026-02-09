@@ -20,6 +20,8 @@ body {
 
 header {
   margin-bottom: 18px;
+  position: relative;
+  padding-left: 56px;
 }
 
 h1,
@@ -42,13 +44,59 @@ p {
 
 main {
   display: grid;
-  grid-template-columns: 320px minmax(0, 1.45fr) minmax(0, 1.15fr);
+  grid-template-columns: minmax(0, 1.45fr) minmax(0, 1.15fr);
   gap: 16px;
 }
 
-.sets-panel {
-  grid-column: 1;
-  grid-row: span 2;
+.hamburger-btn {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 42px;
+  height: 42px;
+  padding: 8px;
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+}
+
+.hamburger-btn span {
+  display: block;
+  height: 2px;
+  background: #1f2937;
+}
+
+.menu-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.35);
+  border: 0;
+  border-radius: 0;
+  z-index: 20;
+}
+
+.sets-drawer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: min(360px, 90vw);
+  height: 100vh;
+  z-index: 30;
+  border-radius: 0 12px 12px 0;
+  transform: translateX(-105%);
+  transition: transform 180ms ease;
+  overflow: auto;
+}
+
+.sets-drawer.open {
+  transform: translateX(0);
+}
+
+.sets-drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
 .panel {
@@ -59,16 +107,16 @@ main {
 }
 
 .editor-panel {
-  grid-column: 2;
+  grid-column: 1;
   grid-row: span 2;
 }
 
 .data-panel {
-  grid-column: 3;
+  grid-column: 2;
 }
 
 .output-panel {
-  grid-column: 3;
+  grid-column: 2;
 }
 
 .editor-controls,
@@ -277,6 +325,16 @@ tr.selected {
 @media (max-width: 1180px) {
   main {
     grid-template-columns: 1fr;
+  }
+
+  header {
+    padding-left: 0;
+    padding-top: 50px;
+  }
+
+  .hamburger-btn {
+    top: 0;
+    left: 0;
   }
 
   .editor-panel {
