@@ -149,6 +149,16 @@ td input:not([type]) {
   width: 100%;
 }
 
+.drop-zone {
+  border: 1px dashed #94a3b8;
+  border-radius: 6px;
+  padding: 4px;
+  margin-bottom: 4px;
+  color: #475569;
+  font-size: 12px;
+  text-align: center;
+}
+
 tr.selected {
   background: #eff6ff;
 }

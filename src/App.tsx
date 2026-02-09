@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type DragEvent } from 'react';
 import { Image as KonvaImage, Layer, Rect, Stage, Text, Transformer } from 'react-konva';
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import type Konva from 'konva';
@@ -141,6 +141,10 @@ export default function App() {
     }
     return project.rows.find((row) => row.id === project.selectedRowId) ?? project.rows[0];
   }, [project.rows, project.selectedRowId]);
+  const selectedRowIndex = useMemo(
+    () => project.rows.findIndex((row) => row.id === selectedRow?.id),
+    [project.rows, selectedRow?.id]
+  );
 
   const previewImageSrc = selectedRow?.localImageDataUrl || selectedRow?.imageUrl;
   const previewImage = useImage(previewImageSrc);
@@ -238,6 +242,15 @@ export default function App() {
       ...current,
       rows: current.rows.map((row) => (row.id === rowId ? { ...row, localImageDataUrl: dataUrl } : row))
     }));
+  }
+
+  async function onRowImageDrop(event: DragEvent<HTMLTableRowElement>, rowId: string) {
+    event.preventDefault();
+    const file = event.dataTransfer.files?.[0];
+    if (!file || !file.type.startsWith('image/')) {
+      return;
+    }
+    await onRowImageUpload(rowId, file);
   }
 
   function updateRow(rowId: string, patch: Partial<FlashcardRow>) {
@@ -589,6 +602,31 @@ export default function App() {
             ) : (
               <p>No rows yet.</p>
             )}
+            <div className="row-buttons">
+              <button
+                onClick={() =>
+                  setProject((current) => ({
+                    ...current,
+                    selectedRowId: current.rows[Math.max((selectedRowIndex || 0) - 1, 0)]?.id
+                  }))
+                }
+                disabled={selectedRowIndex <= 0}
+              >
+                Previous
+              </button>
+              <button
+                onClick={() =>
+                  setProject((current) => ({
+                    ...current,
+                    selectedRowId:
+                      current.rows[Math.min((selectedRowIndex || 0) + 1, Math.max(current.rows.length - 1, 0))]?.id
+                  }))
+                }
+                disabled={selectedRowIndex < 0 || selectedRowIndex >= project.rows.length - 1}
+              >
+                Next
+              </button>
+            </div>
             {currentValidation && (currentValidation.wordOverflow || currentValidation.subtitleOverflow) && (
               <p className="warn">This row has text overflow in one or more text boxes.</p>
             )}
@@ -633,6 +671,8 @@ export default function App() {
                       key={row.id}
                       className={row.id === selectedRow?.id ? 'selected' : undefined}
                       onClick={() => setProject((current) => ({ ...current, selectedRowId: row.id }))}
+                      onDragOver={(event) => event.preventDefault()}
+                      onDrop={(event) => void onRowImageDrop(event, row.id)}
                     >
                       <td>
                         <input
@@ -657,6 +697,7 @@ export default function App() {
                         />
                       </td>
                       <td>
+                        <div className="drop-zone">Drop image here or choose file</div>
                         <input
                           type="file"
                           accept="image/*"
