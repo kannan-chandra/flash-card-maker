@@ -5,8 +5,17 @@ import fontkit from '@pdf-lib/fontkit';
 import tamilFontUrl from '@fontsource/noto-sans-tamil/files/noto-sans-tamil-tamil-400-normal.woff?url';
 import '@fontsource/noto-sans-tamil/400.css';
 import type Konva from 'konva';
-import type { CardPreset, CardTemplate, FlashcardRow, FontFamily, ProjectData, RowValidation, TextElement } from './types';
-import { loadProject, saveProject } from './storage';
+import type {
+  CardPreset,
+  CardTemplate,
+  FlashcardRow,
+  FlashcardSet,
+  FontFamily,
+  ProjectData,
+  RowValidation,
+  TextElement
+} from './types';
+import { loadWorkspace, saveWorkspace } from './storage';
 import { parseCsvInput } from './utils/csv';
 import { splitTextForPdf, validateRows } from './utils/layout';
 
@@ -59,6 +68,22 @@ const EMPTY_PROJECT: ProjectData = {
   showCutGuides: true,
   updatedAt: Date.now()
 };
+
+function makeNewSet(name: string, index: number): FlashcardSet {
+  const now = Date.now();
+  return {
+    ...EMPTY_PROJECT,
+    template: {
+      ...DEFAULT_TEMPLATE,
+      image: { ...DEFAULT_TEMPLATE.image },
+      textElements: DEFAULT_TEMPLATE.textElements.map((item) => ({ ...item })) as CardTemplate['textElements']
+    },
+    id: `set-${now}-${Math.random().toString(36).slice(2, 7)}`,
+    name: name.trim() || `Set ${index}`,
+    createdAt: now,
+    updatedAt: now
+  };
+}
 
 function getPresetGrid(preset: CardPreset): { cols: number; rows: number } {
   if (preset === 6) return { cols: 2, rows: 3 };
@@ -128,7 +153,9 @@ async function fetchImageBytes(row: FlashcardRow): Promise<Uint8Array> {
 }
 
 export default function App() {
-  const [project, setProject] = useState<ProjectData>(EMPTY_PROJECT);
+  const [sets, setSets] = useState<FlashcardSet[]>([]);
+  const [activeSetId, setActiveSetId] = useState<string>('');
+  const [newSetName, setNewSetName] = useState('');
   const [csvInput, setCsvInput] = useState('');
   const [selectedElement, setSelectedElement] = useState<string>('image');
   const [loading, setLoading] = useState(true);
@@ -144,7 +171,14 @@ export default function App() {
   const text2Ref = useRef<Konva.Text>(null);
   const transformerRef = useRef<Konva.Transformer>(null);
 
+  const project = useMemo(() => {
+    return sets.find((setItem) => setItem.id === activeSetId) ?? sets[0] ?? null;
+  }, [sets, activeSetId]);
+
   const selectedRow = useMemo(() => {
+    if (!project) {
+      return undefined;
+    }
     if (!project.rows.length) {
       return undefined;
     }
@@ -152,36 +186,50 @@ export default function App() {
       return project.rows[0];
     }
     return project.rows.find((row) => row.id === project.selectedRowId) ?? project.rows[0];
-  }, [project.rows, project.selectedRowId]);
+  }, [project]);
   const selectedRowIndex = useMemo(
-    () => project.rows.findIndex((row) => row.id === selectedRow?.id),
-    [project.rows, selectedRow?.id]
+    () => (project ? project.rows.findIndex((row) => row.id === selectedRow?.id) : -1),
+    [project, selectedRow?.id]
   );
 
   const previewImageSrc = selectedRow?.localImageDataUrl || selectedRow?.imageUrl;
   const previewImage = useImage(previewImageSrc);
 
-  const validations: RowValidation[] = useMemo(() => validateRows(project.template, project.rows), [project.template, project.rows]);
+  const validations: RowValidation[] = useMemo(() => {
+    if (!project) {
+      return [];
+    }
+    return validateRows(project.template, project.rows);
+  }, [project]);
 
   useEffect(() => {
-    loadProject().then((saved) => {
-      if (saved) {
-        setProject(saved);
+    loadWorkspace().then((saved) => {
+      if (saved?.sets.length) {
+        setSets(saved.sets);
+        setActiveSetId(saved.activeSetId);
+      } else {
+        const firstSet = makeNewSet('Set 1', 1);
+        setSets([firstSet]);
+        setActiveSetId(firstSet.id);
       }
       setLoading(false);
     });
   }, []);
 
   useEffect(() => {
-    if (loading) {
+    if (loading || !sets.length || !activeSetId) {
       return;
     }
-    const next = { ...project, updatedAt: Date.now() };
-    saveProject(next);
-  }, [project, loading]);
+    const nextSets = sets.map((item) => (item.id === activeSetId ? { ...item, updatedAt: Date.now() } : item));
+    saveWorkspace({
+      sets: nextSets,
+      activeSetId,
+      updatedAt: Date.now()
+    });
+  }, [sets, activeSetId, loading]);
 
   useEffect(() => {
-    if (!transformerRef.current) {
+    if (!transformerRef.current || !project) {
       return;
     }
 
@@ -191,10 +239,48 @@ export default function App() {
     if (selectedElement === 'text2' && text2Ref.current) nodes.push(text2Ref.current);
     transformerRef.current.nodes(nodes);
     transformerRef.current.getLayer()?.batchDraw();
-  }, [selectedElement, project.template]);
+  }, [selectedElement, project]);
+
+  function updateActiveSet(updater: (current: FlashcardSet) => FlashcardSet) {
+    setSets((currentSets) =>
+      currentSets.map((item) => {
+        if (item.id !== activeSetId) {
+          return item;
+        }
+        return { ...updater(item), updatedAt: Date.now() };
+      })
+    );
+  }
+
+  function createSet() {
+    setSets((currentSets) => {
+      const nextSet = makeNewSet(newSetName, currentSets.length + 1);
+      setActiveSetId(nextSet.id);
+      setNewSetName('');
+      return [...currentSets, nextSet];
+    });
+  }
+
+  function deleteSet(setId: string) {
+    if (!window.confirm('Delete this set? This only removes it from local browser storage.')) {
+      return;
+    }
+    setSets((currentSets) => {
+      const remaining = currentSets.filter((item) => item.id !== setId);
+      if (!remaining.length) {
+        const fallback = makeNewSet('Set 1', 1);
+        setActiveSetId(fallback.id);
+        return [fallback];
+      }
+      if (setId === activeSetId) {
+        setActiveSetId(remaining[0].id);
+      }
+      return remaining;
+    });
+  }
 
   function patchTemplate(patch: Partial<CardTemplate>) {
-    setProject((current) => ({
+    updateActiveSet((current) => ({
       ...current,
       template: {
         ...current.template,
@@ -204,7 +290,7 @@ export default function App() {
   }
 
   function patchTextElement(id: 'text1' | 'text2', patch: Partial<TextElement>) {
-    setProject((current) => ({
+    updateActiveSet((current) => ({
       ...current,
       template: {
         ...current.template,
@@ -216,7 +302,7 @@ export default function App() {
   }
 
   function replaceRows(rows: FlashcardRow[]) {
-    setProject((current) => ({
+    updateActiveSet((current) => ({
       ...current,
       rows,
       selectedRowId: rows[0]?.id
@@ -224,7 +310,7 @@ export default function App() {
   }
 
   function appendRows(rows: FlashcardRow[]) {
-    setProject((current) => ({
+    updateActiveSet((current) => ({
       ...current,
       rows: [...current.rows, ...rows],
       selectedRowId: current.selectedRowId ?? rows[0]?.id
@@ -250,7 +336,7 @@ export default function App() {
       reader.readAsDataURL(file);
     });
 
-    setProject((current) => ({
+    updateActiveSet((current) => ({
       ...current,
       rows: current.rows.map((row) => (row.id === rowId ? { ...row, localImageDataUrl: dataUrl } : row))
     }));
@@ -266,7 +352,7 @@ export default function App() {
   }
 
   function updateRow(rowId: string, patch: Partial<FlashcardRow>) {
-    setProject((current) => ({
+    updateActiveSet((current) => ({
       ...current,
       rows: current.rows.map((row) => (row.id === rowId ? { ...row, ...patch } : row))
     }));
@@ -274,6 +360,11 @@ export default function App() {
 
   async function generatePdf() {
     if (pdfProgress.active) {
+      return;
+    }
+
+    if (!project) {
+      setPdfStatus('No active set selected.');
       return;
     }
 
@@ -449,6 +540,9 @@ export default function App() {
   if (loading) {
     return <div className="loading">Loading project...</div>;
   }
+  if (!project) {
+    return <div className="loading">No sets available.</div>;
+  }
 
   return (
     <div className="app">
@@ -461,6 +555,33 @@ export default function App() {
       </header>
 
       <main>
+        <section className="panel sets-panel">
+          <h2>Flash Card Sets</h2>
+          <p>Browse and switch between locally stored sets.</p>
+          <div className="set-create">
+            <input
+              value={newSetName}
+              onChange={(event) => setNewSetName(event.target.value)}
+              placeholder="New set name"
+              aria-label="New set name"
+            />
+            <button onClick={createSet}>Create Set</button>
+          </div>
+          <div className="set-list">
+            {sets.map((setItem) => (
+              <div key={setItem.id} className={`set-item ${setItem.id === project.id ? 'active' : ''}`}>
+                <button className="set-select" onClick={() => setActiveSetId(setItem.id)}>
+                  <strong>{setItem.name}</strong>
+                  <span>{setItem.rows.length} rows</span>
+                </button>
+                <button className="danger" onClick={() => deleteSet(setItem.id)}>
+                  Delete
+                </button>
+              </div>
+            ))}
+          </div>
+        </section>
+
         <section className="panel editor-panel">
           <h2>Master Card Layout</h2>
           <p>Drag and resize elements. Changes affect all generated cards.</p>
@@ -660,7 +781,7 @@ export default function App() {
             <div className="row-buttons">
               <button
                 onClick={() =>
-                  setProject((current) => ({
+                  updateActiveSet((current) => ({
                     ...current,
                     selectedRowId: current.rows[Math.max((selectedRowIndex || 0) - 1, 0)]?.id
                   }))
@@ -671,7 +792,7 @@ export default function App() {
               </button>
               <button
                 onClick={() =>
-                  setProject((current) => ({
+                  updateActiveSet((current) => ({
                     ...current,
                     selectedRowId:
                       current.rows[Math.min((selectedRowIndex || 0) + 1, Math.max(current.rows.length - 1, 0))]?.id
@@ -725,7 +846,7 @@ export default function App() {
                     <tr
                       key={row.id}
                       className={row.id === selectedRow?.id ? 'selected' : undefined}
-                      onClick={() => setProject((current) => ({ ...current, selectedRowId: row.id }))}
+                      onClick={() => updateActiveSet((current) => ({ ...current, selectedRowId: row.id }))}
                       onDragOver={(event) => event.preventDefault()}
                       onDrop={(event) => void onRowImageDrop(event, row.id)}
                     >
@@ -791,7 +912,7 @@ export default function App() {
             Cards per page
             <select
               value={project.preset}
-              onChange={(event) => setProject((current) => ({ ...current, preset: Number(event.target.value) as CardPreset }))}
+              onChange={(event) => updateActiveSet((current) => ({ ...current, preset: Number(event.target.value) as CardPreset }))}
             >
               <option value={6}>6 per page</option>
               <option value={8}>8 per page</option>
@@ -803,7 +924,7 @@ export default function App() {
             <input
               type="checkbox"
               checked={project.showCutGuides}
-              onChange={(event) => setProject((current) => ({ ...current, showCutGuides: event.target.checked }))}
+              onChange={(event) => updateActiveSet((current) => ({ ...current, showCutGuides: event.target.checked }))}
             />
             Include cut guide borders
           </label>

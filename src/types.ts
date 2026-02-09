@@ -56,3 +56,15 @@ export interface ProjectData {
   selectedRowId?: string;
   updatedAt: number;
 }
+
+export interface FlashcardSet extends ProjectData {
+  id: string;
+  name: string;
+  createdAt: number;
+}
+
+export interface WorkspaceData {
+  sets: FlashcardSet[];
+  activeSetId: string;
+  updatedAt: number;
+}

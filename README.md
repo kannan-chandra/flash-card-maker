@@ -4,6 +4,7 @@ Frontend-only flashcard generator for GitHub Pages. Users design one master card
 
 ## Features
 - Master card editor with drag/resize for one image and two text boxes
+- Multiple flashcard sets stored locally, with set browser/create/delete
 - Text settings: role mapping (`word` or `subtitle`), font, size, alignment
 - Row list management via CSV paste/import (header or no-header) and manual edits
 - Per-row image sources:
@@ -18,12 +19,9 @@ Frontend-only flashcard generator for GitHub Pages. Users design one master card
 - Local persistence in IndexedDB, with clear local-only data warning
 
 ## Data Model
-The app stores one project object locally:
-- `template`: card layout and style JSON
-- `rows`: list of `word`, `subtitle`, `imageUrl`, optional local image data URL
-- `preset`: cards-per-page setting
-- `showCutGuides`: PDF border toggle
-- `selectedRowId`: row focused in preview
+The app stores one local workspace object:
+- `sets`: each set includes template, rows, preset, and preview state
+- `activeSetId`: currently opened set
 
 ## CSV Input
 Supported formats:
@@ -32,7 +30,7 @@ Supported formats:
 
 ## Important Notes
 - No backend is used and no file/image upload to a server occurs.
-- Data is only in browser storage. Clearing browser data removes projects.
+- Data is only in browser storage. Clearing browser data removes all sets.
 - Some web image hosts block cross-origin fetches required for browser-side PDF generation.
 - Workaround for blocked images: save image locally and upload via row file input.
 
