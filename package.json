@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "emoji:list": "node scripts/export-emoji-support.mjs"
   },
   "dependencies": {
     "@fontsource/noto-sans-tamil": "^5.2.7",

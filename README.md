@@ -68,3 +68,10 @@ Current Playwright coverage includes:
 - Per-row local image upload
 - PDF generation and download assertion
 - No uncaught runtime errors during that flow
+
+## Emoji Support List
+- Generate full supported emoji keyword list:
+```bash
+npm run emoji:list
+```
+- Output file: `emoji-supported.tsv` (columns: `emoji`, `keywords`)

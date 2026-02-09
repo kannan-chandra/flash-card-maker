@@ -1,10 +1,12 @@
 import emojiData from 'emojibase-data/en/data.json';
+import emojiMessages from 'emojibase-data/en/messages.json';
 
 interface EmojiRecord {
   emoji: string;
   label?: string;
   tags?: string[];
   group?: number;
+  subgroup?: number;
   type?: number;
 }
 
@@ -16,7 +18,17 @@ const NOUN_GROUPS = new Set<number>([
   7 // objects
 ]);
 
-// Keep a few person nouns explicitly, without pulling in gesture-heavy groups.
+const PERSON_SUBGROUP_KEYS = new Set<string>(['person-role', 'person-activity', 'person-sport', 'person-resting']);
+
+interface EmojiMessages {
+  subgroups: Array<{ key: string; order: number }>;
+}
+const messages = emojiMessages as EmojiMessages;
+const PERSON_SUBGROUP_ORDERS = new Set<number>(
+  messages.subgroups.filter((entry) => PERSON_SUBGROUP_KEYS.has(entry.key)).map((entry) => entry.order)
+);
+
+// Keep a few person nouns explicitly in addition to activity/occupation subgroups.
 const NOUN_PERSON_OVERRIDES: Array<{ emoji: string; keywords: string[] }> = [
   { emoji: '👶', keywords: ['baby', 'infant', 'newborn'] },
   { emoji: '👦', keywords: ['boy'] },
@@ -71,7 +83,9 @@ function singularize(word: string): string {
 const keywordToEmoji = new Map<string, string>();
 
 for (const item of records) {
-  if (item.type !== 1 || !item.emoji || item.group === undefined || !NOUN_GROUPS.has(item.group)) {
+  const inNounGroup = item.group !== undefined && NOUN_GROUPS.has(item.group);
+  const inAllowedPersonSubgroup = item.subgroup !== undefined && PERSON_SUBGROUP_ORDERS.has(item.subgroup);
+  if (item.type !== 1 || !item.emoji || (!inNounGroup && !inAllowedPersonSubgroup)) {
     continue;
   }
 
