@@ -160,7 +160,7 @@ export default function App() {
   const [setsMenuOpen, setSetsMenuOpen] = useState(false);
   const [csvInput, setCsvInput] = useState('');
   const [imageUrlDraft, setImageUrlDraft] = useState('');
-  const [selectedElement, setSelectedElement] = useState<string>('image');
+  const [selectedElement, setSelectedElement] = useState<'image' | 'text1' | 'text2' | null>(null);
   const [loading, setLoading] = useState(true);
   const [pdfStatus, setPdfStatus] = useState<string>('');
   const [pdfProgress, setPdfProgress] = useState<{ active: boolean; percent: number; stage: string }>({
@@ -266,6 +266,13 @@ export default function App() {
     transformerRef.current.nodes(nodes);
     transformerRef.current.getLayer()?.batchDraw();
   }, [selectedElement, project, imageIsEmpty]);
+
+  function onStagePointerDown(event: Konva.KonvaEventObject<MouseEvent | TouchEvent>) {
+    const target = event.target;
+    if (target === target.getStage() || target.name() === 'canvas-bg') {
+      setSelectedElement(null);
+    }
+  }
 
   useEffect(() => {
     setImageUrlDraft(selectedRow?.imageUrl ?? '');
@@ -777,9 +784,16 @@ export default function App() {
                 })()}
               </div>
 
-              <Stage width={project.template.width} height={project.template.height} className="stage">
+              <Stage
+                width={project.template.width}
+                height={project.template.height}
+                className="stage"
+                onMouseDown={onStagePointerDown}
+                onTouchStart={onStagePointerDown}
+              >
                 <Layer>
                   <Rect
+                    name="canvas-bg"
                     x={0}
                     y={0}
                     width={project.template.width}
