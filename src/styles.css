@@ -143,6 +143,14 @@ main {
   background: #f8fafc;
 }
 
+.card-detail-panel .emoji-prompt {
+  margin: 10px 0;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #eef2ff;
+  padding: 8px;
+}
+
 label {
   display: flex;
   flex-direction: column;

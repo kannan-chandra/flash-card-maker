@@ -17,6 +17,7 @@ import type {
 } from './types';
 import { loadWorkspace, saveWorkspace } from './storage';
 import { parseCsvInput } from './utils/csv';
+import { createEmojiImageDataUrl, findEmojiForWord } from './utils/emoji';
 import { splitTextForPdf, validateRows } from './utils/layout';
 
 const FONT_FAMILIES: FontFamily[] = ['Arial', 'Verdana', 'Times New Roman', 'Georgia', 'Courier New', 'Noto Sans Tamil'];
@@ -161,6 +162,7 @@ export default function App() {
   const [selectedElement, setSelectedElement] = useState<string>('image');
   const [loading, setLoading] = useState(true);
   const [pdfStatus, setPdfStatus] = useState<string>('');
+  const [emojiBulkPrompt, setEmojiBulkPrompt] = useState<{ emoji: string; count: number } | null>(null);
   const [pdfProgress, setPdfProgress] = useState<{ active: boolean; percent: number; stage: string }>({
     active: false,
     percent: 0,
@@ -188,6 +190,13 @@ export default function App() {
     }
     return project.rows.find((row) => row.id === project.selectedRowId) ?? project.rows[0];
   }, [project]);
+  const selectedRowEmoji = useMemo(() => findEmojiForWord(selectedRow?.word ?? ''), [selectedRow?.word]);
+  const canUseEmojiForSelectedRow = useMemo(() => {
+    if (!selectedRow || !selectedRowEmoji) {
+      return false;
+    }
+    return !selectedRow.imageUrl && !selectedRow.localImageDataUrl;
+  }, [selectedRow, selectedRowEmoji]);
   const selectedRowIndex = useMemo(
     () => (project ? project.rows.findIndex((row) => row.id === selectedRow?.id) : -1),
     [project, selectedRow?.id]
@@ -372,6 +381,51 @@ export default function App() {
       ...current,
       rows: current.rows.map((row) => (row.id === rowId ? { ...row, ...patch } : row))
     }));
+  }
+
+  function countRowsEligibleForEmoji() {
+    if (!project) {
+      return 0;
+    }
+    return project.rows.filter((row) => !row.imageUrl && !row.localImageDataUrl && Boolean(findEmojiForWord(row.word))).length;
+  }
+
+  function applyEmojiToRow(rowId: string, emoji: string) {
+    const dataUrl = createEmojiImageDataUrl(emoji);
+    updateRow(rowId, { localImageDataUrl: dataUrl, imageUrl: '' });
+  }
+
+  function onUseEmojiForSelectedRow() {
+    if (!selectedRow || !selectedRowEmoji) {
+      return;
+    }
+
+    applyEmojiToRow(selectedRow.id, selectedRowEmoji);
+    const eligibleCount = countRowsEligibleForEmoji();
+    const others = Math.max(eligibleCount - 1, 0);
+    if (others > 0) {
+      setEmojiBulkPrompt({ emoji: selectedRowEmoji, count: others });
+    } else {
+      setEmojiBulkPrompt(null);
+    }
+  }
+
+  function onApplyEmojiToAllMissingImages() {
+    updateActiveSet((current) => ({
+      ...current,
+      rows: current.rows.map((row) => {
+        if (row.imageUrl || row.localImageDataUrl) {
+          return row;
+        }
+        const emoji = findEmojiForWord(row.word);
+        if (!emoji) {
+          return row;
+        }
+        return { ...row, localImageDataUrl: createEmojiImageDataUrl(emoji), imageUrl: '' };
+      })
+    }));
+    setEmojiBulkPrompt(null);
+    setPdfStatus('Applied emoji images to rows with matching words and no image.');
   }
 
   async function generatePdf() {
@@ -863,7 +917,10 @@ export default function App() {
                     Word
                     <input
                       value={selectedRow.word}
-                      onChange={(event) => updateRow(selectedRow.id, { word: event.target.value })}
+                      onChange={(event) => {
+                        setEmojiBulkPrompt(null);
+                        updateRow(selectedRow.id, { word: event.target.value });
+                      }}
                       aria-label="Selected row word"
                     />
                   </label>
@@ -884,6 +941,26 @@ export default function App() {
                       placeholder="https://..."
                     />
                   </label>
+                  {canUseEmojiForSelectedRow && (
+                    <button type="button" onClick={onUseEmojiForSelectedRow}>
+                      Use emoji for image ({selectedRowEmoji})
+                    </button>
+                  )}
+                  {emojiBulkPrompt && (
+                    <div className="emoji-prompt">
+                      <p>
+                        Apply emoji images for {emojiBulkPrompt.count} other rows with missing images and available matches?
+                      </p>
+                      <div className="row-buttons">
+                        <button type="button" onClick={onApplyEmojiToAllMissingImages}>
+                          Yes, apply to all
+                        </button>
+                        <button type="button" onClick={() => setEmojiBulkPrompt(null)}>
+                          Not now
+                        </button>
+                      </div>
+                    </div>
+                  )}
                   <div className="drop-zone large" onDragOver={(event) => event.preventDefault()} onDrop={(event) => void onSelectedRowImageDrop(event)}>
                     Drop image here
                   </div>

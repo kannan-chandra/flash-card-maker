@@ -45,3 +45,16 @@ test('flags long unbroken words as overflow', async ({ page }) => {
   const statusCell = page.locator('tbody tr').first().locator('td').nth(3);
   await expect(statusCell).toContainText('Word overflow');
 });
+
+test('can use emoji image for selected row and suggest bulk apply', async ({ page }) => {
+  await page.goto('/');
+
+  await page.locator('textarea').first().fill('word,subtitle\nbaby,one\nlion,two');
+  await page.getByRole('button', { name: 'Import CSV' }).click();
+
+  await page.getByRole('button', { name: /Use emoji for image/i }).click();
+  await expect(page.getByText(/Apply emoji images for/i)).toBeVisible();
+
+  const firstStatus = page.locator('tbody tr').first().locator('td').nth(3);
+  await expect(firstStatus).toContainText('Fits');
+});
