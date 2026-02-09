@@ -133,6 +133,11 @@ export default function App() {
   const [selectedElement, setSelectedElement] = useState<string>('image');
   const [loading, setLoading] = useState(true);
   const [pdfStatus, setPdfStatus] = useState<string>('');
+  const [pdfProgress, setPdfProgress] = useState<{ active: boolean; percent: number; stage: string }>({
+    active: false,
+    percent: 0,
+    stage: ''
+  });
   const [imageIssues, setImageIssues] = useState<Record<string, string>>({});
   const imageRef = useRef<Konva.Image>(null);
   const text1Ref = useRef<Konva.Text>(null);
@@ -268,12 +273,25 @@ export default function App() {
   }
 
   async function generatePdf() {
+    if (pdfProgress.active) {
+      return;
+    }
+
     if (!project.rows.length) {
       setPdfStatus('Add at least one row before generating PDF.');
       return;
     }
 
-    setPdfStatus('Generating PDF...');
+    const setProgress = (percent: number, stage: string) => {
+      setPdfProgress({
+        active: true,
+        percent: Math.max(0, Math.min(100, Math.round(percent))),
+        stage
+      });
+      setPdfStatus(stage);
+    };
+
+    setProgress(0, 'Preparing PDF...');
     setImageIssues({});
 
     const doc = await PDFDocument.create();
@@ -284,8 +302,10 @@ export default function App() {
       tamilFont = await doc.embedFont(tamilFontBytes, { subset: true });
     } catch {
       setPdfStatus('Failed to load Tamil font for PDF export.');
+      setPdfProgress({ active: false, percent: 0, stage: '' });
       return;
     }
+    setProgress(5, 'Preparing layout...');
     const standardFontCache = new Map<StandardFonts, PDFFont>();
     const grid = getPresetGrid(project.preset);
     const pageWidth = 612;
@@ -308,8 +328,15 @@ export default function App() {
     const cols = grid.cols;
     const perPage = grid.cols * grid.rows;
     const nextIssues: Record<string, string> = {};
+    const totalRows = project.rows.length;
 
     for (let i = 0; i < project.rows.length; i += 1) {
+      const renderPercent = 10 + ((i + 1) / totalRows) * 80;
+      setProgress(renderPercent, `Rendering card ${i + 1} of ${totalRows}...`);
+      if (i % 4 === 0) {
+        await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+      }
+
       if (i % perPage === 0) {
         doc.addPage([pageWidth, pageHeight]);
       }
@@ -397,7 +424,9 @@ export default function App() {
       }
     }
 
+    setProgress(92, 'Finalizing PDF file...');
     const bytes = await doc.save();
+    setProgress(98, 'Starting download...');
     const blob = new Blob([new Uint8Array(bytes)], { type: 'application/pdf' });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement('a');
@@ -405,6 +434,7 @@ export default function App() {
     anchor.download = 'flashcards.pdf';
     anchor.click();
     URL.revokeObjectURL(url);
+    setPdfProgress({ active: false, percent: 100, stage: '' });
 
     setImageIssues(nextIssues);
     if (Object.keys(nextIssues).length) {
@@ -778,9 +808,21 @@ export default function App() {
             Include cut guide borders
           </label>
 
-          <button className="primary" onClick={generatePdf}>
-            Generate PDF
+          <button className="primary" onClick={generatePdf} disabled={pdfProgress.active}>
+            {pdfProgress.active ? 'Generating...' : 'Generate PDF'}
           </button>
+
+          {pdfProgress.active && (
+            <div className="progress-wrap" aria-live="polite">
+              <div className="progress-label">
+                <span>{pdfProgress.stage}</span>
+                <span>{pdfProgress.percent}%</span>
+              </div>
+              <div className="progress-track" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pdfProgress.percent}>
+                <div className="progress-fill" style={{ width: `${pdfProgress.percent}%` }} />
+              </div>
+            </div>
+          )}
 
           {pdfStatus && <p className="status">{pdfStatus}</p>}
 
