@@ -56,3 +56,14 @@ npm run dev
 ```bash
 npm run build
 ```
+
+## Browser E2E Test
+```bash
+npm run test:e2e
+```
+
+Current Playwright coverage includes:
+- CSV import with Tamil text
+- Per-row local image upload
+- PDF generation and download assertion
+- No uncaught runtime errors during that flow
