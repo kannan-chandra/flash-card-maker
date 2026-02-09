@@ -170,6 +170,7 @@ export default function App() {
   });
   const [imageIssues, setImageIssues] = useState<Record<string, string>>({});
   const imageRef = useRef<Konva.Image>(null);
+  const imagePlaceholderRef = useRef<Konva.Rect>(null);
   const text1Ref = useRef<Konva.Text>(null);
   const text2Ref = useRef<Konva.Text>(null);
   const transformerRef = useRef<Konva.Transformer>(null);
@@ -217,6 +218,7 @@ export default function App() {
 
   const previewImageSrc = selectedRow?.localImageDataUrl || selectedRow?.imageUrl;
   const previewImage = useImage(previewImageSrc);
+  const imageIsEmpty = !previewImageSrc;
 
   const validations: RowValidation[] = useMemo(() => {
     if (!project) {
@@ -257,12 +259,13 @@ export default function App() {
     }
 
     const nodes: Konva.Node[] = [];
-    if (selectedElement === 'image' && imageRef.current) nodes.push(imageRef.current);
+    if (selectedElement === 'image' && imageIsEmpty && imagePlaceholderRef.current) nodes.push(imagePlaceholderRef.current);
+    if (selectedElement === 'image' && !imageIsEmpty && imageRef.current) nodes.push(imageRef.current);
     if (selectedElement === 'text1' && text1Ref.current) nodes.push(text1Ref.current);
     if (selectedElement === 'text2' && text2Ref.current) nodes.push(text2Ref.current);
     transformerRef.current.nodes(nodes);
     transformerRef.current.getLayer()?.batchDraw();
-  }, [selectedElement, project]);
+  }, [selectedElement, project, imageIsEmpty]);
 
   useEffect(() => {
     setImageUrlDraft(selectedRow?.imageUrl ?? '');
@@ -422,6 +425,27 @@ export default function App() {
     }
     updateRow(selectedRow.id, { imageUrl: '', localImageDataUrl: undefined });
     setImageUrlDraft('');
+  }
+
+  function getSelectionInfo() {
+    if (selectedElement === 'image') {
+      return {
+        x: project.template.image.x,
+        y: project.template.image.y,
+        width: project.template.image.width,
+        label: 'Image'
+      };
+    }
+    const textElement = project.template.textElements.find((item) => item.id === selectedElement);
+    if (!textElement) {
+      return null;
+    }
+    return {
+      x: textElement.x,
+      y: textElement.y,
+      width: textElement.width,
+      label: textElement.role === 'word' ? 'Word' : 'Subtitle'
+    };
   }
 
   async function generatePdf() {
@@ -705,18 +729,6 @@ export default function App() {
                     return (
                       <>
                         <label>
-                          Text role
-                          <select
-                            value={selectedText.role}
-                            onChange={(event) =>
-                              patchTextElement(selectedText.id, { role: event.target.value as TextElement['role'] })
-                            }
-                          >
-                            <option value="word">Word</option>
-                            <option value="subtitle">Subtitle</option>
-                          </select>
-                        </label>
-                        <label>
                           Font
                           <select
                             value={selectedText.fontFamily}
@@ -811,54 +823,143 @@ export default function App() {
                     stroke={selectedElement === 'image' ? '#2563eb' : undefined}
                     strokeWidth={selectedElement === 'image' ? 2 : 0}
                   />
-
-                  {project.template.textElements.map((textElement, index) => {
-                    const textValue = selectedRow ? fitTextValue(selectedRow, textElement.role) : `[${textElement.role}]`;
-                    return (
-                      <Text
-                        key={textElement.id}
-                        ref={index === 0 ? text1Ref : text2Ref}
-                        text={textValue}
-                        x={textElement.x}
-                        y={textElement.y}
-                        width={textElement.width}
-                        height={textElement.height}
-                        fontSize={textElement.fontSize}
-                        fontFamily={textElement.fontFamily}
-                        fill={textElement.color}
-                        align={textElement.align}
-                        lineHeight={textElement.lineHeight}
-                        verticalAlign="middle"
-                        padding={4}
-                        ellipsis
-                        wrap="word"
-                        draggable
-                        onClick={() => setSelectedElement(textElement.id)}
-                        onTap={() => setSelectedElement(textElement.id)}
-                        onDragEnd={(event) =>
-                          patchTextElement(textElement.id, {
+                  {imageIsEmpty && (
+                    <Rect
+                      ref={imagePlaceholderRef}
+                      x={project.template.image.x}
+                      y={project.template.image.y}
+                      width={project.template.image.width}
+                      height={project.template.image.height}
+                      stroke={selectedElement === 'image' ? '#2563eb' : '#94a3b8'}
+                      strokeWidth={1}
+                      dash={[4, 4]}
+                      fill="rgba(0,0,0,0)"
+                      draggable
+                      onClick={() => setSelectedElement('image')}
+                      onTap={() => setSelectedElement('image')}
+                      onDragEnd={(event) =>
+                        patchTemplate({
+                          image: {
+                            ...project.template.image,
                             x: event.target.x(),
                             y: event.target.y()
-                          })
-                        }
-                        onTransformEnd={(event) => {
-                          const node = event.target;
-                          const scaleX = node.scaleX();
-                          const scaleY = node.scaleY();
-                          patchTextElement(textElement.id, {
+                          }
+                        })
+                      }
+                      onTransformEnd={(event) => {
+                        const node = event.target;
+                        const scaleX = node.scaleX();
+                        const scaleY = node.scaleY();
+                        patchTemplate({
+                          image: {
                             x: node.x(),
                             y: node.y(),
-                            width: Math.max(40, node.width() * scaleX),
-                            height: Math.max(30, node.height() * scaleY)
-                          });
-                          node.scaleX(1);
-                          node.scaleY(1);
-                        }}
-                        stroke={selectedElement === textElement.id ? '#2563eb' : '#9ca3af'}
-                        strokeWidth={1}
-                      />
+                            width: Math.max(20, node.width() * scaleX),
+                            height: Math.max(20, node.height() * scaleY)
+                          }
+                        });
+                        node.scaleX(1);
+                        node.scaleY(1);
+                      }}
+                    />
+                  )}
+
+                  {project.template.textElements.map((textElement, index) => {
+                    const textValue = selectedRow ? fitTextValue(selectedRow, textElement.role) : '';
+                    const textIsEmpty = !textValue.trim();
+                    return (
+                      [
+                        <Text
+                          key={`${textElement.id}-text`}
+                          ref={index === 0 ? text1Ref : text2Ref}
+                          text={textValue}
+                          x={textElement.x}
+                          y={textElement.y}
+                          width={textElement.width}
+                          height={textElement.height}
+                          fontSize={textElement.fontSize}
+                          fontFamily={textElement.fontFamily}
+                          fill={textElement.color}
+                          align={textElement.align}
+                          lineHeight={textElement.lineHeight}
+                          verticalAlign="middle"
+                          padding={4}
+                          ellipsis
+                          wrap="word"
+                          draggable
+                          onClick={() => setSelectedElement(textElement.id)}
+                          onTap={() => setSelectedElement(textElement.id)}
+                          onDragEnd={(event) =>
+                            patchTextElement(textElement.id, {
+                              x: event.target.x(),
+                              y: event.target.y()
+                            })
+                          }
+                          onTransformEnd={(event) => {
+                            const node = event.target;
+                            const scaleX = node.scaleX();
+                            const scaleY = node.scaleY();
+                            patchTextElement(textElement.id, {
+                              x: node.x(),
+                              y: node.y(),
+                              width: Math.max(40, node.width() * scaleX),
+                              height: Math.max(30, node.height() * scaleY)
+                            });
+                            node.scaleX(1);
+                            node.scaleY(1);
+                          }}
+                          stroke={selectedElement === textElement.id ? '#2563eb' : '#9ca3af'}
+                          strokeWidth={1}
+                        />
+                        ,
+                        textIsEmpty && (
+                          <Rect
+                            key={`${textElement.id}-empty`}
+                            x={textElement.x}
+                            y={textElement.y}
+                            width={textElement.width}
+                            height={textElement.height}
+                            stroke={selectedElement === textElement.id ? '#2563eb' : '#94a3b8'}
+                            strokeWidth={1}
+                            dash={[4, 4]}
+                            fill="rgba(0,0,0,0)"
+                            onClick={() => setSelectedElement(textElement.id)}
+                            onTap={() => setSelectedElement(textElement.id)}
+                          />
+                        )
+                      ]
                     );
                   })}
+
+                  {(() => {
+                    const selection = getSelectionInfo();
+                    if (!selection) {
+                      return null;
+                    }
+                    const labelWidth = Math.max(70, selection.label.length * 9 + 18);
+                    return (
+                      <>
+                        <Rect
+                          x={selection.x}
+                          y={Math.max(4, selection.y - 24)}
+                          width={labelWidth}
+                          height={20}
+                          fill="#2563eb"
+                          cornerRadius={4}
+                          listening={false}
+                        />
+                        <Text
+                          x={selection.x + 8}
+                          y={Math.max(7, selection.y - 21)}
+                          text={selection.label}
+                          fill="#ffffff"
+                          fontSize={12}
+                          fontStyle="bold"
+                          listening={false}
+                        />
+                      </>
+                    );
+                  })()}
 
                   <Transformer ref={transformerRef} rotateEnabled={false} flipEnabled={false} keepRatio={false} />
                 </Layer>
