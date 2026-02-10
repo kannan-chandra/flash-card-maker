@@ -105,7 +105,6 @@ export function CanvasEditor(props: CanvasEditorProps) {
   const stageScale = stageViewportWidth > 0 ? Math.min(1, stageViewportWidth / project.template.width) : 1;
   const scaledStageWidth = project.template.width * stageScale;
   const scaledStageHeight = stageHeight * stageScale;
-  const toTemplateCoord = (value: number) => (stageScale > 0 ? value / stageScale : value);
 
   const editingTextElement = useMemo(
     () => project.template.textElements.find((item) => item.id === editingTextId),
@@ -398,12 +397,11 @@ export function CanvasEditor(props: CanvasEditorProps) {
                 onClick={() => onSelectElement('image')}
                 onTap={() => onSelectElement('image')}
                 onDragEnd={(event) => {
-                  const nextY = toTemplateCoord(event.target.y());
-                  const sideResult = fromCanvasY(nextY, project.template.image.height);
+                  const sideResult = fromCanvasY(event.target.y(), project.template.image.height);
                   onPatchTemplate({
                     image: {
                       ...project.template.image,
-                      x: toTemplateCoord(event.target.x()),
+                      x: event.target.x(),
                       y: sideResult.y,
                       side: sideResult.side
                     }
@@ -413,12 +411,12 @@ export function CanvasEditor(props: CanvasEditorProps) {
                   const node = event.target;
                   const scaleX = node.scaleX();
                   const scaleY = node.scaleY();
-                  const nextWidth = Math.max(20, toTemplateCoord(node.width() * scaleX));
-                  const nextHeight = Math.max(20, toTemplateCoord(node.height() * scaleY));
-                  const sideResult = fromCanvasY(toTemplateCoord(node.y()), nextHeight);
+                  const nextWidth = Math.max(20, node.width() * scaleX);
+                  const nextHeight = Math.max(20, node.height() * scaleY);
+                  const sideResult = fromCanvasY(node.y(), nextHeight);
                   onPatchTemplate({
                     image: {
-                      x: toTemplateCoord(node.x()),
+                      x: node.x(),
                       y: sideResult.y,
                       side: sideResult.side,
                       width: nextWidth,
@@ -446,12 +444,11 @@ export function CanvasEditor(props: CanvasEditorProps) {
                   onClick={() => onSelectElement('image')}
                   onTap={() => onSelectElement('image')}
                   onDragEnd={(event) => {
-                    const nextY = toTemplateCoord(event.target.y());
-                    const sideResult = fromCanvasY(nextY, project.template.image.height);
+                    const sideResult = fromCanvasY(event.target.y(), project.template.image.height);
                     onPatchTemplate({
                       image: {
                         ...project.template.image,
-                        x: toTemplateCoord(event.target.x()),
+                        x: event.target.x(),
                         y: sideResult.y,
                         side: sideResult.side
                       }
@@ -461,12 +458,12 @@ export function CanvasEditor(props: CanvasEditorProps) {
                     const node = event.target;
                     const scaleX = node.scaleX();
                     const scaleY = node.scaleY();
-                    const nextWidth = Math.max(20, toTemplateCoord(node.width() * scaleX));
-                    const nextHeight = Math.max(20, toTemplateCoord(node.height() * scaleY));
-                    const sideResult = fromCanvasY(toTemplateCoord(node.y()), nextHeight);
+                    const nextWidth = Math.max(20, node.width() * scaleX);
+                    const nextHeight = Math.max(20, node.height() * scaleY);
+                    const sideResult = fromCanvasY(node.y(), nextHeight);
                     onPatchTemplate({
                       image: {
-                        x: toTemplateCoord(node.x()),
+                        x: node.x(),
                         y: sideResult.y,
                         side: sideResult.side,
                         width: nextWidth,
@@ -508,10 +505,9 @@ export function CanvasEditor(props: CanvasEditorProps) {
                     onDblClick={() => startEditingText(textElement.id)}
                     onDblTap={() => startEditingText(textElement.id)}
                     onDragEnd={(event) => {
-                      const nextY = toTemplateCoord(event.target.y());
-                      const sideResult = fromCanvasY(nextY, textElement.height);
+                      const sideResult = fromCanvasY(event.target.y(), textElement.height);
                       onPatchTextElement(textElement.id, {
-                        x: toTemplateCoord(event.target.x()),
+                        x: event.target.x(),
                         y: sideResult.y,
                         side: sideResult.side
                       });
@@ -520,11 +516,11 @@ export function CanvasEditor(props: CanvasEditorProps) {
                       const node = event.target;
                       const scaleX = node.scaleX();
                       const scaleY = node.scaleY();
-                      const nextWidth = Math.max(40, toTemplateCoord(node.width() * scaleX));
-                      const nextHeight = Math.max(30, toTemplateCoord(node.height() * scaleY));
-                      const sideResult = fromCanvasY(toTemplateCoord(node.y()), nextHeight);
+                      const nextWidth = Math.max(40, node.width() * scaleX);
+                      const nextHeight = Math.max(30, node.height() * scaleY);
+                      const sideResult = fromCanvasY(node.y(), nextHeight);
                       onPatchTextElement(textElement.id, {
-                        x: toTemplateCoord(node.x()),
+                        x: node.x(),
                         y: sideResult.y,
                         side: sideResult.side,
                         width: nextWidth,
@@ -554,10 +550,9 @@ export function CanvasEditor(props: CanvasEditorProps) {
                       onDblClick={() => startEditingText(textElement.id)}
                       onDblTap={() => startEditingText(textElement.id)}
                       onDragEnd={(event) => {
-                        const nextY = toTemplateCoord(event.target.y());
-                        const sideResult = fromCanvasY(nextY, textElement.height);
+                        const sideResult = fromCanvasY(event.target.y(), textElement.height);
                         onPatchTextElement(textElement.id, {
-                          x: toTemplateCoord(event.target.x()),
+                          x: event.target.x(),
                           y: sideResult.y,
                           side: sideResult.side
                         });
@@ -566,11 +561,11 @@ export function CanvasEditor(props: CanvasEditorProps) {
                         const node = event.target;
                         const scaleX = node.scaleX();
                         const scaleY = node.scaleY();
-                        const nextWidth = Math.max(40, toTemplateCoord(node.width() * scaleX));
-                        const nextHeight = Math.max(30, toTemplateCoord(node.height() * scaleY));
-                        const sideResult = fromCanvasY(toTemplateCoord(node.y()), nextHeight);
+                        const nextWidth = Math.max(40, node.width() * scaleX);
+                        const nextHeight = Math.max(30, node.height() * scaleY);
+                        const sideResult = fromCanvasY(node.y(), nextHeight);
                         onPatchTextElement(textElement.id, {
-                          x: toTemplateCoord(node.x()),
+                          x: node.x(),
                           y: sideResult.y,
                           side: sideResult.side,
                           width: nextWidth,
