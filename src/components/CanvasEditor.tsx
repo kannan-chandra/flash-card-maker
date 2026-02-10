@@ -617,6 +617,7 @@ export function CanvasEditor(props: CanvasEditorProps) {
               )}
             </div>
           </div>
+          {children}
 
           <div className="preview-meta">
             <h3>Row preview</h3>
@@ -640,7 +641,6 @@ export function CanvasEditor(props: CanvasEditorProps) {
             )}
           </div>
         </div>
-        {children}
       </div>
     </section>
   );
