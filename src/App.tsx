@@ -276,6 +276,31 @@ export default function App() {
     });
   }
 
+  function onInsertRowAfter(rowId: string): string | undefined {
+    let insertedId: string | undefined;
+    updateActiveSet((current) => {
+      const rowIndex = current.rows.findIndex((row) => row.id === rowId);
+      if (rowIndex < 0) {
+        return current;
+      }
+      insertedId = makeRowId();
+      const nextRow = {
+        id: insertedId,
+        word: '',
+        subtitle: '',
+        imageUrl: ''
+      };
+      const nextRows = [...current.rows];
+      nextRows.splice(rowIndex + 1, 0, nextRow);
+      return {
+        ...current,
+        rows: nextRows,
+        selectedRowId: current.selectedRowId
+      };
+    });
+    return insertedId;
+  }
+
   if (loading) {
     return <div className="loading">Loading project...</div>;
   }
@@ -379,6 +404,7 @@ export default function App() {
           onSelectRow={(rowId) => updateActiveSet((current) => ({ ...current, selectedRowId: rowId }))}
           onUpdateRow={updateRow}
           onAppendRow={onAppendRow}
+          onInsertRowAfter={onInsertRowAfter}
           onDeleteRow={onDeleteRow}
         />
 

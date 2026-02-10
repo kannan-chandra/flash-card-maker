@@ -13,6 +13,7 @@ interface WordListPanelProps {
   onSelectRow: (rowId: string) => void;
   onUpdateRow: (rowId: string, patch: Partial<FlashcardRow>) => void;
   onAppendRow: (row: Pick<FlashcardRow, 'word' | 'subtitle'>) => void;
+  onInsertRowAfter: (rowId: string) => string | undefined;
   onDeleteRow: (rowId: string) => void;
 }
 
@@ -29,6 +30,7 @@ export function WordListPanel(props: WordListPanelProps) {
     onSelectRow,
     onUpdateRow,
     onAppendRow,
+    onInsertRowAfter,
     onDeleteRow
   } = props;
   const [csvModalOpen, setCsvModalOpen] = useState(false);
@@ -173,14 +175,14 @@ export function WordListPanel(props: WordListPanelProps) {
     if (rowIndex < 0 || isRowEmpty(rows[rowIndex])) {
       return;
     }
-    const nextRow = rows[rowIndex + 1];
-    if (!nextRow) {
-      scheduleSelectionCommit(undefined);
-      focusInput('__draft__', 'word', { arrowDirection: 'down' });
+    const insertedRowId = onInsertRowAfter(rowId);
+    if (!insertedRowId) {
       return;
     }
-    scheduleSelectionCommit(nextRow.id);
-    focusInput(nextRow.id, 'word', { arrowDirection: 'down' });
+    scheduleSelectionCommit(insertedRowId);
+    requestAnimationFrame(() => {
+      focusInput(insertedRowId, 'word', { arrowDirection: 'down' });
+    });
   }
 
   function atStart(input: HTMLInputElement): boolean {
