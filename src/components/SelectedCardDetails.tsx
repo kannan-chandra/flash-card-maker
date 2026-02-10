@@ -7,8 +7,6 @@ interface EmojiMatch {
 
 interface SelectedRowData {
   id: string;
-  word: string;
-  subtitle: string;
 }
 
 interface SelectedCardDetailsProps {
@@ -44,26 +42,9 @@ export function SelectedCardDetails(props: SelectedCardDetailsProps) {
 
   return (
     <aside className="card-detail-panel">
-      <h3>Selected Card Details</h3>
-      <p>Edit fields for the currently highlighted row.</p>
+      <h3>Image</h3>
       {selectedRow ? (
         <>
-          <label>
-            Word
-            <input
-              value={selectedRow.word}
-              onChange={(event) => onUpdateRow(selectedRow.id, { word: event.target.value })}
-              aria-label="Selected row word"
-            />
-          </label>
-          <label>
-            Subtitle
-            <input
-              value={selectedRow.subtitle}
-              onChange={(event) => onUpdateRow(selectedRow.id, { subtitle: event.target.value })}
-              aria-label="Selected row subtitle"
-            />
-          </label>
           {selectedRowHasImage ? (
             <div className="image-selected-state">
               <p>Image is set for this row.</p>
