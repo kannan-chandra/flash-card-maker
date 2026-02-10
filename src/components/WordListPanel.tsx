@@ -258,6 +258,61 @@ export function WordListPanel(props: WordListPanelProps) {
     }
   }
 
+  function onTabNavigation(event: KeyboardEvent<HTMLInputElement>, rowId: string, column: 'word' | 'subtitle') {
+    if (event.key !== 'Tab') {
+      return;
+    }
+
+    const rowsWithDraft = [...rows.map((row) => row.id), '__draft__'];
+    const currentIndex = rowsWithDraft.indexOf(rowId);
+    if (currentIndex < 0) {
+      return;
+    }
+
+    if (event.shiftKey) {
+      if (column === 'subtitle') {
+        event.preventDefault();
+        if (rowId !== '__draft__') {
+          scheduleSelectionCommit(rowId);
+        }
+        focusInput(rowId, 'word');
+        return;
+      }
+
+      if (column === 'word' && currentIndex > 0) {
+        event.preventDefault();
+        const previousRowId = rowsWithDraft[currentIndex - 1];
+        if (previousRowId !== '__draft__') {
+          scheduleSelectionCommit(previousRowId);
+        } else {
+          scheduleSelectionCommit(undefined);
+        }
+        focusInput(previousRowId, 'subtitle', { arrowDirection: 'up' });
+      }
+      return;
+    }
+
+    if (column === 'word') {
+      event.preventDefault();
+      if (rowId !== '__draft__') {
+        scheduleSelectionCommit(rowId);
+      }
+      focusInput(rowId, 'subtitle');
+      return;
+    }
+
+    if (column === 'subtitle' && currentIndex < rowsWithDraft.length - 1) {
+      event.preventDefault();
+      const nextRowId = rowsWithDraft[currentIndex + 1];
+      if (nextRowId !== '__draft__') {
+        scheduleSelectionCommit(nextRowId);
+      } else {
+        scheduleSelectionCommit(undefined);
+      }
+      focusInput(nextRowId, 'word', { arrowDirection: 'down' });
+    }
+  }
+
   function onDraftEnter(event: KeyboardEvent<HTMLInputElement>) {
     if (event.key !== 'Enter') {
       return;
@@ -356,6 +411,7 @@ export function WordListPanel(props: WordListPanelProps) {
                       onFocus={() => scheduleSelectionCommit(row.id)}
                       onBlur={(event) => onRowBlur(row.id, event)}
                       onKeyDown={(event) => {
+                        onTabNavigation(event, row.id, 'word');
                         onArrowNavigation(event, row.id, 'word');
                         onExistingRowEnter(event, row.id);
                       }}
@@ -374,6 +430,7 @@ export function WordListPanel(props: WordListPanelProps) {
                         onFocus={() => scheduleSelectionCommit(row.id)}
                         onBlur={(event) => onRowBlur(row.id, event)}
                         onKeyDown={(event) => {
+                          onTabNavigation(event, row.id, 'subtitle');
                           onArrowNavigation(event, row.id, 'subtitle');
                           onExistingRowEnter(event, row.id);
                         }}
@@ -397,6 +454,7 @@ export function WordListPanel(props: WordListPanelProps) {
                   value={draftRow.word}
                   onChange={(event) => setDraftRow((current) => ({ ...current, word: event.target.value }))}
                   onKeyDown={(event) => {
+                    onTabNavigation(event, '__draft__', 'word');
                     onArrowNavigation(event, '__draft__', 'word');
                     onDraftEnter(event);
                   }}
@@ -412,6 +470,7 @@ export function WordListPanel(props: WordListPanelProps) {
                     value={draftRow.subtitle}
                     onChange={(event) => setDraftRow((current) => ({ ...current, subtitle: event.target.value }))}
                     onKeyDown={(event) => {
+                      onTabNavigation(event, '__draft__', 'subtitle');
                       onArrowNavigation(event, '__draft__', 'subtitle');
                       onDraftEnter(event);
                     }}
