@@ -1,4 +1,4 @@
-import { PDFDocument, StandardFonts, type PDFFont, rgb } from 'pdf-lib';
+import { PDFDocument, StandardFonts, clip, endPath, popGraphicsState, pushGraphicsState, rectangle, type PDFFont, rgb } from 'pdf-lib';
 import fontkit from '@pdf-lib/fontkit';
 import type { CardPreset, FlashcardRow, ProjectData, TextElement } from '../types';
 import { splitTextForPdf } from '../utils/layout';
@@ -166,111 +166,116 @@ export async function generatePdfBytes(options: GeneratePdfOptions): Promise<Pdf
       borderColor: rgb(0.75, 0.75, 0.75)
     });
 
-    const imageElement = project.template.image;
-    if (imageElement.side === side) {
-      const imageX = cardX + (imageElement.x / project.template.width) * cardWidth;
-      const imageY = cardY + cardHeight - ((imageElement.y + imageElement.height) / project.template.height) * cardHeight;
-      const imageW = (imageElement.width / project.template.width) * cardWidth;
-      const imageH = (imageElement.height / project.template.height) * cardHeight;
+    page.pushOperators(pushGraphicsState(), rectangle(cardX, cardY, cardWidth, cardHeight), clip(), endPath());
+    try {
+      const imageElement = project.template.image;
+      if (imageElement.side === side) {
+        const imageX = cardX + (imageElement.x / project.template.width) * cardWidth;
+        const imageY = cardY + cardHeight - ((imageElement.y + imageElement.height) / project.template.height) * cardHeight;
+        const imageW = (imageElement.width / project.template.width) * cardWidth;
+        const imageH = (imageElement.height / project.template.height) * cardHeight;
 
-      try {
-        const imageBytes = await fetchImageBytes(row);
-        const embeddedImage =
-          detectImageType(imageBytes) === 'png' ? await doc.embedPng(imageBytes) : await doc.embedJpg(imageBytes);
-        page.drawImage(embeddedImage, {
-          x: imageX,
-          y: imageY,
-          width: imageW,
-          height: imageH
-        });
-      } catch {
-        nextIssues[row.id] = 'Unable to load image. Workaround: save the image and upload it from your computer.';
-      }
-    }
-
-    for (const textElement of project.template.textElements.filter((item) => item.side === side)) {
-      const rawText = fitTextValue(row, textElement.role);
-      const textPadding = 4;
-      const lines = splitTextForPdf(rawText, {
-        ...textElement,
-        width: Math.max(textElement.width - textPadding * 2, 0)
-      });
-
-      const scaledFontSize = (textElement.fontSize / project.template.width) * cardWidth;
-      const lineHeight = scaledFontSize * textElement.lineHeight;
-      const boxH = (textElement.height / project.template.height) * cardHeight;
-      const paddingY = (textPadding / project.template.height) * cardHeight;
-      const innerH = Math.max(boxH - paddingY * 2, 0);
-      const maxLines = Math.floor(innerH / lineHeight);
-      const clipped = lines.slice(0, Math.max(maxLines, 0));
-
-      const paddingX = (textPadding / project.template.width) * cardWidth;
-      const textX = cardX + (textElement.x / project.template.width) * cardWidth + paddingX;
-      const textYTop = cardY + cardHeight - (textElement.y / project.template.height) * cardHeight;
-      const boxW = Math.max((textElement.width / project.template.width) * cardWidth - paddingX * 2, 0);
-      const textBlockHeight = clipped.length * lineHeight;
-      const topInset = paddingY + Math.max((innerH - textBlockHeight) / 2, 0);
-      const textTopY = textYTop - topInset;
-      const textColor = parseHexColor(textElement.color);
-      const proportionalNudgeTemplatePx = textElement.fontSize * textElement.lineHeight * BASELINE_NUDGE_LINE_HEIGHT_RATIO;
-      const yNudgeTemplatePx = proportionalNudgeTemplatePx + pdfTextDebug.yNudgePx;
-      const yNudgePdf = (yNudgeTemplatePx / project.template.height) * cardHeight;
-
-      clipped.forEach((line, lineIndex) => {
-        const shouldUseTamilFont = textElement.fontFamily === 'Noto Sans Tamil' || hasTamil(line);
-        const standardFontName = mapFontForPdf(textElement.fontFamily);
-        let font = standardFontCache.get(standardFontName);
-        if (!font) {
-          font = doc.embedStandardFont(standardFontName);
-          standardFontCache.set(standardFontName, font);
-        }
-        const activeFont = shouldUseTamilFont ? tamilFont : font;
-        const lineWidth = activeFont.widthOfTextAtSize(line, scaledFontSize);
-
-        let x = textX;
-        if (textElement.align === 'center') {
-          x = textX + Math.max((boxW - lineWidth) / 2, 0);
-        } else if (textElement.align === 'right') {
-          x = textX + Math.max(boxW - lineWidth, 0);
-        }
-
-        const ascent = activeFont.heightAtSize(scaledFontSize, { descender: false });
-        const lineTopY = textTopY - lineHeight * lineIndex;
-        const baselineY = lineTopY - ascent - yNudgePdf;
-
-        page.drawText(line, {
-          x,
-          y: baselineY,
-          size: scaledFontSize,
-          font: activeFont,
-          color: rgb(textColor.r, textColor.g, textColor.b)
-        });
-
-        if (pdfTextDebug.enabled && lineIndex === 0) {
-          const baselineByLineHeight = textTopY - lineHeight;
-          const ascentShift = baselineY - baselineByLineHeight;
-          console.log('[pdf-text-debug]', {
-            rowId: row.id,
-            side,
-            textId: textElement.id,
-            fontFamily: textElement.fontFamily,
-            fontSize: textElement.fontSize,
-            lineHeight: textElement.lineHeight,
-            baselineNudgeRatio: BASELINE_NUDGE_LINE_HEIGHT_RATIO,
-            proportionalNudgeTemplatePx: Number(proportionalNudgeTemplatePx.toFixed(3)),
-            manualNudgeTemplatePx: pdfTextDebug.yNudgePx,
-            totalNudgeTemplatePx: Number(yNudgeTemplatePx.toFixed(3)),
-            boxTopTemplateY: textElement.y,
-            boxHeightTemplate: textElement.height,
-            textTopPdfY: Number(textTopY.toFixed(3)),
-            baselinePdfY: Number(baselineY.toFixed(3)),
-            ascentPdf: Number(ascent.toFixed(3)),
-            lineHeightPdf: Number(lineHeight.toFixed(3)),
-            ascentShiftPdf: Number(ascentShift.toFixed(3)),
-            ascentShiftTemplatePx: Number(((ascentShift / cardHeight) * project.template.height).toFixed(3))
+        try {
+          const imageBytes = await fetchImageBytes(row);
+          const embeddedImage =
+            detectImageType(imageBytes) === 'png' ? await doc.embedPng(imageBytes) : await doc.embedJpg(imageBytes);
+          page.drawImage(embeddedImage, {
+            x: imageX,
+            y: imageY,
+            width: imageW,
+            height: imageH
           });
+        } catch {
+          nextIssues[row.id] = 'Unable to load image. Workaround: save the image and upload it from your computer.';
         }
-      });
+      }
+
+      for (const textElement of project.template.textElements.filter((item) => item.side === side)) {
+        const rawText = fitTextValue(row, textElement.role);
+        const textPadding = 4;
+        const lines = splitTextForPdf(rawText, {
+          ...textElement,
+          width: Math.max(textElement.width - textPadding * 2, 0)
+        });
+
+        const scaledFontSize = (textElement.fontSize / project.template.width) * cardWidth;
+        const lineHeight = scaledFontSize * textElement.lineHeight;
+        const boxH = (textElement.height / project.template.height) * cardHeight;
+        const paddingY = (textPadding / project.template.height) * cardHeight;
+        const innerH = Math.max(boxH - paddingY * 2, 0);
+        const maxLines = Math.floor(innerH / lineHeight);
+        const clipped = lines.slice(0, Math.max(maxLines, 0));
+
+        const paddingX = (textPadding / project.template.width) * cardWidth;
+        const textX = cardX + (textElement.x / project.template.width) * cardWidth + paddingX;
+        const textYTop = cardY + cardHeight - (textElement.y / project.template.height) * cardHeight;
+        const boxW = Math.max((textElement.width / project.template.width) * cardWidth - paddingX * 2, 0);
+        const textBlockHeight = clipped.length * lineHeight;
+        const topInset = paddingY + Math.max((innerH - textBlockHeight) / 2, 0);
+        const textTopY = textYTop - topInset;
+        const textColor = parseHexColor(textElement.color);
+        const proportionalNudgeTemplatePx = textElement.fontSize * textElement.lineHeight * BASELINE_NUDGE_LINE_HEIGHT_RATIO;
+        const yNudgeTemplatePx = proportionalNudgeTemplatePx + pdfTextDebug.yNudgePx;
+        const yNudgePdf = (yNudgeTemplatePx / project.template.height) * cardHeight;
+
+        clipped.forEach((line, lineIndex) => {
+          const shouldUseTamilFont = textElement.fontFamily === 'Noto Sans Tamil' || hasTamil(line);
+          const standardFontName = mapFontForPdf(textElement.fontFamily);
+          let font = standardFontCache.get(standardFontName);
+          if (!font) {
+            font = doc.embedStandardFont(standardFontName);
+            standardFontCache.set(standardFontName, font);
+          }
+          const activeFont = shouldUseTamilFont ? tamilFont : font;
+          const lineWidth = activeFont.widthOfTextAtSize(line, scaledFontSize);
+
+          let x = textX;
+          if (textElement.align === 'center') {
+            x = textX + Math.max((boxW - lineWidth) / 2, 0);
+          } else if (textElement.align === 'right') {
+            x = textX + Math.max(boxW - lineWidth, 0);
+          }
+
+          const ascent = activeFont.heightAtSize(scaledFontSize, { descender: false });
+          const lineTopY = textTopY - lineHeight * lineIndex;
+          const baselineY = lineTopY - ascent - yNudgePdf;
+
+          page.drawText(line, {
+            x,
+            y: baselineY,
+            size: scaledFontSize,
+            font: activeFont,
+            color: rgb(textColor.r, textColor.g, textColor.b)
+          });
+
+          if (pdfTextDebug.enabled && lineIndex === 0) {
+            const baselineByLineHeight = textTopY - lineHeight;
+            const ascentShift = baselineY - baselineByLineHeight;
+            console.log('[pdf-text-debug]', {
+              rowId: row.id,
+              side,
+              textId: textElement.id,
+              fontFamily: textElement.fontFamily,
+              fontSize: textElement.fontSize,
+              lineHeight: textElement.lineHeight,
+              baselineNudgeRatio: BASELINE_NUDGE_LINE_HEIGHT_RATIO,
+              proportionalNudgeTemplatePx: Number(proportionalNudgeTemplatePx.toFixed(3)),
+              manualNudgeTemplatePx: pdfTextDebug.yNudgePx,
+              totalNudgeTemplatePx: Number(yNudgeTemplatePx.toFixed(3)),
+              boxTopTemplateY: textElement.y,
+              boxHeightTemplate: textElement.height,
+              textTopPdfY: Number(textTopY.toFixed(3)),
+              baselinePdfY: Number(baselineY.toFixed(3)),
+              ascentPdf: Number(ascent.toFixed(3)),
+              lineHeightPdf: Number(lineHeight.toFixed(3)),
+              ascentShiftPdf: Number(ascentShift.toFixed(3)),
+              ascentShiftTemplatePx: Number(((ascentShift / cardHeight) * project.template.height).toFixed(3))
+            });
+          }
+        });
+      }
+    } finally {
+      page.pushOperators(popGraphicsState());
     }
   }
 

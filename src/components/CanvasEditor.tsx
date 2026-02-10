@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { Image as KonvaImage, Layer, Rect, Stage, Text, Transformer } from 'react-konva';
+import { Group, Image as KonvaImage, Layer, Rect, Stage, Text, Transformer } from 'react-konva';
 import type Konva from 'konva';
 import { FONT_FAMILIES } from '../constants/project';
 import type { CardTemplate, FlashcardRow, FlashcardSet, FontFamily, RowValidation, TextElement } from '../types';
@@ -260,6 +260,20 @@ export function CanvasEditor(props: CanvasEditorProps) {
     };
   }
 
+  function wrapWithSideClip(side: 1 | 2, key: string, node: ReactNode) {
+    return (
+      <Group
+        key={key}
+        clipX={0}
+        clipY={project.doubleSided && side === 2 ? cardHeight : 0}
+        clipWidth={project.template.width}
+        clipHeight={cardHeight}
+      >
+        {node}
+      </Group>
+    );
+  }
+
   const selectedText =
     selectedElement === 'text1'
       ? project.template.textElements[0]
@@ -386,63 +400,32 @@ export function CanvasEditor(props: CanvasEditorProps) {
                 />
               )}
 
-              <KonvaImage
-                ref={imageRef}
-                image={previewImage}
-                x={project.template.image.x}
-                y={toCanvasY(project.template.image.y, project.template.image.side)}
-                width={project.template.image.width}
-                height={project.template.image.height}
-                draggable
-                onClick={() => onSelectElement('image')}
-                onTap={() => onSelectElement('image')}
-                onDragEnd={(event) => {
-                  const sideResult = fromCanvasY(event.target.y(), project.template.image.height);
-                  onPatchTemplate({
-                    image: {
-                      ...project.template.image,
-                      x: event.target.x(),
-                      y: sideResult.y,
-                      side: sideResult.side
-                    }
-                  });
-                }}
-                onTransformEnd={(event) => {
-                  const node = event.target;
-                  const scaleX = node.scaleX();
-                  const scaleY = node.scaleY();
-                  const nextWidth = Math.max(20, node.width() * scaleX);
-                  const nextHeight = Math.max(20, node.height() * scaleY);
-                  const sideResult = fromCanvasY(node.y(), nextHeight);
-                  onPatchTemplate({
-                    image: {
-                      x: node.x(),
-                      y: sideResult.y,
-                      side: sideResult.side,
-                      width: nextWidth,
-                      height: nextHeight
-                    }
-                  });
-                  node.scaleX(1);
-                  node.scaleY(1);
-                }}
-                stroke={selectedElement === 'image' ? '#2563eb' : undefined}
-                strokeWidth={selectedElement === 'image' ? 2 : 0}
-              />
-              {imageIsEmpty && (
-                <Rect
-                  ref={imagePlaceholderRef}
+              {wrapWithSideClip(
+                project.template.image.side,
+                'image-clip',
+                <KonvaImage
+                  ref={imageRef}
+                  image={previewImage}
                   x={project.template.image.x}
                   y={toCanvasY(project.template.image.y, project.template.image.side)}
                   width={project.template.image.width}
                   height={project.template.image.height}
-                  stroke={selectedElement === 'image' ? '#2563eb' : '#94a3b8'}
-                  strokeWidth={1}
-                  dash={[4, 4]}
-                  fill="rgba(0,0,0,0)"
                   draggable
                   onClick={() => onSelectElement('image')}
                   onTap={() => onSelectElement('image')}
+                  onDragMove={(event) => {
+                    const sideResult = fromCanvasY(event.target.y(), project.template.image.height);
+                    if (sideResult.side !== project.template.image.side) {
+                      onPatchTemplate({
+                        image: {
+                          ...project.template.image,
+                          x: event.target.x(),
+                          y: sideResult.y,
+                          side: sideResult.side
+                        }
+                      });
+                    }
+                  }}
                   onDragEnd={(event) => {
                     const sideResult = fromCanvasY(event.target.y(), project.template.image.height);
                     onPatchTemplate({
@@ -473,7 +456,72 @@ export function CanvasEditor(props: CanvasEditorProps) {
                     node.scaleX(1);
                     node.scaleY(1);
                   }}
+                  stroke={selectedElement === 'image' ? '#2563eb' : undefined}
+                  strokeWidth={selectedElement === 'image' ? 2 : 0}
                 />
+              )}
+              {imageIsEmpty && (
+                wrapWithSideClip(
+                  project.template.image.side,
+                  'image-empty-clip',
+                  <Rect
+                    ref={imagePlaceholderRef}
+                    x={project.template.image.x}
+                    y={toCanvasY(project.template.image.y, project.template.image.side)}
+                    width={project.template.image.width}
+                    height={project.template.image.height}
+                    stroke={selectedElement === 'image' ? '#2563eb' : '#94a3b8'}
+                    strokeWidth={1}
+                    dash={[4, 4]}
+                    fill="rgba(0,0,0,0)"
+                    draggable
+                    onClick={() => onSelectElement('image')}
+                    onTap={() => onSelectElement('image')}
+                    onDragMove={(event) => {
+                      const sideResult = fromCanvasY(event.target.y(), project.template.image.height);
+                      if (sideResult.side !== project.template.image.side) {
+                        onPatchTemplate({
+                          image: {
+                            ...project.template.image,
+                            x: event.target.x(),
+                            y: sideResult.y,
+                            side: sideResult.side
+                          }
+                        });
+                      }
+                    }}
+                    onDragEnd={(event) => {
+                      const sideResult = fromCanvasY(event.target.y(), project.template.image.height);
+                      onPatchTemplate({
+                        image: {
+                          ...project.template.image,
+                          x: event.target.x(),
+                          y: sideResult.y,
+                          side: sideResult.side
+                        }
+                      });
+                    }}
+                    onTransformEnd={(event) => {
+                      const node = event.target;
+                      const scaleX = node.scaleX();
+                      const scaleY = node.scaleY();
+                      const nextWidth = Math.max(20, node.width() * scaleX);
+                      const nextHeight = Math.max(20, node.height() * scaleY);
+                      const sideResult = fromCanvasY(node.y(), nextHeight);
+                      onPatchTemplate({
+                        image: {
+                          x: node.x(),
+                          y: sideResult.y,
+                          side: sideResult.side,
+                          width: nextWidth,
+                          height: nextHeight
+                        }
+                      });
+                      node.scaleX(1);
+                      node.scaleY(1);
+                    }}
+                  />
+                )
               )}
 
               {project.template.textElements.map((textElement, index) => {
@@ -481,74 +529,42 @@ export function CanvasEditor(props: CanvasEditorProps) {
                 const textIsEmpty = !textValue.trim();
                 const isEditing = editingTextId === textElement.id;
                 return [
-                  <Text
-                    key={`${textElement.id}-text`}
-                    ref={index === 0 ? text1Ref : text2Ref}
-                    text={textValue}
-                    x={textElement.x}
-                    y={toCanvasY(textElement.y, textElement.side)}
-                    width={textElement.width}
-                    height={textElement.height}
-                    fontSize={textElement.fontSize}
-                    fontFamily={textElement.fontFamily}
-                    fill={textElement.color}
-                    align={textElement.align}
-                    lineHeight={textElement.lineHeight}
-                    verticalAlign="middle"
-                    padding={4}
-                    ellipsis
-                    wrap="word"
-                    visible={!isEditing}
-                    draggable={!isEditing}
-                    onClick={() => onSelectElement(textElement.id)}
-                    onTap={() => onSelectElement(textElement.id)}
-                    onDblClick={() => startEditingText(textElement.id)}
-                    onDblTap={() => startEditingText(textElement.id)}
-                    onDragEnd={(event) => {
-                      const sideResult = fromCanvasY(event.target.y(), textElement.height);
-                      onPatchTextElement(textElement.id, {
-                        x: event.target.x(),
-                        y: sideResult.y,
-                        side: sideResult.side
-                      });
-                    }}
-                    onTransformEnd={(event) => {
-                      const node = event.target;
-                      const scaleX = node.scaleX();
-                      const scaleY = node.scaleY();
-                      const nextWidth = Math.max(40, node.width() * scaleX);
-                      const nextHeight = Math.max(30, node.height() * scaleY);
-                      const sideResult = fromCanvasY(node.y(), nextHeight);
-                      onPatchTextElement(textElement.id, {
-                        x: node.x(),
-                        y: sideResult.y,
-                        side: sideResult.side,
-                        width: nextWidth,
-                        height: nextHeight
-                      });
-                      node.scaleX(1);
-                      node.scaleY(1);
-                    }}
-                    stroke={selectedElement === textElement.id ? '#2563eb' : '#9ca3af'}
-                    strokeWidth={1}
-                  />,
-                  textIsEmpty && !isEditing && (
-                    <Rect
-                      ref={textElement.id === 'text1' ? text1PlaceholderRef : text2PlaceholderRef}
-                      key={`${textElement.id}-empty`}
+                  wrapWithSideClip(
+                    textElement.side,
+                    `${textElement.id}-text-clip`,
+                    <Text
+                      key={`${textElement.id}-text`}
+                      ref={index === 0 ? text1Ref : text2Ref}
+                      text={textValue}
                       x={textElement.x}
                       y={toCanvasY(textElement.y, textElement.side)}
                       width={textElement.width}
                       height={textElement.height}
-                      stroke={selectedElement === textElement.id ? '#2563eb' : '#94a3b8'}
-                      strokeWidth={1}
-                      dash={[4, 4]}
-                      fill="rgba(0,0,0,0)"
-                      draggable
+                      fontSize={textElement.fontSize}
+                      fontFamily={textElement.fontFamily}
+                      fill={textElement.color}
+                      align={textElement.align}
+                      lineHeight={textElement.lineHeight}
+                      verticalAlign="middle"
+                      padding={4}
+                      ellipsis
+                      wrap="word"
+                      visible={!isEditing}
+                      draggable={!isEditing}
                       onClick={() => onSelectElement(textElement.id)}
                       onTap={() => onSelectElement(textElement.id)}
                       onDblClick={() => startEditingText(textElement.id)}
                       onDblTap={() => startEditingText(textElement.id)}
+                      onDragMove={(event) => {
+                        const sideResult = fromCanvasY(event.target.y(), textElement.height);
+                        if (sideResult.side !== textElement.side) {
+                          onPatchTextElement(textElement.id, {
+                            x: event.target.x(),
+                            y: sideResult.y,
+                            side: sideResult.side
+                          });
+                        }
+                      }}
                       onDragEnd={(event) => {
                         const sideResult = fromCanvasY(event.target.y(), textElement.height);
                         onPatchTextElement(textElement.id, {
@@ -574,7 +590,67 @@ export function CanvasEditor(props: CanvasEditorProps) {
                         node.scaleX(1);
                         node.scaleY(1);
                       }}
+                      stroke={selectedElement === textElement.id ? '#2563eb' : '#9ca3af'}
+                      strokeWidth={1}
                     />
+                  ),
+                  textIsEmpty && !isEditing && (
+                    wrapWithSideClip(
+                      textElement.side,
+                      `${textElement.id}-empty-clip`,
+                      <Rect
+                        ref={textElement.id === 'text1' ? text1PlaceholderRef : text2PlaceholderRef}
+                        key={`${textElement.id}-empty`}
+                        x={textElement.x}
+                        y={toCanvasY(textElement.y, textElement.side)}
+                        width={textElement.width}
+                        height={textElement.height}
+                        stroke={selectedElement === textElement.id ? '#2563eb' : '#94a3b8'}
+                        strokeWidth={1}
+                        dash={[4, 4]}
+                        fill="rgba(0,0,0,0)"
+                        draggable
+                        onClick={() => onSelectElement(textElement.id)}
+                        onTap={() => onSelectElement(textElement.id)}
+                        onDblClick={() => startEditingText(textElement.id)}
+                        onDblTap={() => startEditingText(textElement.id)}
+                        onDragMove={(event) => {
+                          const sideResult = fromCanvasY(event.target.y(), textElement.height);
+                          if (sideResult.side !== textElement.side) {
+                            onPatchTextElement(textElement.id, {
+                              x: event.target.x(),
+                              y: sideResult.y,
+                              side: sideResult.side
+                            });
+                          }
+                        }}
+                        onDragEnd={(event) => {
+                          const sideResult = fromCanvasY(event.target.y(), textElement.height);
+                          onPatchTextElement(textElement.id, {
+                            x: event.target.x(),
+                            y: sideResult.y,
+                            side: sideResult.side
+                          });
+                        }}
+                        onTransformEnd={(event) => {
+                          const node = event.target;
+                          const scaleX = node.scaleX();
+                          const scaleY = node.scaleY();
+                          const nextWidth = Math.max(40, node.width() * scaleX);
+                          const nextHeight = Math.max(30, node.height() * scaleY);
+                          const sideResult = fromCanvasY(node.y(), nextHeight);
+                          onPatchTextElement(textElement.id, {
+                            x: node.x(),
+                            y: sideResult.y,
+                            side: sideResult.side,
+                            width: nextWidth,
+                            height: nextHeight
+                          });
+                          node.scaleX(1);
+                          node.scaleY(1);
+                        }}
+                      />
+                    )
                   )
                 ];
               })}
@@ -631,6 +707,12 @@ export function CanvasEditor(props: CanvasEditorProps) {
                     }
                   }}
                   style={{
+                    clipPath: `inset(${
+                      (project.doubleSided && editingTextElement.side === 2 ? cardHeight : 0) * stageScale
+                    }px 0px ${
+                      scaledStageHeight -
+                      (project.doubleSided && editingTextElement.side === 2 ? stageHeight : cardHeight) * stageScale
+                    }px 0px)`,
                     left: editingTextElement.x * stageScale,
                     top: toCanvasY(editingTextElement.y, editingTextElement.side) * stageScale,
                     width: editingTextElement.width * stageScale,

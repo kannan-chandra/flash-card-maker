@@ -20,7 +20,8 @@ export function fromCanvasY(canvasY: number, elementHeight: number, context: Can
     return { side: 1, y: canvasY };
   }
 
-  const side: 1 | 2 = canvasY >= context.cardHeight ? 2 : 1;
+  const midpointY = canvasY + elementHeight / 2;
+  const side: 1 | 2 = midpointY >= context.cardHeight ? 2 : 1;
   const offset = side === 2 ? context.cardHeight : 0;
   const localY = canvasY - offset;
   return { side, y: localY };
