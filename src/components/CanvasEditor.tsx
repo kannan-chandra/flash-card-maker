@@ -1,0 +1,490 @@
+import { useEffect, useRef, type ReactNode } from 'react';
+import { Image as KonvaImage, Layer, Rect, Stage, Text, Transformer } from 'react-konva';
+import type Konva from 'konva';
+import { FONT_FAMILIES } from '../constants/project';
+import type { CardTemplate, FlashcardRow, FlashcardSet, FontFamily, RowValidation, TextElement } from '../types';
+
+interface CanvasEditorProps {
+  project: FlashcardSet;
+  selectedRow?: FlashcardRow;
+  selectedRowIndex: number;
+  currentValidation?: RowValidation;
+  selectedElement: 'image' | 'text1' | 'text2' | null;
+  previewImage?: HTMLImageElement;
+  imageIsEmpty: boolean;
+  cardHeight: number;
+  stageHeight: number;
+  toCanvasY: (y: number, side: 1 | 2) => number;
+  fromCanvasY: (canvasY: number, elementHeight: number) => { side: 1 | 2; y: number };
+  onSelectElement: (element: 'image' | 'text1' | 'text2' | null) => void;
+  onPatchTemplate: (patch: Partial<CardTemplate>) => void;
+  onPatchTextElement: (id: 'text1' | 'text2', patch: Partial<TextElement>) => void;
+  onToggleDoubleSided: (value: boolean) => void;
+  onSelectPreviousRow: () => void;
+  onSelectNextRow: () => void;
+  canSelectPreviousRow: boolean;
+  canSelectNextRow: boolean;
+  children?: ReactNode;
+}
+
+function fitTextValue(row: FlashcardRow, role: TextElement['role']): string {
+  return role === 'word' ? row.word : row.subtitle;
+}
+
+export function CanvasEditor(props: CanvasEditorProps) {
+  const {
+    project,
+    selectedRow,
+    selectedRowIndex,
+    currentValidation,
+    selectedElement,
+    previewImage,
+    imageIsEmpty,
+    cardHeight,
+    stageHeight,
+    toCanvasY,
+    fromCanvasY,
+    onSelectElement,
+    onPatchTemplate,
+    onPatchTextElement,
+    onToggleDoubleSided,
+    onSelectPreviousRow,
+    onSelectNextRow,
+    canSelectPreviousRow,
+    canSelectNextRow,
+    children
+  } = props;
+
+  const imageRef = useRef<Konva.Image>(null);
+  const imagePlaceholderRef = useRef<Konva.Rect>(null);
+  const text1Ref = useRef<Konva.Text>(null);
+  const text2Ref = useRef<Konva.Text>(null);
+  const text1PlaceholderRef = useRef<Konva.Rect>(null);
+  const text2PlaceholderRef = useRef<Konva.Rect>(null);
+  const transformerRef = useRef<Konva.Transformer>(null);
+
+  useEffect(() => {
+    if (!transformerRef.current) {
+      return;
+    }
+
+    const nodes: Konva.Node[] = [];
+    if (selectedElement === 'image' && imageIsEmpty && imagePlaceholderRef.current) nodes.push(imagePlaceholderRef.current);
+    if (selectedElement === 'image' && !imageIsEmpty && imageRef.current) nodes.push(imageRef.current);
+    if (selectedElement === 'text1') {
+      const wordValue = selectedRow ? fitTextValue(selectedRow, project.template.textElements[0].role) : '';
+      if (!wordValue.trim() && text1PlaceholderRef.current) {
+        nodes.push(text1PlaceholderRef.current);
+      } else if (text1Ref.current) {
+        nodes.push(text1Ref.current);
+      }
+    }
+    if (selectedElement === 'text2') {
+      const subtitleValue = selectedRow ? fitTextValue(selectedRow, project.template.textElements[1].role) : '';
+      if (!subtitleValue.trim() && text2PlaceholderRef.current) {
+        nodes.push(text2PlaceholderRef.current);
+      } else if (text2Ref.current) {
+        nodes.push(text2Ref.current);
+      }
+    }
+    transformerRef.current.nodes(nodes);
+    transformerRef.current.getLayer()?.batchDraw();
+  }, [selectedElement, project, imageIsEmpty, selectedRow]);
+
+  function onStagePointerDown(event: Konva.KonvaEventObject<MouseEvent | TouchEvent>) {
+    const target = event.target;
+    if (target === target.getStage() || target.name() === 'canvas-bg') {
+      onSelectElement(null);
+    }
+  }
+
+  function getSelectionInfo() {
+    if (selectedElement === 'image') {
+      return {
+        x: project.template.image.x,
+        y: toCanvasY(project.template.image.y, project.template.image.side),
+        width: project.template.image.width,
+        label: 'Image'
+      };
+    }
+    const textElement = project.template.textElements.find((item) => item.id === selectedElement);
+    if (!textElement) {
+      return null;
+    }
+    return {
+      x: textElement.x,
+      y: toCanvasY(textElement.y, textElement.side),
+      width: textElement.width,
+      label: textElement.role === 'word' ? 'Word' : 'Subtitle'
+    };
+  }
+
+  const selectedText =
+    selectedElement === 'text1'
+      ? project.template.textElements[0]
+      : selectedElement === 'text2'
+        ? project.template.textElements[1]
+        : project.template.textElements[0];
+  const textControlsDisabled = selectedElement !== 'text1' && selectedElement !== 'text2';
+
+  return (
+    <section className="panel editor-panel">
+      <h2>Master Card Layout</h2>
+      <p>Drag and resize elements. Changes affect all generated cards.</p>
+
+      <div className="editor-layout">
+        <div>
+          <div className="editor-controls">
+            <label>
+              Card Background
+              <input
+                type="color"
+                value={project.template.backgroundColor}
+                onChange={(event) => onPatchTemplate({ backgroundColor: event.target.value })}
+              />
+            </label>
+            <label>
+              Font
+              <select
+                disabled={textControlsDisabled}
+                value={selectedText.fontFamily}
+                onChange={(event) => onPatchTextElement(selectedText.id, { fontFamily: event.target.value as FontFamily })}
+              >
+                {FONT_FAMILIES.map((font) => (
+                  <option key={font} value={font}>
+                    {font}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Size
+              <input
+                disabled={textControlsDisabled}
+                type="number"
+                min={10}
+                max={120}
+                value={selectedText.fontSize}
+                onChange={(event) => onPatchTextElement(selectedText.id, { fontSize: Number(event.target.value) || 10 })}
+              />
+            </label>
+            <label>
+              Align
+              <select
+                disabled={textControlsDisabled}
+                value={selectedText.align}
+                onChange={(event) => onPatchTextElement(selectedText.id, { align: event.target.value as TextElement['align'] })}
+              >
+                <option value="left">Left</option>
+                <option value="center">Center</option>
+                <option value="right">Right</option>
+              </select>
+            </label>
+            <label>
+              Text Color
+              <input
+                disabled={textControlsDisabled}
+                type="color"
+                value={selectedText.color}
+                onChange={(event) => onPatchTextElement(selectedText.id, { color: event.target.value })}
+              />
+            </label>
+            <label className="checkbox-row control-checkbox">
+              <input
+                type="checkbox"
+                checked={project.doubleSided}
+                onChange={(event) => onToggleDoubleSided(event.target.checked)}
+              />
+              Double-sided cards
+            </label>
+          </div>
+
+          <Stage
+            width={project.template.width}
+            height={stageHeight}
+            className="stage"
+            onMouseDown={onStagePointerDown}
+            onTouchStart={onStagePointerDown}
+          >
+            <Layer>
+              <Rect
+                name="canvas-bg"
+                x={0}
+                y={0}
+                width={project.template.width}
+                height={stageHeight}
+                fill="#f8fafc"
+                stroke="#d1d5db"
+                strokeWidth={1}
+              />
+              <Rect
+                x={0}
+                y={0}
+                width={project.template.width}
+                height={cardHeight}
+                fill={project.template.backgroundColor}
+                stroke="#94a3b8"
+                strokeWidth={1}
+                listening={false}
+              />
+              {project.doubleSided && (
+                <Rect
+                  x={0}
+                  y={cardHeight}
+                  width={project.template.width}
+                  height={cardHeight}
+                  fill={project.template.backgroundColor}
+                  stroke="#94a3b8"
+                  strokeWidth={1}
+                  listening={false}
+                />
+              )}
+
+              <KonvaImage
+                ref={imageRef}
+                image={previewImage}
+                x={project.template.image.x}
+                y={toCanvasY(project.template.image.y, project.template.image.side)}
+                width={project.template.image.width}
+                height={project.template.image.height}
+                draggable
+                onClick={() => onSelectElement('image')}
+                onTap={() => onSelectElement('image')}
+                onDragEnd={(event) => {
+                  const sideResult = fromCanvasY(event.target.y(), project.template.image.height);
+                  onPatchTemplate({
+                    image: {
+                      ...project.template.image,
+                      x: event.target.x(),
+                      y: sideResult.y,
+                      side: sideResult.side
+                    }
+                  });
+                }}
+                onTransformEnd={(event) => {
+                  const node = event.target;
+                  const scaleX = node.scaleX();
+                  const scaleY = node.scaleY();
+                  const nextWidth = Math.max(20, node.width() * scaleX);
+                  const nextHeight = Math.max(20, node.height() * scaleY);
+                  const sideResult = fromCanvasY(node.y(), nextHeight);
+                  onPatchTemplate({
+                    image: {
+                      x: node.x(),
+                      y: sideResult.y,
+                      side: sideResult.side,
+                      width: nextWidth,
+                      height: nextHeight
+                    }
+                  });
+                  node.scaleX(1);
+                  node.scaleY(1);
+                }}
+                stroke={selectedElement === 'image' ? '#2563eb' : undefined}
+                strokeWidth={selectedElement === 'image' ? 2 : 0}
+              />
+              {imageIsEmpty && (
+                <Rect
+                  ref={imagePlaceholderRef}
+                  x={project.template.image.x}
+                  y={toCanvasY(project.template.image.y, project.template.image.side)}
+                  width={project.template.image.width}
+                  height={project.template.image.height}
+                  stroke={selectedElement === 'image' ? '#2563eb' : '#94a3b8'}
+                  strokeWidth={1}
+                  dash={[4, 4]}
+                  fill="rgba(0,0,0,0)"
+                  draggable
+                  onClick={() => onSelectElement('image')}
+                  onTap={() => onSelectElement('image')}
+                  onDragEnd={(event) => {
+                    const sideResult = fromCanvasY(event.target.y(), project.template.image.height);
+                    onPatchTemplate({
+                      image: {
+                        ...project.template.image,
+                        x: event.target.x(),
+                        y: sideResult.y,
+                        side: sideResult.side
+                      }
+                    });
+                  }}
+                  onTransformEnd={(event) => {
+                    const node = event.target;
+                    const scaleX = node.scaleX();
+                    const scaleY = node.scaleY();
+                    const nextWidth = Math.max(20, node.width() * scaleX);
+                    const nextHeight = Math.max(20, node.height() * scaleY);
+                    const sideResult = fromCanvasY(node.y(), nextHeight);
+                    onPatchTemplate({
+                      image: {
+                        x: node.x(),
+                        y: sideResult.y,
+                        side: sideResult.side,
+                        width: nextWidth,
+                        height: nextHeight
+                      }
+                    });
+                    node.scaleX(1);
+                    node.scaleY(1);
+                  }}
+                />
+              )}
+
+              {project.template.textElements.map((textElement, index) => {
+                const textValue = selectedRow ? fitTextValue(selectedRow, textElement.role) : '';
+                const textIsEmpty = !textValue.trim();
+                return [
+                  <Text
+                    key={`${textElement.id}-text`}
+                    ref={index === 0 ? text1Ref : text2Ref}
+                    text={textValue}
+                    x={textElement.x}
+                    y={toCanvasY(textElement.y, textElement.side)}
+                    width={textElement.width}
+                    height={textElement.height}
+                    fontSize={textElement.fontSize}
+                    fontFamily={textElement.fontFamily}
+                    fill={textElement.color}
+                    align={textElement.align}
+                    lineHeight={textElement.lineHeight}
+                    verticalAlign="middle"
+                    padding={4}
+                    ellipsis
+                    wrap="word"
+                    draggable
+                    onClick={() => onSelectElement(textElement.id)}
+                    onTap={() => onSelectElement(textElement.id)}
+                    onDragEnd={(event) => {
+                      const sideResult = fromCanvasY(event.target.y(), textElement.height);
+                      onPatchTextElement(textElement.id, {
+                        x: event.target.x(),
+                        y: sideResult.y,
+                        side: sideResult.side
+                      });
+                    }}
+                    onTransformEnd={(event) => {
+                      const node = event.target;
+                      const scaleX = node.scaleX();
+                      const scaleY = node.scaleY();
+                      const nextWidth = Math.max(40, node.width() * scaleX);
+                      const nextHeight = Math.max(30, node.height() * scaleY);
+                      const sideResult = fromCanvasY(node.y(), nextHeight);
+                      onPatchTextElement(textElement.id, {
+                        x: node.x(),
+                        y: sideResult.y,
+                        side: sideResult.side,
+                        width: nextWidth,
+                        height: nextHeight
+                      });
+                      node.scaleX(1);
+                      node.scaleY(1);
+                    }}
+                    stroke={selectedElement === textElement.id ? '#2563eb' : '#9ca3af'}
+                    strokeWidth={1}
+                  />,
+                  textIsEmpty && (
+                    <Rect
+                      ref={textElement.id === 'text1' ? text1PlaceholderRef : text2PlaceholderRef}
+                      key={`${textElement.id}-empty`}
+                      x={textElement.x}
+                      y={toCanvasY(textElement.y, textElement.side)}
+                      width={textElement.width}
+                      height={textElement.height}
+                      stroke={selectedElement === textElement.id ? '#2563eb' : '#94a3b8'}
+                      strokeWidth={1}
+                      dash={[4, 4]}
+                      fill="rgba(0,0,0,0)"
+                      draggable
+                      onClick={() => onSelectElement(textElement.id)}
+                      onTap={() => onSelectElement(textElement.id)}
+                      onDragEnd={(event) => {
+                        const sideResult = fromCanvasY(event.target.y(), textElement.height);
+                        onPatchTextElement(textElement.id, {
+                          x: event.target.x(),
+                          y: sideResult.y,
+                          side: sideResult.side
+                        });
+                      }}
+                      onTransformEnd={(event) => {
+                        const node = event.target;
+                        const scaleX = node.scaleX();
+                        const scaleY = node.scaleY();
+                        const nextWidth = Math.max(40, node.width() * scaleX);
+                        const nextHeight = Math.max(30, node.height() * scaleY);
+                        const sideResult = fromCanvasY(node.y(), nextHeight);
+                        onPatchTextElement(textElement.id, {
+                          x: node.x(),
+                          y: sideResult.y,
+                          side: sideResult.side,
+                          width: nextWidth,
+                          height: nextHeight
+                        });
+                        node.scaleX(1);
+                        node.scaleY(1);
+                      }}
+                    />
+                  )
+                ];
+              })}
+
+              {(() => {
+                const selection = getSelectionInfo();
+                if (!selection) {
+                  return null;
+                }
+                const labelWidth = Math.max(70, selection.label.length * 9 + 18);
+                return (
+                  <>
+                    <Rect
+                      x={selection.x}
+                      y={Math.max(4, selection.y - 24)}
+                      width={labelWidth}
+                      height={20}
+                      fill="#2563eb"
+                      cornerRadius={4}
+                      listening={false}
+                    />
+                    <Text
+                      x={selection.x + 8}
+                      y={Math.max(7, selection.y - 21)}
+                      text={selection.label}
+                      fill="#ffffff"
+                      fontSize={12}
+                      fontStyle="bold"
+                      listening={false}
+                    />
+                  </>
+                );
+              })()}
+
+              <Transformer ref={transformerRef} rotateEnabled={false} flipEnabled={false} keepRatio={false} />
+            </Layer>
+          </Stage>
+
+          <div className="preview-meta">
+            <h3>Row preview</h3>
+            {selectedRow ? (
+              <p>
+                Previewing: <strong>{selectedRow.word || '(empty word)'}</strong>
+              </p>
+            ) : (
+              <p>No rows yet.</p>
+            )}
+            <div className="row-buttons">
+              <button onClick={onSelectPreviousRow} disabled={!canSelectPreviousRow}>
+                Previous
+              </button>
+              <button onClick={onSelectNextRow} disabled={!canSelectNextRow}>
+                Next
+              </button>
+            </div>
+            {currentValidation && (currentValidation.wordOverflow || currentValidation.subtitleOverflow) && (
+              <p className="warn">This row has text overflow in one or more text boxes.</p>
+            )}
+          </div>
+        </div>
+        {children}
+      </div>
+    </section>
+  );
+}
