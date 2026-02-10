@@ -38,6 +38,41 @@ function fitTextValue(row: FlashcardRow, role: TextElement['role']): string {
   return role === 'word' ? row.word : row.subtitle;
 }
 
+function estimateWrappedLineCount(text: string, textElement: TextElement): number {
+  const value = text || '';
+  const paragraphs = value.split('\n');
+  const canvas = document.createElement('canvas');
+  const context = canvas.getContext('2d');
+  if (!context) {
+    return Math.max(1, paragraphs.length);
+  }
+
+  context.font = `${textElement.fontSize}px ${textElement.fontFamily}`;
+  let lineCount = 0;
+
+  for (const paragraph of paragraphs) {
+    const words = paragraph.split(/\s+/).filter(Boolean);
+    if (!words.length) {
+      lineCount += 1;
+      continue;
+    }
+
+    let current = words[0];
+    for (let i = 1; i < words.length; i += 1) {
+      const candidate = `${current} ${words[i]}`;
+      if (context.measureText(candidate).width <= textElement.width - 8) {
+        current = candidate;
+      } else {
+        lineCount += 1;
+        current = words[i];
+      }
+    }
+    lineCount += 1;
+  }
+
+  return Math.max(1, lineCount);
+}
+
 export function CanvasEditor(props: CanvasEditorProps) {
   const { project, selection, canvas, actions, children } = props;
   const { selectedRow, selectedRowIndex, currentValidation, selectedElement, previewImage, imageIsEmpty } = selection;
@@ -69,6 +104,19 @@ export function CanvasEditor(props: CanvasEditorProps) {
     () => project.template.textElements.find((item) => item.id === editingTextId),
     [editingTextId, project.template.textElements]
   );
+  const editingTextareaPadding = useMemo(() => {
+    if (!editingTextElement) {
+      return { top: 4, bottom: 4 };
+    }
+    const lineHeightPx = editingTextElement.fontSize * editingTextElement.lineHeight;
+    const lineCount = estimateWrappedLineCount(editingValue, editingTextElement);
+    const contentHeight = lineHeightPx * lineCount;
+    const verticalPad = Math.max(4, (editingTextElement.height - contentHeight) / 2);
+    return {
+      top: verticalPad,
+      bottom: verticalPad
+    };
+  }, [editingTextElement, editingValue]);
 
   useEffect(() => {
     if (!selectedRow && editingTextId) {
@@ -557,6 +605,8 @@ export function CanvasEditor(props: CanvasEditorProps) {
                     top: toCanvasY(editingTextElement.y, editingTextElement.side),
                     width: editingTextElement.width,
                     height: editingTextElement.height,
+                    paddingTop: editingTextareaPadding.top,
+                    paddingBottom: editingTextareaPadding.bottom,
                     fontSize: editingTextElement.fontSize,
                     fontFamily: editingTextElement.fontFamily,
                     color: editingTextElement.color,

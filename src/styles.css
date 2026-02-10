@@ -214,13 +214,14 @@ input[type='color'] {
   position: absolute;
   z-index: 10;
   margin: 0;
-  padding: 4px;
+  padding-left: 4px;
+  padding-right: 4px;
   border: 2px solid #2563eb;
   border-radius: 2px;
   outline: none;
   resize: none;
-  background: rgba(255, 255, 255, 0.97);
-  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.2);
+  background: transparent;
+  box-shadow: none;
   overflow: hidden;
   white-space: pre-wrap;
   word-break: break-word;
