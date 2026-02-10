@@ -4,6 +4,10 @@ import tamilFontUrl from '@fontsource/noto-sans-tamil/files/noto-sans-tamil-tami
 import '@fontsource/noto-sans-tamil/400.css';
 import type Konva from 'konva';
 import type { CardPreset, CardTemplate, FlashcardRow, FlashcardSet, FontFamily, RowValidation, TextElement } from './types';
+import { PdfOutputPanel } from './components/PdfOutputPanel';
+import { SelectedCardDetails } from './components/SelectedCardDetails';
+import { SetsDrawer } from './components/SetsDrawer';
+import { WordListPanel } from './components/WordListPanel';
 import { makeNewSet, normalizeSet, DEFAULT_TEMPLATE, FONT_FAMILIES } from './constants/project';
 import { useImage } from './hooks/useImage';
 import { generatePdfBytes } from './services/pdfExport';
@@ -432,43 +436,17 @@ export default function App() {
       </header>
 
       {setsMenuOpen && <button type="button" className="menu-backdrop" onClick={() => setSetsMenuOpen(false)} aria-label="Close sets menu" />}
-      <aside className={`panel sets-drawer ${setsMenuOpen ? 'open' : ''}`} aria-hidden={!setsMenuOpen}>
-        <div className="sets-drawer-header">
-          <h2>Flash Card Sets</h2>
-          <button type="button" onClick={() => setSetsMenuOpen(false)}>
-            Close
-          </button>
-        </div>
-        <p>Browse and switch between locally stored sets.</p>
-        <div className="set-create">
-          <input
-            value={newSetName}
-            onChange={(event) => setNewSetName(event.target.value)}
-            placeholder="New set name"
-            aria-label="New set name"
-          />
-          <button onClick={createSet}>Create Set</button>
-        </div>
-        <div className="set-list">
-          {sets.map((setItem) => (
-            <div key={setItem.id} className={`set-item ${setItem.id === project.id ? 'active' : ''}`}>
-              <button
-                className="set-select"
-                onClick={() => {
-                  setActiveSetId(setItem.id);
-                  setSetsMenuOpen(false);
-                }}
-              >
-                <strong>{setItem.name}</strong>
-                <span>{setItem.rows.length} rows</span>
-              </button>
-              <button className="danger" onClick={() => deleteSet(setItem.id)}>
-                Delete
-              </button>
-            </div>
-          ))}
-        </div>
-      </aside>
+      <SetsDrawer
+        setsMenuOpen={setsMenuOpen}
+        newSetName={newSetName}
+        sets={sets}
+        activeSetId={project.id}
+        onNewSetNameChange={setNewSetName}
+        onCreateSet={createSet}
+        onSelectSet={setActiveSetId}
+        onDeleteSet={deleteSet}
+        onClose={() => setSetsMenuOpen(false)}
+      />
 
       <main>
         <section className="panel editor-panel">
@@ -877,225 +855,45 @@ export default function App() {
               </div>
             </div>
 
-            <aside className="card-detail-panel">
-              <h3>Selected Card Details</h3>
-              <p>Edit fields for the currently highlighted row.</p>
-              {selectedRow ? (
-                <>
-                  <label>
-                    Word
-                    <input
-                      value={selectedRow.word}
-                      onChange={(event) => updateRow(selectedRow.id, { word: event.target.value })}
-                      aria-label="Selected row word"
-                    />
-                  </label>
-                  <label>
-                    Subtitle
-                    <input
-                      value={selectedRow.subtitle}
-                      onChange={(event) => updateRow(selectedRow.id, { subtitle: event.target.value })}
-                      aria-label="Selected row subtitle"
-                    />
-                  </label>
-                  {selectedRowHasImage ? (
-                    <div className="image-selected-state">
-                      <p>Image is set for this row.</p>
-                      <button type="button" className="danger" onClick={onRemoveSelectedRowImage}>
-                        Remove image
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="image-options">
-                      <label>
-                        Image URL
-                        <input
-                          value={imageUrlDraft}
-                          onChange={(event) => setImageUrlDraft(event.target.value)}
-                          aria-label="Selected row image URL"
-                          placeholder="https://..."
-                        />
-                      </label>
-                      <button type="button" onClick={onApplySelectedImageUrl} disabled={!imageUrlDraft.trim()}>
-                        Set image from URL
-                      </button>
-                      <div className="drop-zone large" onDragOver={(event) => event.preventDefault()} onDrop={(event) => void onSelectedRowImageDrop(event)}>
-                        Drop image here
-                      </div>
-                      <label>
-                        Upload local image
-                        <input
-                          type="file"
-                          accept="image/*"
-                          aria-label="Selected row image upload"
-                          onChange={(event) => {
-                            const file = event.target.files?.[0];
-                            if (file) {
-                              onSelectedRowImageUpload(file);
-                            }
-                          }}
-                        />
-                      </label>
-
-                      <div className="emoji-options">
-                        <p>Emoji choices</p>
-                        {selectedRowEmojiMatches.length > 0 ? (
-                          <div className="emoji-grid">
-                            {selectedRowEmojiMatches.map((match) => (
-                              <button
-                                type="button"
-                                key={match.emoji}
-                                className="emoji-choice"
-                                aria-label={`Use emoji ${match.emoji}`}
-                                title={`Keywords: ${match.keywords.join(', ')}`}
-                                onClick={() => applyEmojiToRow(selectedRow.id, match.emoji)}
-                              >
-                                {match.emoji}
-                              </button>
-                            ))}
-                          </div>
-                        ) : (
-                          <p className="hint">No emoji matches found for this word.</p>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </>
-              ) : (
-                <p>Select a row from the list to edit details.</p>
-              )}
-            </aside>
-          </div>
-
-        </section>
-
-        <section className="panel data-panel">
-          <h2>Word & Image List</h2>
-          <p>Columns: `word`, `subtitle`, `imageUrl`. Header row is optional. Select a row to edit details at left.</p>
-          <textarea
-            value={csvInput}
-            onChange={(event) => setCsvInput(event.target.value)}
-            placeholder={'word,subtitle,imageUrl\nDog,Animal,https://example.com/dog.jpg'}
-            rows={5}
-          />
-          <div className="row-buttons">
-            <button onClick={onCsvImport}>Import CSV</button>
-            <button onClick={() => replaceRows([])} className="danger">
-              Clear Rows
-            </button>
-          </div>
-
-          <div className="list-table" role="region" aria-label="Rows list">
-            <table>
-              <thead>
-                <tr>
-                  <th>Word</th>
-                  <th>Subtitle</th>
-                  <th>Image URL</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {project.rows.map((row) => {
-                  const rowValidation = validations.find((item) => item.rowId === row.id);
-                  const hasIssue = Boolean(
-                    rowValidation?.wordOverflow || rowValidation?.subtitleOverflow || rowValidation?.imageIssue || imageIssues[row.id]
-                  );
-                  return (
-                    <tr
-                      key={row.id}
-                      className={row.id === selectedRow?.id ? 'selected' : undefined}
-                      onClick={() => updateActiveSet((current) => ({ ...current, selectedRowId: row.id }))}
-                    >
-                      <td>
-                        <input
-                          value={row.word}
-                          onChange={(event) => updateRow(row.id, { word: event.target.value })}
-                          aria-label="Word"
-                        />
-                      </td>
-                      <td>
-                        <input
-                          value={row.subtitle}
-                          onChange={(event) => updateRow(row.id, { subtitle: event.target.value })}
-                          aria-label="Subtitle"
-                        />
-                      </td>
-                      <td>
-                        <input
-                          value={row.imageUrl}
-                          onChange={(event) => updateRow(row.id, { imageUrl: event.target.value })}
-                          aria-label="Image URL"
-                          placeholder="https://..."
-                        />
-                      </td>
-                      <td>
-                        {hasIssue ? (
-                          <span className="warn">
-                            {rowValidation?.wordOverflow ? 'Word overflow. ' : ''}
-                            {rowValidation?.subtitleOverflow ? 'Subtitle overflow. ' : ''}
-                            {rowValidation?.imageIssue ? 'Missing image. ' : ''}
-                            {imageIssues[row.id] ? 'Image fetch blocked.' : ''}
-                          </span>
-                        ) : (
-                          <span className="ok">Fits</span>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </section>
-
-        <section className="panel output-panel">
-          <h2>PDF Output</h2>
-
-          <label>
-            Cards per page
-            <select
-              value={project.preset}
-              onChange={(event) => updateActiveSet((current) => ({ ...current, preset: Number(event.target.value) as CardPreset }))}
-            >
-              <option value={6}>6 per page</option>
-              <option value={8}>8 per page</option>
-              <option value={12}>12 per page</option>
-            </select>
-          </label>
-
-          <label className="checkbox-row">
-            <input
-              type="checkbox"
-              checked={project.showCutGuides}
-              onChange={(event) => updateActiveSet((current) => ({ ...current, showCutGuides: event.target.checked }))}
+            <SelectedCardDetails
+              selectedRow={selectedRow}
+              selectedRowHasImage={selectedRowHasImage}
+              imageUrlDraft={imageUrlDraft}
+              selectedRowEmojiMatches={selectedRowEmojiMatches}
+              onUpdateRow={updateRow}
+              onImageUrlDraftChange={setImageUrlDraft}
+              onApplySelectedImageUrl={onApplySelectedImageUrl}
+              onSelectedRowImageDrop={(event) => void onSelectedRowImageDrop(event)}
+              onSelectedRowImageUpload={(file) => void onSelectedRowImageUpload(file)}
+              onApplyEmoji={applyEmojiToRow}
+              onRemoveSelectedRowImage={onRemoveSelectedRowImage}
             />
-            Include cut guide borders
-          </label>
+          </div>
 
-          <button className="primary" onClick={generatePdf} disabled={pdfProgress.active}>
-            {pdfProgress.active ? 'Generating...' : 'Generate PDF'}
-          </button>
-
-          {pdfProgress.active && (
-            <div className="progress-wrap" aria-live="polite">
-              <div className="progress-label">
-                <span>{pdfProgress.stage}</span>
-                <span>{pdfProgress.percent}%</span>
-              </div>
-              <div className="progress-track" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pdfProgress.percent}>
-                <div className="progress-fill" style={{ width: `${pdfProgress.percent}%` }} />
-              </div>
-            </div>
-          )}
-
-          {pdfStatus && <p className="status">{pdfStatus}</p>}
-
-          <p className="hint">
-            If a web image fails due to CORS/restrictions, save it to your computer and upload it in Selected Card
-            Details.
-          </p>
         </section>
+
+        <WordListPanel
+          csvInput={csvInput}
+          rows={project.rows}
+          validations={validations}
+          imageIssues={imageIssues}
+          selectedRowId={selectedRow?.id}
+          onCsvInputChange={setCsvInput}
+          onCsvImport={onCsvImport}
+          onClearRows={() => replaceRows([])}
+          onSelectRow={(rowId) => updateActiveSet((current) => ({ ...current, selectedRowId: rowId }))}
+          onUpdateRow={updateRow}
+        />
+
+        <PdfOutputPanel
+          preset={project.preset}
+          showCutGuides={project.showCutGuides}
+          pdfProgress={pdfProgress}
+          pdfStatus={pdfStatus}
+          onPresetChange={(preset) => updateActiveSet((current) => ({ ...current, preset }))}
+          onShowCutGuidesChange={(showCutGuides) => updateActiveSet((current) => ({ ...current, showCutGuides }))}
+          onGeneratePdf={() => void generatePdf()}
+        />
       </main>
     </div>
   );
