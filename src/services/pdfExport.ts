@@ -84,10 +84,29 @@ export interface GeneratePdfOptions {
   onProgress: (percent: number, stage: string) => void;
 }
 
+interface PdfTextDebugConfig {
+  enabled: boolean;
+  yNudgePx: number;
+}
+
+function getPdfTextDebugConfig(): PdfTextDebugConfig {
+  if (typeof window === 'undefined') {
+    return { enabled: false, yNudgePx: 0 };
+  }
+
+  const enabled = window.localStorage.getItem('pdfTextDebug') === '1';
+  const yNudgeRaw = Number(window.localStorage.getItem('pdfTextYNudgePx') ?? '0');
+  return {
+    enabled,
+    yNudgePx: Number.isFinite(yNudgeRaw) ? yNudgeRaw : 0
+  };
+}
+
 export async function generatePdfBytes(options: GeneratePdfOptions): Promise<PdfGenerationResult> {
   const { project, tamilFontUrl, onProgress } = options;
   const doc = await PDFDocument.create();
   doc.registerFontkit(fontkit);
+  const pdfTextDebug = getPdfTextDebugConfig();
 
   const tamilFontBytes = await fetch(tamilFontUrl).then((response) => response.arrayBuffer());
   const tamilFont = await doc.embedFont(tamilFontBytes, { subset: true });
@@ -191,6 +210,7 @@ export async function generatePdfBytes(options: GeneratePdfOptions): Promise<Pdf
       const topInset = paddingY + Math.max((innerH - textBlockHeight) / 2, 0);
       const textTopY = textYTop - topInset;
       const textColor = parseHexColor(textElement.color);
+      const yNudgePdf = (pdfTextDebug.yNudgePx / project.template.height) * cardHeight;
 
       clipped.forEach((line, lineIndex) => {
         const shouldUseTamilFont = textElement.fontFamily === 'Noto Sans Tamil' || hasTamil(line);
@@ -212,14 +232,37 @@ export async function generatePdfBytes(options: GeneratePdfOptions): Promise<Pdf
 
         const ascent = activeFont.heightAtSize(scaledFontSize, { descender: false });
         const lineTopY = textTopY - lineHeight * lineIndex;
+        const baselineY = lineTopY - ascent - yNudgePdf;
 
         page.drawText(line, {
           x,
-          y: lineTopY - ascent,
+          y: baselineY,
           size: scaledFontSize,
           font: activeFont,
           color: rgb(textColor.r, textColor.g, textColor.b)
         });
+
+        if (pdfTextDebug.enabled && lineIndex === 0) {
+          const baselineByLineHeight = textTopY - lineHeight;
+          const ascentShift = baselineY - baselineByLineHeight;
+          console.log('[pdf-text-debug]', {
+            rowId: row.id,
+            side,
+            textId: textElement.id,
+            fontFamily: textElement.fontFamily,
+            fontSize: textElement.fontSize,
+            lineHeight: textElement.lineHeight,
+            yNudgePx: pdfTextDebug.yNudgePx,
+            boxTopTemplateY: textElement.y,
+            boxHeightTemplate: textElement.height,
+            textTopPdfY: Number(textTopY.toFixed(3)),
+            baselinePdfY: Number(baselineY.toFixed(3)),
+            ascentPdf: Number(ascent.toFixed(3)),
+            lineHeightPdf: Number(lineHeight.toFixed(3)),
+            ascentShiftPdf: Number(ascentShift.toFixed(3)),
+            ascentShiftTemplatePx: Number(((ascentShift / cardHeight) * project.template.height).toFixed(3))
+          });
+        }
       });
     }
   }
