@@ -189,7 +189,7 @@ export async function generatePdfBytes(options: GeneratePdfOptions): Promise<Pdf
       const boxW = Math.max((textElement.width / project.template.width) * cardWidth - paddingX * 2, 0);
       const textBlockHeight = clipped.length * lineHeight;
       const topInset = paddingY + Math.max((innerH - textBlockHeight) / 2, 0);
-      const firstBaselineY = textYTop - topInset - lineHeight;
+      const textTopY = textYTop - topInset;
       const textColor = parseHexColor(textElement.color);
 
       clipped.forEach((line, lineIndex) => {
@@ -210,9 +210,12 @@ export async function generatePdfBytes(options: GeneratePdfOptions): Promise<Pdf
           x = textX + Math.max(boxW - lineWidth, 0);
         }
 
+        const ascent = activeFont.heightAtSize(scaledFontSize, { descender: false });
+        const lineTopY = textTopY - lineHeight * lineIndex;
+
         page.drawText(line, {
           x,
-          y: firstBaselineY - lineHeight * lineIndex,
+          y: lineTopY - ascent,
           size: scaledFontSize,
           font: activeFont,
           color: rgb(textColor.r, textColor.g, textColor.b)
