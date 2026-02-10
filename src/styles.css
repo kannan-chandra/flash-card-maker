@@ -204,18 +204,26 @@ input[type='color'] {
   position: relative;
 }
 
-.floating-image-panel {
+.floating-inspector-panel {
   position: absolute;
   z-index: 30;
-  width: min(340px, calc(100vw - 48px));
   max-width: calc(100% - 8px);
 }
 
-.floating-image-panel .card-detail-panel {
+.floating-inspector-panel .card-detail-panel,
+.floating-text-panel .text-control-panel {
   margin: 0;
   border: 1px solid #94a3b8;
+  border-radius: 8px;
   background: #ffffff;
+  padding: 10px;
   box-shadow: 0 10px 24px rgba(15, 23, 42, 0.2);
+}
+
+.floating-text-panel .text-control-panel {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 10px;
 }
 
 .stage-shell {

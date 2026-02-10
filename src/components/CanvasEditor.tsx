@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Group, Image as KonvaImage, Layer, Rect, Stage, Text, Transformer } from 'react-konva';
 import type Konva from 'konva';
 import { FONT_FAMILIES } from '../constants/project';
+import { FloatingInspectorPanel } from './FloatingInspectorPanel';
 import type { CardTemplate, FlashcardRow, FlashcardSet, FontFamily, RowValidation, TextElement } from '../types';
 
 interface CanvasEditorProps {
@@ -281,9 +282,15 @@ export function CanvasEditor(props: CanvasEditorProps) {
         ? project.template.textElements[1]
         : null;
   const showImagePanel = selectedElement === 'image' && Boolean(children);
-  const imagePanelLeft = Math.max(0, Math.min(project.template.image.x * stageScale, Math.max(0, scaledStageWidth - 340)));
-  const imagePanelTop =
-    (toCanvasY(project.template.image.y, project.template.image.side) + project.template.image.height) * stageScale + 8;
+  const showTextPanel = Boolean(selectedText);
+  const imagePanelWidth = Math.min(340, Math.max(240, scaledStageWidth - 8));
+  const textPanelWidth = Math.min(340, Math.max(240, scaledStageWidth - 8));
+  const imagePanelLeft = Math.max(0, Math.min(project.template.image.x * stageScale, Math.max(0, scaledStageWidth - imagePanelWidth)));
+  const imagePanelTop = (toCanvasY(project.template.image.y, project.template.image.side) + project.template.image.height) * stageScale + 8;
+  const textPanelLeft = selectedText
+    ? Math.max(0, Math.min(selectedText.x * stageScale, Math.max(0, scaledStageWidth - textPanelWidth)))
+    : 0;
+  const textPanelTop = selectedText ? (toCanvasY(selectedText.y, selectedText.side) + selectedText.height) * stageScale + 8 : 0;
 
   return (
     <section className="panel editor-panel">
@@ -301,52 +308,6 @@ export function CanvasEditor(props: CanvasEditorProps) {
                 onChange={(event) => onPatchTemplate({ backgroundColor: event.target.value })}
               />
             </label>
-            {selectedText ? (
-              <>
-                <label>
-                  Font
-                  <select
-                    value={selectedText.fontFamily}
-                    onChange={(event) => onPatchTextElement(selectedText.id, { fontFamily: event.target.value as FontFamily })}
-                  >
-                    {FONT_FAMILIES.map((font) => (
-                      <option key={font} value={font}>
-                        {font}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label>
-                  Size
-                  <input
-                    type="number"
-                    min={10}
-                    max={120}
-                    value={selectedText.fontSize}
-                    onChange={(event) => onPatchTextElement(selectedText.id, { fontSize: Number(event.target.value) || 10 })}
-                  />
-                </label>
-                <label>
-                  Align
-                  <select
-                    value={selectedText.align}
-                    onChange={(event) => onPatchTextElement(selectedText.id, { align: event.target.value as TextElement['align'] })}
-                  >
-                    <option value="left">Left</option>
-                    <option value="center">Center</option>
-                    <option value="right">Right</option>
-                  </select>
-                </label>
-                <label>
-                  Text Color
-                  <input
-                    type="color"
-                    value={selectedText.color}
-                    onChange={(event) => onPatchTextElement(selectedText.id, { color: event.target.value })}
-                  />
-                </label>
-              </>
-            ) : null}
             <label className="checkbox-row control-checkbox">
               <input
                 type="checkbox"
@@ -732,15 +693,57 @@ export function CanvasEditor(props: CanvasEditorProps) {
               )}
               </div>
               {showImagePanel && (
-                <div
-                  className="floating-image-panel"
-                  style={{
-                    left: imagePanelLeft,
-                    top: imagePanelTop
-                  }}
-                >
+                <FloatingInspectorPanel className="floating-image-panel" left={imagePanelLeft} top={imagePanelTop} width={imagePanelWidth}>
                   {children}
-                </div>
+                </FloatingInspectorPanel>
+              )}
+              {showTextPanel && selectedText && (
+                <FloatingInspectorPanel className="floating-text-panel" left={textPanelLeft} top={textPanelTop} width={textPanelWidth}>
+                  <div className="text-control-panel">
+                    <label>
+                      Font
+                      <select
+                        value={selectedText.fontFamily}
+                        onChange={(event) => onPatchTextElement(selectedText.id, { fontFamily: event.target.value as FontFamily })}
+                      >
+                        {FONT_FAMILIES.map((font) => (
+                          <option key={font} value={font}>
+                            {font}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label>
+                      Size
+                      <input
+                        type="number"
+                        min={10}
+                        max={120}
+                        value={selectedText.fontSize}
+                        onChange={(event) => onPatchTextElement(selectedText.id, { fontSize: Number(event.target.value) || 10 })}
+                      />
+                    </label>
+                    <label>
+                      Align
+                      <select
+                        value={selectedText.align}
+                        onChange={(event) => onPatchTextElement(selectedText.id, { align: event.target.value as TextElement['align'] })}
+                      >
+                        <option value="left">Left</option>
+                        <option value="center">Center</option>
+                        <option value="right">Right</option>
+                      </select>
+                    </label>
+                    <label>
+                      Text Color
+                      <input
+                        type="color"
+                        value={selectedText.color}
+                        onChange={(event) => onPatchTextElement(selectedText.id, { color: event.target.value })}
+                      />
+                    </label>
+                  </div>
+                </FloatingInspectorPanel>
               )}
             </div>
           </div>
