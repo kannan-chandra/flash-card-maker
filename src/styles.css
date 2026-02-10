@@ -281,6 +281,7 @@ button.danger {
   overflow: auto;
   border: 1px solid #d1d5db;
   border-radius: 8px;
+  background: #ffffff;
 }
 
 table {
@@ -293,11 +294,82 @@ td {
   border-bottom: 1px solid #e5e7eb;
   padding: 6px;
   font-size: 13px;
-  vertical-align: top;
+  vertical-align: middle;
 }
 
 td input[type='text'],
 td input:not([type]) {
+  width: 100%;
+}
+
+.list-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #f8fafc;
+}
+
+.list-table td {
+  padding: 0;
+}
+
+.list-table td input {
+  border: 0;
+  border-radius: 0;
+  padding: 9px 10px;
+  min-height: 40px;
+}
+
+.list-table td input:focus {
+  outline: 2px solid #93c5fd;
+  outline-offset: -2px;
+  background: #eff6ff;
+}
+
+.subtitle-cell {
+  display: flex;
+  align-items: center;
+}
+
+.subtitle-cell input {
+  flex: 1;
+}
+
+.row-warning {
+  margin-right: 8px;
+  color: #b91c1c;
+  font-weight: 700;
+}
+
+.sheet-hint-row td {
+  padding: 8px 10px;
+  color: #475569;
+  font-size: 12px;
+}
+
+.draft-row td {
+  background: #fcfcff;
+}
+
+.csv-backdrop {
+  z-index: 40;
+}
+
+.csv-modal {
+  position: fixed;
+  z-index: 50;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(720px, calc(100vw - 24px));
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  padding: 12px;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.2);
+}
+
+.csv-modal textarea {
   width: 100%;
 }
 
@@ -318,6 +390,10 @@ td input:not([type]) {
 }
 
 tr.selected {
+  background: #eff6ff;
+}
+
+.list-table tbody tr:focus-within {
   background: #eff6ff;
 }
 

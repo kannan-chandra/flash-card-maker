@@ -54,8 +54,7 @@ export function validateRows(template: CardTemplate, rows: FlashcardRow[]): RowV
   return rows.map((row) => ({
     rowId: row.id,
     wordOverflow: wordText ? hasOverflow(row.word, wordText) : false,
-    subtitleOverflow: subtitleText ? hasOverflow(row.subtitle, subtitleText) : false,
-    imageIssue: !row.imageUrl && !row.localImageDataUrl ? 'Missing image' : undefined
+    subtitleOverflow: subtitleText ? hasOverflow(row.subtitle, subtitleText) : false
   }));
 }
 

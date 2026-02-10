@@ -17,6 +17,10 @@ import { createEmojiImageDataUrl, findTopEmojiMatches } from './utils/emoji';
 import { validateRows } from './utils/layout';
 import { clearRowImage, hasRowImage, setImageFromDataUrl, setImageFromUrl } from './utils/rowImage';
 
+function makeRowId(): string {
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
 export default function App() {
   const { sets, project, loading, setActiveSetId, createSet, deleteSet, updateActiveSet, patchTemplate, patchTextElement, replaceRows, appendRows, updateRow } =
     useWorkspace();
@@ -103,15 +107,16 @@ export default function App() {
     deleteSet(setId);
   }
 
-  function onCsvImport() {
+  function onCsvImport(): boolean {
     const rows = parseCsvInput(csvInput);
     if (!rows.length) {
       setPdfStatus('No CSV rows found.');
-      return;
+      return false;
     }
     appendRows(rows);
     setCsvInput('');
     setPdfStatus(`Imported ${rows.length} rows from CSV.`);
+    return true;
   }
 
   async function onRowImageUpload(rowId: string, file: File) {
@@ -236,6 +241,41 @@ export default function App() {
 
   const currentValidation = validations.find((item) => item.rowId === selectedRow?.id);
 
+  function onAppendRow(row: { word: string; subtitle: string }) {
+    const nextRow = {
+      id: makeRowId(),
+      word: row.word,
+      subtitle: row.subtitle,
+      imageUrl: ''
+    };
+    appendRows([nextRow]);
+  }
+
+  function onDeleteRow(rowId: string) {
+    updateActiveSet((current) => {
+      const rowIndex = current.rows.findIndex((row) => row.id === rowId);
+      if (rowIndex < 0) {
+        return current;
+      }
+      const nextRows = current.rows.filter((row) => row.id !== rowId);
+      const nextSelectedRowId =
+        current.selectedRowId === rowId ? nextRows[Math.min(rowIndex, Math.max(nextRows.length - 1, 0))]?.id : current.selectedRowId;
+      return {
+        ...current,
+        rows: nextRows,
+        selectedRowId: nextSelectedRowId
+      };
+    });
+    setImageIssues((current) => {
+      if (!current[rowId]) {
+        return current;
+      }
+      const next = { ...current };
+      delete next[rowId];
+      return next;
+    });
+  }
+
   if (loading) {
     return <div className="loading">Loading project...</div>;
   }
@@ -338,6 +378,8 @@ export default function App() {
           onClearRows={() => replaceRows([])}
           onSelectRow={(rowId) => updateActiveSet((current) => ({ ...current, selectedRowId: rowId }))}
           onUpdateRow={updateRow}
+          onAppendRow={onAppendRow}
+          onDeleteRow={onDeleteRow}
         />
 
         <PdfOutputPanel

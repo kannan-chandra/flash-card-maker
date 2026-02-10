@@ -1,9 +1,16 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 
 const ONE_BY_ONE_PNG = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO2XK7kAAAAASUVORK5CYII=',
   'base64'
 );
+
+async function importCsv(page: Page, value: string) {
+  await page.getByRole('button', { name: 'Import CSV' }).click();
+  const dialog = page.getByRole('dialog', { name: 'CSV import' });
+  await dialog.getByLabel('CSV input').fill(value);
+  await dialog.getByRole('button', { name: 'Import', exact: true }).click();
+}
 
 test('generates downloadable PDF for Tamil text without runtime errors', async ({ page }) => {
   const pageErrors: string[] = [];
@@ -11,8 +18,7 @@ test('generates downloadable PDF for Tamil text without runtime errors', async (
 
   await page.goto('/');
 
-  await page.locator('textarea').first().fill('word,subtitle\nசிங்கம்,விலங்கு');
-  await page.getByRole('button', { name: 'Import CSV' }).click();
+  await importCsv(page, 'word,subtitle\nசிங்கம்,விலங்கு');
 
   const upload = page.getByLabel('Selected row image upload');
   await upload.setInputFiles({
@@ -39,18 +45,15 @@ test('generates downloadable PDF for Tamil text without runtime errors', async (
 test('flags long unbroken words as overflow', async ({ page }) => {
   await page.goto('/');
 
-  await page.locator('textarea').first().fill('word,subtitle\nBabyBabyBabyBabyBabyBabyBabyBabyBaby,Demo');
-  await page.getByRole('button', { name: 'Import CSV' }).click();
+  await importCsv(page, 'word,subtitle\nBabyBabyBabyBabyBabyBabyBabyBabyBaby,Demo');
 
-  const statusCell = page.locator('tbody tr').first().locator('td').nth(3);
-  await expect(statusCell).toContainText('Word overflow');
+  await expect(page.getByLabel(/Row issues: Word overflow/i)).toBeVisible();
 });
 
 test('can set emoji image for selected row and then remove image', async ({ page }) => {
   await page.goto('/');
 
-  await page.locator('textarea').first().fill('word,subtitle\nbaby,one\nlion,two');
-  await page.getByRole('button', { name: 'Import CSV' }).click();
+  await importCsv(page, 'word,subtitle\nbaby,one\nlion,two');
 
   await page.getByRole('button', { name: /^Use emoji / }).first().click();
   await expect(page.getByRole('button', { name: 'Remove image' })).toBeVisible();
@@ -58,16 +61,12 @@ test('can set emoji image for selected row and then remove image', async ({ page
 
   await page.getByRole('button', { name: 'Remove image' }).click();
   await expect(page.getByRole('button', { name: 'Set image from URL' })).toBeVisible();
-
-  const firstStatus = page.locator('tbody tr').first().locator('td').nth(3);
-  await expect(firstStatus).toContainText('Missing image');
 });
 
 test('offers emoji button for noun objects and vehicles', async ({ page }) => {
   await page.goto('/');
 
-  await page.locator('textarea').first().fill('word,subtitle\nhammer,tool\nbus,vehicle');
-  await page.getByRole('button', { name: 'Import CSV' }).click();
+  await importCsv(page, 'word,subtitle\nhammer,tool\nbus,vehicle');
 
   const emojiChoices = page.getByRole('button', { name: /^Use emoji / });
   const count = await emojiChoices.count();
@@ -78,8 +77,7 @@ test('offers emoji button for noun objects and vehicles', async ({ page }) => {
 test('offers emoji button for Tamil keyword matches', async ({ page }) => {
   await page.goto('/');
 
-  await page.locator('textarea').first().fill('word,subtitle\nநாய்,செல்லப்பிராணி');
-  await page.getByRole('button', { name: 'Import CSV' }).click();
+  await importCsv(page, 'word,subtitle\nநாய்,செல்லப்பிராணி');
 
   const emojiChoices = page.getByRole('button', { name: /^Use emoji / });
   const count = await emojiChoices.count();
@@ -90,8 +88,7 @@ test('offers emoji button for Tamil keyword matches', async ({ page }) => {
 test('uses subtitle emoji keywords when word has no match', async ({ page }) => {
   await page.goto('/');
 
-  await page.locator('textarea').first().fill('word,subtitle\nperro,நாய்');
-  await page.getByRole('button', { name: 'Import CSV' }).click();
+  await importCsv(page, 'word,subtitle\nperro,நாய்');
 
   const emojiChoices = page.getByRole('button', { name: /^Use emoji / });
   const count = await emojiChoices.count();
@@ -102,8 +99,7 @@ test('uses subtitle emoji keywords when word has no match', async ({ page }) => 
 test('generates downloadable PDF in double-sided mode', async ({ page }) => {
   await page.goto('/');
 
-  await page.locator('textarea').first().fill('word,subtitle\nDog,Animal');
-  await page.getByRole('button', { name: 'Import CSV' }).click();
+  await importCsv(page, 'word,subtitle\nDog,Animal');
 
   const upload = page.getByLabel('Selected row image upload');
   await upload.setInputFiles({
