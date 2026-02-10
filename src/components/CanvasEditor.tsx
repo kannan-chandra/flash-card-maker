@@ -104,6 +104,8 @@ export function CanvasEditor(props: CanvasEditorProps) {
   const textEditorRef = useRef<HTMLTextAreaElement>(null);
   const stageShellRef = useRef<HTMLDivElement>(null);
   const [stageViewportWidth, setStageViewportWidth] = useState<number>(0);
+  const [isImageDropTargetActive, setIsImageDropTargetActive] = useState(false);
+  const dragEnterDepthRef = useRef(0);
 
   const stageScale = stageViewportWidth > 0 ? Math.min(1, stageViewportWidth / project.template.width) : 1;
   const scaledStageWidth = project.template.width * stageScale;
@@ -248,8 +250,30 @@ export function CanvasEditor(props: CanvasEditorProps) {
     }
   }
 
+  function onCanvasDragEnter(event: ReactDragEvent<HTMLDivElement>) {
+    if (!event.dataTransfer.types.includes('Files')) {
+      return;
+    }
+    event.preventDefault();
+    dragEnterDepthRef.current += 1;
+    setIsImageDropTargetActive(true);
+  }
+
+  function onCanvasDragLeave(event: ReactDragEvent<HTMLDivElement>) {
+    if (!event.dataTransfer.types.includes('Files')) {
+      return;
+    }
+    event.preventDefault();
+    dragEnterDepthRef.current = Math.max(0, dragEnterDepthRef.current - 1);
+    if (dragEnterDepthRef.current === 0) {
+      setIsImageDropTargetActive(false);
+    }
+  }
+
   function onCanvasDrop(event: ReactDragEvent<HTMLDivElement>) {
     event.preventDefault();
+    dragEnterDepthRef.current = 0;
+    setIsImageDropTargetActive(false);
     const file = event.dataTransfer.files?.[0];
     if (file && file.type.startsWith('image/')) {
       onCanvasImageDrop(file);
@@ -339,7 +363,9 @@ export function CanvasEditor(props: CanvasEditorProps) {
               <div
                 className="stage-canvas"
                 style={{ width: scaledStageWidth, height: scaledStageHeight }}
+                onDragEnter={onCanvasDragEnter}
                 onDragOver={onCanvasDragOver}
+                onDragLeave={onCanvasDragLeave}
                 onDrop={onCanvasDrop}
               >
               <Stage
@@ -711,6 +737,24 @@ export function CanvasEditor(props: CanvasEditorProps) {
                     lineHeight: String(editingTextElement.lineHeight)
                   }}
                 />
+              )}
+              {isImageDropTargetActive && (
+                <div
+                  className="canvas-drop-overlay"
+                  style={{
+                    left: project.template.image.x * stageScale,
+                    top: toCanvasY(project.template.image.y, project.template.image.side) * stageScale,
+                    width: project.template.image.width * stageScale,
+                    height: project.template.image.height * stageScale
+                  }}
+                >
+                  <div className="canvas-drop-overlay-icon" aria-hidden>
+                    <span className="icon-frame" />
+                    <span className="icon-plus-v" />
+                    <span className="icon-plus-h" />
+                  </div>
+                  <p>Drag and drop image here</p>
+                </div>
               )}
               </div>
               {showImagePanel && (
