@@ -106,6 +106,21 @@ main {
   padding: 14px;
 }
 
+.editor-panel {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.data-panel {
+  grid-column: 1;
+  grid-row: 2;
+}
+
+.output-panel {
+  grid-column: 1;
+  grid-row: 3;
+}
+
 .editor-controls {
   display: flex;
   flex-wrap: wrap;
@@ -115,22 +130,8 @@ main {
 
 .editor-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 12px;
-  align-items: start;
-}
-
-.editor-layout.with-sidebar {
-  display: grid;
   grid-template-columns: minmax(0, 1fr) 280px;
   gap: 12px;
-  align-items: start;
-}
-
-.list-detail-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(300px, 360px);
-  gap: 16px;
   align-items: start;
 }
 
@@ -477,10 +478,6 @@ td input:not([type]) {
   }
 
   .editor-layout {
-    grid-template-columns: 1fr;
-  }
-
-  .list-detail-row {
     grid-template-columns: 1fr;
   }
 

@@ -372,25 +372,7 @@ export default function App() {
             canSelectPreviousRow: selectedRowIndex > 0,
             canSelectNextRow: selectedRowIndex >= 0 && selectedRowIndex < project.rows.length - 1
           }}
-        />
-
-        <div className="list-detail-row">
-          <WordListPanel
-            csvInput={csvInput}
-            rows={project.rows}
-            validations={validations}
-            imageIssues={imageIssues}
-            selectedRowId={selectedRow?.id}
-            onCsvInputChange={setCsvInput}
-            onCsvImport={onCsvImport}
-            onClearRows={() => replaceRows([])}
-            onSelectRow={(rowId) => updateActiveSet((current) => ({ ...current, selectedRowId: rowId }))}
-            onUpdateRow={updateRow}
-            onAppendRow={onAppendRow}
-            onInsertRowAfter={onInsertRowAfter}
-            onDeleteRow={onDeleteRow}
-          />
-
+        >
           <SelectedCardDetails
             data={{
               selectedRow,
@@ -408,7 +390,23 @@ export default function App() {
               onRemoveSelectedRowImage
             }}
           />
-        </div>
+        </CanvasEditor>
+
+        <WordListPanel
+          csvInput={csvInput}
+          rows={project.rows}
+          validations={validations}
+          imageIssues={imageIssues}
+          selectedRowId={selectedRow?.id}
+          onCsvInputChange={setCsvInput}
+          onCsvImport={onCsvImport}
+          onClearRows={() => replaceRows([])}
+          onSelectRow={(rowId) => updateActiveSet((current) => ({ ...current, selectedRowId: rowId }))}
+          onUpdateRow={updateRow}
+          onAppendRow={onAppendRow}
+          onInsertRowAfter={onInsertRowAfter}
+          onDeleteRow={onDeleteRow}
+        />
 
         <PdfOutputPanel
           preset={project.preset}
