@@ -22,6 +22,7 @@ header {
   margin-bottom: 18px;
   position: relative;
   padding-left: 56px;
+  padding-right: 120px;
 }
 
 h1,
@@ -65,6 +66,12 @@ main {
   display: block;
   height: 2px;
   background: #1f2937;
+}
+
+.export-btn {
+  position: absolute;
+  top: 0;
+  right: 0;
 }
 
 .menu-backdrop {
@@ -654,11 +661,17 @@ td input:not([type]) {
   header {
     padding-left: 0;
     padding-top: 50px;
+    padding-right: 0;
   }
 
   .hamburger-btn {
     top: 0;
     left: 0;
+  }
+
+  .export-btn {
+    top: 0;
+    right: 0;
   }
 
   .editor-panel {

@@ -3,7 +3,6 @@ import tamilFontUrl from '@fontsource/noto-sans-tamil/files/noto-sans-tamil-tami
 import '@fontsource/noto-sans-tamil/400.css';
 import type { RowValidation } from './types';
 import { CanvasEditor } from './components/CanvasEditor';
-import { PdfOutputPanel } from './components/PdfOutputPanel';
 import { SelectedCardDetails } from './components/SelectedCardDetails';
 import { SetsDrawer } from './components/SetsDrawer';
 import { WordListPanel } from './components/WordListPanel';
@@ -26,6 +25,7 @@ export default function App() {
     useWorkspace();
   const [newSetName, setNewSetName] = useState('');
   const [setsMenuOpen, setSetsMenuOpen] = useState(false);
+  const [exportModalOpen, setExportModalOpen] = useState(false);
   const [csvInput, setCsvInput] = useState('');
   const [imageUrlDraft, setImageUrlDraft] = useState('');
   const [selectedElement, setSelectedElement] = useState<'image' | 'text1' | 'text2' | null>(null);
@@ -300,6 +300,9 @@ export default function App() {
           <span />
         </button>
         <h1>Flash Card Maker</h1>
+        <button type="button" className="primary export-btn" onClick={() => setExportModalOpen(true)}>
+          Export
+        </button>
         <p>Design one master card layout. Every row in your list uses the same layout.</p>
         <p className="local-only">
           Stored locally in this browser only (IndexedDB). If browser data is cleared, your project is lost.
@@ -318,6 +321,51 @@ export default function App() {
         onDeleteSet={onDeleteSet}
         onClose={() => setSetsMenuOpen(false)}
       />
+      {exportModalOpen && (
+        <>
+          <button type="button" className="menu-backdrop csv-backdrop" onClick={() => setExportModalOpen(false)} aria-label="Close export" />
+          <div className="csv-modal" role="dialog" aria-modal="true" aria-label="Export PDF">
+            <h3>Export PDF</h3>
+            <label>
+              Cards per page
+              <select value={project.preset} onChange={(event) => updateActiveSet((current) => ({ ...current, preset: Number(event.target.value) as 6 | 8 | 12 }))}>
+                <option value={6}>6 per page</option>
+                <option value={8}>8 per page</option>
+                <option value={12}>12 per page</option>
+              </select>
+            </label>
+            <label className="checkbox-row">
+              <input
+                type="checkbox"
+                checked={project.showCutGuides}
+                onChange={(event) => updateActiveSet((current) => ({ ...current, showCutGuides: event.target.checked }))}
+              />
+              Include cut guide borders
+            </label>
+            <div className="row-buttons">
+              <button className="primary" type="button" onClick={() => void generatePdf()} disabled={pdfProgress.active}>
+                {pdfProgress.active ? 'Generating...' : 'Generate PDF'}
+              </button>
+              <button type="button" onClick={() => setExportModalOpen(false)} disabled={pdfProgress.active}>
+                Close
+              </button>
+            </div>
+            {pdfProgress.active && (
+              <div className="progress-wrap" aria-live="polite">
+                <div className="progress-label">
+                  <span>{pdfProgress.stage}</span>
+                  <span>{pdfProgress.percent}%</span>
+                </div>
+                <div className="progress-track" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pdfProgress.percent}>
+                  <div className="progress-fill" style={{ width: `${pdfProgress.percent}%` }} />
+                </div>
+              </div>
+            )}
+            {pdfStatus && <p className="status">{pdfStatus}</p>}
+            <p className="hint">If a web image fails due to CORS/restrictions, save it to your computer and upload it from the image modal.</p>
+          </div>
+        </>
+      )}
 
       <main>
         <CanvasEditor
@@ -384,16 +432,6 @@ export default function App() {
           onAppendRow={onAppendRow}
           onInsertRowAfter={onInsertRowAfter}
           onDeleteRow={onDeleteRow}
-        />
-
-        <PdfOutputPanel
-          preset={project.preset}
-          showCutGuides={project.showCutGuides}
-          pdfProgress={pdfProgress}
-          pdfStatus={pdfStatus}
-          onPresetChange={(preset) => updateActiveSet((current) => ({ ...current, preset }))}
-          onShowCutGuidesChange={(showCutGuides) => updateActiveSet((current) => ({ ...current, showCutGuides }))}
-          onGeneratePdf={() => void generatePdf()}
         />
       </main>
     </div>
