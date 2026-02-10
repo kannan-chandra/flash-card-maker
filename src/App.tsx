@@ -75,7 +75,7 @@ export default function App() {
   );
 
   const previewImageSrc = selectedRow?.localImageDataUrl || selectedRow?.imageUrl;
-  const previewImage = useImage(previewImageSrc);
+  const { image: previewImage, isLoading: previewImageLoading } = useImage(previewImageSrc);
   const imageIsEmpty = !previewImageSrc;
   const cardHeight = project?.template.height ?? DEFAULT_TEMPLATE.height;
   const canvasContext = { cardHeight, doubleSided: Boolean(project?.doubleSided) };
@@ -335,7 +335,8 @@ export default function App() {
             currentValidation,
             selectedElement,
             previewImage,
-            imageIsEmpty
+            imageIsEmpty,
+            imageIsLoading: previewImageLoading
           }}
           canvas={{ cardHeight, stageHeight, toCanvasY, fromCanvasY }}
           actions={{

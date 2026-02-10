@@ -14,6 +14,7 @@ interface CanvasEditorProps {
     selectedElement: 'image' | 'text1' | 'text2' | null;
     previewImage?: HTMLImageElement;
     imageIsEmpty: boolean;
+    imageIsLoading: boolean;
   };
   canvas: {
     cardHeight: number;
@@ -97,7 +98,7 @@ function getContainSize(containerWidth: number, containerHeight: number, sourceW
 
 export function CanvasEditor(props: CanvasEditorProps) {
   const { project, selection, canvas, actions, children } = props;
-  const { selectedRow, selectedRowIndex, currentValidation, selectedElement, previewImage, imageIsEmpty } = selection;
+  const { selectedRow, selectedRowIndex, currentValidation, selectedElement, previewImage, imageIsEmpty, imageIsLoading } = selection;
   const { cardHeight, stageHeight, toCanvasY, fromCanvasY } = canvas;
   const {
     onSelectElement,
@@ -734,6 +735,19 @@ export function CanvasEditor(props: CanvasEditorProps) {
                     <span className="icon-plus-h" />
                   </div>
                   <p>Drag and drop image here</p>
+                </div>
+              )}
+              {imageIsLoading && !imageIsEmpty && (
+                <div
+                  className="canvas-image-loading"
+                  style={{
+                    left: project.template.image.x * stageScale,
+                    top: toCanvasY(project.template.image.y, project.template.image.side) * stageScale,
+                    width: project.template.image.width * stageScale,
+                    height: project.template.image.height * stageScale
+                  }}
+                >
+                  <div className="spinner" aria-label="Loading image" />
                 </div>
               )}
               </div>

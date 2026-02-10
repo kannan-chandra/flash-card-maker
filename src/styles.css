@@ -331,6 +331,30 @@ input[type='color'] {
   padding: 0 10px;
 }
 
+.canvas-image-loading {
+  position: absolute;
+  z-index: 22;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.canvas-image-loading .spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid rgba(148, 163, 184, 0.5);
+  border-top-color: #2563eb;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .canvas-drop-overlay-icon {
   position: relative;
   width: 34px;
