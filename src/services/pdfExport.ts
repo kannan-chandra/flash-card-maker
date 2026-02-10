@@ -1,4 +1,4 @@
-import { PDFDocument, StandardFonts, clip, endPath, popGraphicsState, pushGraphicsState, rectangle, type PDFFont, rgb } from 'pdf-lib';
+import { PDFDocument, StandardFonts, clip, endPath, popGraphicsState, pushGraphicsState, rectangle, type PDFImage, type PDFFont, rgb } from 'pdf-lib';
 import fontkit from '@pdf-lib/fontkit';
 import type { CardPreset, FlashcardRow, ProjectData, TextElement } from '../types';
 import { splitTextForPdf } from '../utils/layout';
@@ -33,6 +33,16 @@ function hasTamil(text: string): boolean {
 
 function fitTextValue(row: FlashcardRow, role: TextElement['role']): string {
   return role === 'word' ? row.word : row.subtitle;
+}
+
+function getImageSourceKey(row: FlashcardRow): string | null {
+  if (row.localImageDataUrl) {
+    return `local:${row.localImageDataUrl}`;
+  }
+  if (row.imageUrl) {
+    return `remote:${row.imageUrl}`;
+  }
+  return null;
 }
 
 async function fetchImageBytes(row: FlashcardRow): Promise<Uint8Array> {
@@ -120,11 +130,14 @@ export async function generatePdfBytes(options: GeneratePdfOptions): Promise<Pdf
   const perfConfig = getPdfPerfDebugConfig();
   const perfStart = performance.now();
   const perf = {
+    imagePrefetchMs: 0,
     imageFetchMs: 0,
     imageEmbedMs: 0,
     textDrawMs: 0,
     pagesMs: 0,
-    saveMs: 0
+    saveMs: 0,
+    imageSources: 0,
+    imageRows: 0
   };
   const doc = await PDFDocument.create();
   doc.registerFontkit(fontkit);
@@ -156,8 +169,56 @@ export async function generatePdfBytes(options: GeneratePdfOptions): Promise<Pdf
   const cols = grid.cols;
   const perPage = grid.cols * grid.rows;
   const nextIssues: Record<string, string> = {};
+  const rowImageSourceKey = new Map<string, string>();
+  const rowImageBytes = new Map<string, Uint8Array>();
+  const embeddedImageBySourceKey = new Map<string, PDFImage>();
   const totalRows = project.rows.length;
   const totalPagePairs = Math.ceil(totalRows / perPage);
+
+  const rowsBySourceKey = new Map<string, FlashcardRow[]>();
+  for (const row of project.rows) {
+    const sourceKey = getImageSourceKey(row);
+    if (!sourceKey) {
+      continue;
+    }
+    rowImageSourceKey.set(row.id, sourceKey);
+    const list = rowsBySourceKey.get(sourceKey);
+    if (list) {
+      list.push(row);
+    } else {
+      rowsBySourceKey.set(sourceKey, [row]);
+    }
+  }
+  perf.imageRows = rowImageSourceKey.size;
+  perf.imageSources = rowsBySourceKey.size;
+
+  const prefetchStart = performance.now();
+  const sourceEntries = Array.from(rowsBySourceKey.entries());
+  const prefetchConcurrency = 6;
+  let sourceIndex = 0;
+  await Promise.all(
+    Array.from({ length: Math.min(prefetchConcurrency, sourceEntries.length || 0) }).map(async () => {
+      while (sourceIndex < sourceEntries.length) {
+        const currentIndex = sourceIndex;
+        sourceIndex += 1;
+        const [, rowsForSource] = sourceEntries[currentIndex];
+        const representativeRow = rowsForSource[0];
+        try {
+          const fetchStart = performance.now();
+          const bytes = await fetchImageBytes(representativeRow);
+          perf.imageFetchMs += performance.now() - fetchStart;
+          for (const row of rowsForSource) {
+            rowImageBytes.set(row.id, bytes);
+          }
+        } catch {
+          for (const row of rowsForSource) {
+            nextIssues[row.id] = 'Unable to load image. Workaround: save the image and upload it from your computer.';
+          }
+        }
+      }
+    })
+  );
+  perf.imagePrefetchMs = performance.now() - prefetchStart;
 
   function getCardPosition(rowInPage: number, colInPage: number): { cardX: number; cardY: number } {
     const slotX = margin + colInPage * (slotWidth + gutter);
@@ -191,18 +252,20 @@ export async function generatePdfBytes(options: GeneratePdfOptions): Promise<Pdf
     try {
       const imageElement = project.template.image;
       if (imageElement.side === side) {
+        const sourceKey = rowImageSourceKey.get(row.id);
+        const imageBytes = rowImageBytes.get(row.id);
         const imageX = cardX + (imageElement.x / project.template.width) * cardWidth;
         const imageY = cardY + cardHeight - ((imageElement.y + imageElement.height) / project.template.height) * cardHeight;
         const imageW = (imageElement.width / project.template.width) * cardWidth;
         const imageH = (imageElement.height / project.template.height) * cardHeight;
 
-        try {
-          const fetchStart = performance.now();
-          const imageBytes = await fetchImageBytes(row);
-          perf.imageFetchMs += performance.now() - fetchStart;
+        if (sourceKey && imageBytes) {
           const embedStart = performance.now();
-          const embeddedImage =
-            detectImageType(imageBytes) === 'png' ? await doc.embedPng(imageBytes) : await doc.embedJpg(imageBytes);
+          let embeddedImage = embeddedImageBySourceKey.get(sourceKey);
+          if (!embeddedImage) {
+            embeddedImage = detectImageType(imageBytes) === 'png' ? await doc.embedPng(imageBytes) : await doc.embedJpg(imageBytes);
+            embeddedImageBySourceKey.set(sourceKey, embeddedImage);
+          }
           perf.imageEmbedMs += performance.now() - embedStart;
           page.drawImage(embeddedImage, {
             x: imageX,
@@ -210,7 +273,7 @@ export async function generatePdfBytes(options: GeneratePdfOptions): Promise<Pdf
             width: imageW,
             height: imageH
           });
-        } catch {
+        } else if (!nextIssues[row.id]) {
           nextIssues[row.id] = 'Unable to load image. Workaround: save the image and upload it from your computer.';
         }
       }
@@ -342,16 +405,22 @@ export async function generatePdfBytes(options: GeneratePdfOptions): Promise<Pdf
 
   if (perfConfig.enabled) {
     const totalMs = performance.now() - perfStart;
-    console.log('[pdf-perf]', {
+    console.log(
+      '[pdf-perf]',
+      JSON.stringify({
       rows: totalRows,
       doubleSided: project.doubleSided,
       totalMs: Number(totalMs.toFixed(1)),
+      imagePrefetchMs: Number(perf.imagePrefetchMs.toFixed(1)),
+      imageSources: perf.imageSources,
+      imageRows: perf.imageRows,
       imageFetchMs: Number(perf.imageFetchMs.toFixed(1)),
       imageEmbedMs: Number(perf.imageEmbedMs.toFixed(1)),
       textDrawMs: Number(perf.textDrawMs.toFixed(1)),
       pagesMs: Number(perf.pagesMs.toFixed(1)),
       saveMs: Number(perf.saveMs.toFixed(1))
-    });
+      })
+    );
   }
 
   return {
