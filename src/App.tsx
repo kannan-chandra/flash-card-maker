@@ -1,214 +1,21 @@
 import { useEffect, useMemo, useRef, useState, type DragEvent } from 'react';
 import { Image as KonvaImage, Layer, Rect, Stage, Text, Transformer } from 'react-konva';
-import { PDFDocument, StandardFonts, type PDFFont, rgb } from 'pdf-lib';
-import fontkit from '@pdf-lib/fontkit';
 import tamilFontUrl from '@fontsource/noto-sans-tamil/files/noto-sans-tamil-tamil-400-normal.woff?url';
 import '@fontsource/noto-sans-tamil/400.css';
 import type Konva from 'konva';
-import type {
-  CardPreset,
-  CardTemplate,
-  FlashcardRow,
-  FlashcardSet,
-  FontFamily,
-  ProjectData,
-  RowValidation,
-  TextElement
-} from './types';
+import type { CardPreset, CardTemplate, FlashcardRow, FlashcardSet, FontFamily, RowValidation, TextElement } from './types';
+import { makeNewSet, normalizeSet, DEFAULT_TEMPLATE, FONT_FAMILIES } from './constants/project';
+import { useImage } from './hooks/useImage';
+import { generatePdfBytes } from './services/pdfExport';
 import { loadWorkspace, saveWorkspace } from './storage';
+import { fromCanvasY as mapFromCanvasY, getStageHeight, toCanvasY as mapToCanvasY } from './utils/canvasLayout';
 import { parseCsvInput } from './utils/csv';
 import { createEmojiImageDataUrl, findTopEmojiMatches } from './utils/emoji';
-import { splitTextForPdf, validateRows } from './utils/layout';
-
-const FONT_FAMILIES: FontFamily[] = ['Arial', 'Verdana', 'Times New Roman', 'Georgia', 'Courier New', 'Noto Sans Tamil'];
-
-const DEFAULT_TEMPLATE: CardTemplate = {
-  width: 700,
-  height: 500,
-  backgroundColor: '#ffffff',
-  image: {
-    side: 1,
-    x: 35,
-    y: 35,
-    width: 260,
-    height: 250
-  },
-  textElements: [
-    {
-      id: 'text1',
-      role: 'word',
-      side: 1,
-      x: 320,
-      y: 80,
-      width: 340,
-      height: 160,
-      fontFamily: 'Arial',
-      fontSize: 44,
-      color: '#1f2937',
-      align: 'center',
-      lineHeight: 1.2
-    },
-    {
-      id: 'text2',
-      role: 'subtitle',
-      side: 1,
-      x: 320,
-      y: 260,
-      width: 340,
-      height: 140,
-      fontFamily: 'Verdana',
-      fontSize: 28,
-      color: '#374151',
-      align: 'center',
-      lineHeight: 1.2
-    }
-  ]
-};
-
-const EMPTY_PROJECT: ProjectData = {
-  template: DEFAULT_TEMPLATE,
-  doubleSided: false,
-  rows: [],
-  preset: 6,
-  showCutGuides: true,
-  updatedAt: Date.now()
-};
-
-function makeNewSet(name: string, index: number): FlashcardSet {
-  const now = Date.now();
-  return {
-    ...EMPTY_PROJECT,
-    template: {
-      ...DEFAULT_TEMPLATE,
-      image: { ...DEFAULT_TEMPLATE.image },
-      textElements: DEFAULT_TEMPLATE.textElements.map((item) => ({ ...item })) as CardTemplate['textElements']
-    },
-    id: `set-${now}-${Math.random().toString(36).slice(2, 7)}`,
-    name: name.trim() || `Set ${index}`,
-    createdAt: now,
-    updatedAt: now
-  };
-}
-
-function normalizeTemplate(template: CardTemplate): CardTemplate {
-  const fallback = DEFAULT_TEMPLATE;
-  const safeNumber = (value: unknown, defaultValue: number) =>
-    typeof value === 'number' && Number.isFinite(value) ? value : defaultValue;
-  const safeSide = (value: unknown, defaultSide: 1 | 2): 1 | 2 => (value === 2 ? 2 : defaultSide);
-  const safeAlign = (value: unknown, defaultAlign: TextElement['align']): TextElement['align'] =>
-    value === 'left' || value === 'center' || value === 'right' ? value : defaultAlign;
-
-  const fallbackTextById: Record<'text1' | 'text2', TextElement> = {
-    text1: fallback.textElements[0],
-    text2: fallback.textElements[1]
-  };
-
-  return {
-    ...template,
-    width: safeNumber(template.width, fallback.width),
-    height: safeNumber(template.height, fallback.height),
-    backgroundColor: template.backgroundColor || fallback.backgroundColor,
-    image: {
-      ...template.image,
-      side: safeSide(template.image?.side, 1),
-      x: safeNumber(template.image?.x, fallback.image.x),
-      y: safeNumber(template.image?.y, fallback.image.y),
-      width: safeNumber(template.image?.width, fallback.image.width),
-      height: safeNumber(template.image?.height, fallback.image.height)
-    },
-    textElements: template.textElements.map((item) => {
-      const fb = fallbackTextById[item.id];
-      return {
-        ...item,
-        side: safeSide(item.side, 1),
-        x: safeNumber(item.x, fb.x),
-        y: safeNumber(item.y, fb.y),
-        width: safeNumber(item.width, fb.width),
-        height: safeNumber(item.height, fb.height),
-        fontSize: safeNumber(item.fontSize, fb.fontSize),
-        lineHeight: safeNumber(item.lineHeight, fb.lineHeight),
-        align: safeAlign(item.align, fb.align),
-        color: item.color || fb.color,
-        fontFamily: item.fontFamily || fb.fontFamily,
-        role: item.role === 'subtitle' ? 'subtitle' : 'word'
-      };
-    }) as CardTemplate['textElements']
-  };
-}
-
-function normalizeSet(setItem: FlashcardSet): FlashcardSet {
-  return {
-    ...setItem,
-    doubleSided: setItem.doubleSided ?? false,
-    template: normalizeTemplate(setItem.template)
-  };
-}
-
-function getPresetGrid(preset: CardPreset): { cols: number; rows: number } {
-  if (preset === 6) return { cols: 2, rows: 3 };
-  if (preset === 8) return { cols: 2, rows: 4 };
-  return { cols: 3, rows: 4 };
-}
-
-function dataUrlToBytes(dataUrl: string): Uint8Array {
-  const base64 = dataUrl.split(',')[1] ?? '';
-  return Uint8Array.from(atob(base64), (char) => char.charCodeAt(0));
-}
-
-function detectImageType(bytes: Uint8Array): 'png' | 'jpg' {
-  if (bytes[0] === 0x89 && bytes[1] === 0x50) {
-    return 'png';
-  }
-  return 'jpg';
-}
-
-function mapFontForPdf(fontFamily: string): StandardFonts {
-  if (fontFamily === 'Courier New') return StandardFonts.Courier;
-  if (fontFamily === 'Times New Roman' || fontFamily === 'Georgia') return StandardFonts.TimesRoman;
-  return StandardFonts.Helvetica;
-}
-
-function hasTamil(text: string): boolean {
-  return /[\u0b80-\u0bff]/i.test(text);
-}
-
-function useImage(src?: string): HTMLImageElement | undefined {
-  const [img, setImg] = useState<HTMLImageElement>();
-
-  useEffect(() => {
-    if (!src) {
-      setImg(undefined);
-      return;
-    }
-    const image = new window.Image();
-    image.crossOrigin = 'anonymous';
-    image.onload = () => setImg(image);
-    image.onerror = () => setImg(undefined);
-    image.src = src;
-  }, [src]);
-
-  return img;
-}
+import { validateRows } from './utils/layout';
+import { clearRowImage, hasRowImage, setImageFromDataUrl, setImageFromUrl } from './utils/rowImage';
 
 function fitTextValue(row: FlashcardRow, role: TextElement['role']): string {
   return role === 'word' ? row.word : row.subtitle;
-}
-
-async function fetchImageBytes(row: FlashcardRow): Promise<Uint8Array> {
-  if (row.localImageDataUrl) {
-    return dataUrlToBytes(row.localImageDataUrl);
-  }
-
-  if (!row.imageUrl) {
-    throw new Error('Missing image URL');
-  }
-
-  const response = await fetch(row.imageUrl, { mode: 'cors' });
-  if (!response.ok) {
-    throw new Error(`Image fetch failed (${response.status})`);
-  }
-  const arrayBuffer = await response.arrayBuffer();
-  return new Uint8Array(arrayBuffer);
 }
 
 export default function App() {
@@ -251,7 +58,7 @@ export default function App() {
     }
     return project.rows.find((row) => row.id === project.selectedRowId) ?? project.rows[0];
   }, [project]);
-  const selectedRowHasImage = Boolean(selectedRow?.imageUrl || selectedRow?.localImageDataUrl);
+  const selectedRowHasImage = hasRowImage(selectedRow);
   const selectedRowEmojiMatches = useMemo(() => {
     if (!selectedRow) {
       return [];
@@ -280,19 +87,10 @@ export default function App() {
   const previewImage = useImage(previewImageSrc);
   const imageIsEmpty = !previewImageSrc;
   const cardHeight = project?.template.height ?? DEFAULT_TEMPLATE.height;
-  const stageHeight = project?.doubleSided ? cardHeight * 2 : cardHeight;
-  const sideOffset = (side: 1 | 2) => (project?.doubleSided ? (side - 1) * cardHeight : 0);
-  const toCanvasY = (y: number, side: 1 | 2) => y + sideOffset(side);
-
-  function fromCanvasY(canvasY: number, elementHeight: number): { side: 1 | 2; y: number } {
-    if (!project?.doubleSided) {
-      return { side: 1, y: Math.max(0, Math.min(canvasY, cardHeight - elementHeight)) };
-    }
-    const side: 1 | 2 = canvasY >= cardHeight ? 2 : 1;
-    const offset = side === 2 ? cardHeight : 0;
-    const localY = canvasY - offset;
-    return { side, y: Math.max(0, Math.min(localY, cardHeight - elementHeight)) };
-  }
+  const canvasContext = { cardHeight, doubleSided: Boolean(project?.doubleSided) };
+  const stageHeight = getStageHeight(canvasContext);
+  const toCanvasY = (y: number, side: 1 | 2) => mapToCanvasY(y, side, canvasContext);
+  const fromCanvasY = (canvasY: number, elementHeight: number) => mapFromCanvasY(canvasY, elementHeight, canvasContext);
 
   const validations: RowValidation[] = useMemo(() => {
     if (!project) {
@@ -465,7 +263,7 @@ export default function App() {
 
     updateActiveSet((current) => ({
       ...current,
-      rows: current.rows.map((row) => (row.id === rowId ? { ...row, localImageDataUrl: dataUrl } : row))
+      rows: current.rows.map((row) => (row.id === rowId ? { ...row, ...setImageFromDataUrl(dataUrl) } : row))
     }));
   }
 
@@ -501,7 +299,7 @@ export default function App() {
 
   function applyEmojiToRow(rowId: string, emoji: string) {
     const dataUrl = createEmojiImageDataUrl(emoji);
-    updateRow(rowId, { localImageDataUrl: dataUrl, imageUrl: '' });
+    updateRow(rowId, setImageFromDataUrl(dataUrl));
   }
 
   function onApplySelectedImageUrl() {
@@ -512,14 +310,14 @@ export default function App() {
     if (!trimmed) {
       return;
     }
-    updateRow(selectedRow.id, { imageUrl: trimmed, localImageDataUrl: undefined });
+    updateRow(selectedRow.id, setImageFromUrl(trimmed));
   }
 
   function onRemoveSelectedRowImage() {
     if (!selectedRow) {
       return;
     }
-    updateRow(selectedRow.id, { imageUrl: '', localImageDataUrl: undefined });
+    updateRow(selectedRow.id, clearRowImage());
     setImageUrlDraft('');
   }
 
@@ -570,167 +368,23 @@ export default function App() {
 
     setProgress(0, 'Preparing PDF...');
     setImageIssues({});
-
-    const doc = await PDFDocument.create();
-    doc.registerFontkit(fontkit);
-    let tamilFont: PDFFont | null = null;
+    let generated: Awaited<ReturnType<typeof generatePdfBytes>>;
     try {
-      const tamilFontBytes = await fetch(tamilFontUrl).then((response) => response.arrayBuffer());
-      tamilFont = await doc.embedFont(tamilFontBytes, { subset: true });
+      generated = await generatePdfBytes({
+        project,
+        tamilFontUrl,
+        onProgress: setProgress
+      });
     } catch {
       setPdfStatus('Failed to load Tamil font for PDF export.');
       setPdfProgress({ active: false, percent: 0, stage: '' });
       return;
     }
-    setProgress(5, 'Preparing layout...');
-    const standardFontCache = new Map<StandardFonts, PDFFont>();
-    const grid = getPresetGrid(project.preset);
-    const pageWidth = 612;
-    const pageHeight = 792;
-    const margin = 36;
-    const gutter = 12;
-    const usableWidth = pageWidth - margin * 2 - gutter * (grid.cols - 1);
-    const usableHeight = pageHeight - margin * 2 - gutter * (grid.rows - 1);
-    const slotWidth = usableWidth / grid.cols;
-    const slotHeight = usableHeight / grid.rows;
 
-    const ratio = project.template.width / project.template.height;
-    let cardWidth = slotWidth;
-    let cardHeight = slotWidth / ratio;
-    if (cardHeight > slotHeight) {
-      cardHeight = slotHeight;
-      cardWidth = slotHeight * ratio;
-    }
-
-    const cols = grid.cols;
-    const perPage = grid.cols * grid.rows;
-    const nextIssues: Record<string, string> = {};
-    const totalRows = project.rows.length;
-    const totalPagePairs = Math.ceil(totalRows / perPage);
-
-    function getCardPosition(rowInPage: number, colInPage: number): { cardX: number; cardY: number } {
-      const slotX = margin + colInPage * (slotWidth + gutter);
-      const slotYTop = margin + rowInPage * (slotHeight + gutter);
-      return {
-        cardX: slotX + (slotWidth - cardWidth) / 2,
-        cardY: pageHeight - slotYTop - cardHeight - (slotHeight - cardHeight) / 2
-      };
-    }
-
-    async function drawCardSide(
-      page: ReturnType<typeof doc.getPages>[number],
-      row: FlashcardRow,
-      rowInPage: number,
-      colInPage: number,
-      side: 1 | 2
-    ) {
-      const { cardX, cardY } = getCardPosition(rowInPage, colInPage);
-      page.drawRectangle({
-        x: cardX,
-        y: cardY,
-        width: cardWidth,
-        height: cardHeight,
-        color: rgb(1, 1, 1),
-        borderWidth: project.showCutGuides ? 0.5 : 0,
-        borderColor: rgb(0.75, 0.75, 0.75)
-      });
-
-      const imageElement = project.template.image;
-      if (imageElement.side === side) {
-        const imageX = cardX + (imageElement.x / project.template.width) * cardWidth;
-        const imageY = cardY + cardHeight - ((imageElement.y + imageElement.height) / project.template.height) * cardHeight;
-        const imageW = (imageElement.width / project.template.width) * cardWidth;
-        const imageH = (imageElement.height / project.template.height) * cardHeight;
-
-        try {
-          const imageBytes = await fetchImageBytes(row);
-          const embeddedImage =
-            detectImageType(imageBytes) === 'png' ? await doc.embedPng(imageBytes) : await doc.embedJpg(imageBytes);
-          page.drawImage(embeddedImage, {
-            x: imageX,
-            y: imageY,
-            width: imageW,
-            height: imageH
-          });
-        } catch {
-          nextIssues[row.id] = 'Unable to load image. Workaround: save the image and upload it from your computer.';
-        }
-      }
-
-      for (const textElement of project.template.textElements.filter((item) => item.side === side)) {
-        const rawText = fitTextValue(row, textElement.role);
-        const lines = splitTextForPdf(rawText, textElement);
-
-        const scaledFontSize = (textElement.fontSize / project.template.width) * cardWidth;
-        const lineHeight = scaledFontSize * textElement.lineHeight;
-        const maxLines = Math.floor(((textElement.height / project.template.height) * cardHeight) / lineHeight);
-        const clipped = lines.slice(0, Math.max(maxLines, 0));
-
-        const textX = cardX + (textElement.x / project.template.width) * cardWidth;
-        const textYTop = cardY + cardHeight - (textElement.y / project.template.height) * cardHeight;
-        const boxW = (textElement.width / project.template.width) * cardWidth;
-
-        clipped.forEach((line, lineIndex) => {
-          const shouldUseTamilFont = textElement.fontFamily === 'Noto Sans Tamil' || hasTamil(line);
-          const standardFontName = mapFontForPdf(textElement.fontFamily);
-          let font = standardFontCache.get(standardFontName);
-          if (!font) {
-            font = doc.embedStandardFont(standardFontName);
-            standardFontCache.set(standardFontName, font);
-          }
-          const activeFont = shouldUseTamilFont ? tamilFont! : font;
-          const lineWidth = activeFont.widthOfTextAtSize(line, scaledFontSize);
-
-          let x = textX;
-          if (textElement.align === 'center') {
-            x = textX + Math.max((boxW - lineWidth) / 2, 0);
-          } else if (textElement.align === 'right') {
-            x = textX + Math.max(boxW - lineWidth, 0);
-          }
-
-          page.drawText(line, {
-            x,
-            y: textYTop - lineHeight * (lineIndex + 1),
-            size: scaledFontSize,
-            font: activeFont,
-            color: rgb(0.1, 0.1, 0.1)
-          });
-        });
-      }
-    }
-
-    for (let pagePairIndex = 0; pagePairIndex < totalPagePairs; pagePairIndex += 1) {
-      const frontPage = doc.addPage([pageWidth, pageHeight]);
-      const backPage = project.doubleSided ? doc.addPage([pageWidth, pageHeight]) : null;
-
-      for (let slotIndex = 0; slotIndex < perPage; slotIndex += 1) {
-        const rowIndex = pagePairIndex * perPage + slotIndex;
-        if (rowIndex >= project.rows.length) {
-          continue;
-        }
-
-        const renderPercent = 10 + ((rowIndex + 1) / totalRows) * 80;
-        setProgress(renderPercent, `Rendering card ${rowIndex + 1} of ${totalRows}...`);
-        if (rowIndex % 4 === 0) {
-          await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-        }
-
-        const row = project.rows[rowIndex];
-        const rowInPage = Math.floor(slotIndex / cols);
-        const colInPage = slotIndex % cols;
-        await drawCardSide(frontPage, row, rowInPage, colInPage, 1);
-
-        if (backPage) {
-          const mirroredCol = cols - 1 - colInPage;
-          await drawCardSide(backPage, row, rowInPage, mirroredCol, 2);
-        }
-      }
-    }
-
-    setProgress(92, 'Finalizing PDF file...');
-    const bytes = await doc.save();
     setProgress(98, 'Starting download...');
-    const blob = new Blob([new Uint8Array(bytes)], { type: 'application/pdf' });
+    const pdfBuffer = new ArrayBuffer(generated.bytes.byteLength);
+    new Uint8Array(pdfBuffer).set(generated.bytes);
+    const blob = new Blob([pdfBuffer], { type: 'application/pdf' });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement('a');
     anchor.href = url;
@@ -739,8 +393,8 @@ export default function App() {
     URL.revokeObjectURL(url);
     setPdfProgress({ active: false, percent: 100, stage: '' });
 
-    setImageIssues(nextIssues);
-    if (Object.keys(nextIssues).length) {
+    setImageIssues(generated.imageIssues);
+    if (Object.keys(generated.imageIssues).length) {
       setPdfStatus('PDF generated with some image errors. Use local image upload for blocked web images.');
       return;
     }
