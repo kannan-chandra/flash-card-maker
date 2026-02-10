@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type DragEvent as ReactDragEvent, type ReactNode } from 'react';
 import { Group, Image as KonvaImage, Layer, Rect, Stage, Text, Transformer } from 'react-konva';
 import type Konva from 'konva';
 import { FONT_FAMILIES } from '../constants/project';
@@ -27,6 +27,7 @@ interface CanvasEditorProps {
     onPatchTextElement: (id: 'text1' | 'text2', patch: Partial<TextElement>) => void;
     onUpdateRow: (rowId: string, patch: Partial<FlashcardRow>) => void;
     onToggleDoubleSided: (value: boolean) => void;
+    onCanvasImageDrop: (file: File) => void;
     onSelectPreviousRow: () => void;
     onSelectNextRow: () => void;
     canSelectPreviousRow: boolean;
@@ -84,6 +85,7 @@ export function CanvasEditor(props: CanvasEditorProps) {
     onPatchTextElement,
     onUpdateRow,
     onToggleDoubleSided,
+    onCanvasImageDrop,
     onSelectPreviousRow,
     onSelectNextRow,
     canSelectPreviousRow,
@@ -240,6 +242,20 @@ export function CanvasEditor(props: CanvasEditorProps) {
     }
   }
 
+  function onCanvasDragOver(event: ReactDragEvent<HTMLDivElement>) {
+    if (event.dataTransfer.types.includes('Files')) {
+      event.preventDefault();
+    }
+  }
+
+  function onCanvasDrop(event: ReactDragEvent<HTMLDivElement>) {
+    event.preventDefault();
+    const file = event.dataTransfer.files?.[0];
+    if (file && file.type.startsWith('image/')) {
+      onCanvasImageDrop(file);
+    }
+  }
+
   function getSelectionInfo() {
     if (selectedElement === 'image') {
       return {
@@ -320,7 +336,12 @@ export function CanvasEditor(props: CanvasEditorProps) {
 
           <div className="stage-shell" ref={stageShellRef}>
             <div className="stage-wrap" style={{ width: scaledStageWidth, height: scaledStageHeight }}>
-              <div className="stage-canvas" style={{ width: scaledStageWidth, height: scaledStageHeight }}>
+              <div
+                className="stage-canvas"
+                style={{ width: scaledStageWidth, height: scaledStageHeight }}
+                onDragOver={onCanvasDragOver}
+                onDrop={onCanvasDrop}
+              >
               <Stage
                 width={scaledStageWidth}
                 height={scaledStageHeight}

@@ -359,6 +359,7 @@ export default function App() {
             onPatchTemplate: patchTemplate,
             onPatchTextElement: patchTextElement,
             onUpdateRow: updateRow,
+            onCanvasImageDrop: (file) => void onSelectedRowImageUpload(file),
             onToggleDoubleSided: (doubleSided) =>
               updateActiveSet((current) => {
                 const currentTemplate = current.template;
