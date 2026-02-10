@@ -18,7 +18,7 @@ interface SelectedCardDetailsProps {
   };
   actions: {
     onImageUrlDraftChange: (value: string) => void;
-    onApplySelectedImageUrl: () => void;
+    onApplySelectedImageUrl: (value?: string) => void;
     onSelectedRowImageUpload: (file: File) => void;
     onApplyEmoji: (rowId: string, emoji: string) => void;
     onRemoveSelectedRowImage: () => void;
@@ -32,6 +32,7 @@ export function SelectedCardDetails(props: SelectedCardDetailsProps) {
   const [showUrlInput, setShowUrlInput] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const urlInputRef = useRef<HTMLInputElement>(null);
+  const applyAttemptIdRef = useRef(0);
 
   useEffect(() => {
     if (!showUrlInput) {
@@ -40,6 +41,37 @@ export function SelectedCardDetails(props: SelectedCardDetailsProps) {
     urlInputRef.current?.focus();
     urlInputRef.current?.select();
   }, [showUrlInput]);
+
+  function tryApplyImageUrl(value: string) {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return;
+    }
+
+    let parsed: URL;
+    try {
+      parsed = new URL(trimmed);
+    } catch {
+      return;
+    }
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:' && parsed.protocol !== 'data:') {
+      return;
+    }
+
+    const attemptId = applyAttemptIdRef.current + 1;
+    applyAttemptIdRef.current = attemptId;
+    const probe = new Image();
+    probe.onload = () => {
+      if (applyAttemptIdRef.current !== attemptId) {
+        return;
+      }
+      onApplySelectedImageUrl(trimmed);
+    };
+    probe.onerror = () => {
+      // Silent failure while user is still typing.
+    };
+    probe.src = trimmed;
+  }
 
   return (
     <aside className="card-detail-panel">
@@ -62,7 +94,11 @@ export function SelectedCardDetails(props: SelectedCardDetailsProps) {
                 ref={urlInputRef}
                 className="image-url-input-active"
                 value={imageUrlDraft}
-                onChange={(event) => onImageUrlDraftChange(event.target.value)}
+                onChange={(event) => {
+                  const nextValue = event.target.value;
+                  onImageUrlDraftChange(nextValue);
+                  tryApplyImageUrl(nextValue);
+                }}
                 aria-label="Selected row image URL"
                 placeholder="Paste image URL"
                 onPaste={(event) => {
@@ -70,10 +106,13 @@ export function SelectedCardDetails(props: SelectedCardDetailsProps) {
                   if (!pasted) {
                     return;
                   }
-                  onImageUrlDraftChange(pasted);
-                  window.setTimeout(() => {
-                    onApplySelectedImageUrl();
-                  }, 0);
+                  event.preventDefault();
+                  const input = event.currentTarget;
+                  const selectionStart = input.selectionStart ?? 0;
+                  const selectionEnd = input.selectionEnd ?? selectionStart;
+                  const nextValue = `${imageUrlDraft.slice(0, selectionStart)}${pasted}${imageUrlDraft.slice(selectionEnd)}`;
+                  onImageUrlDraftChange(nextValue);
+                  tryApplyImageUrl(nextValue);
                 }}
                 onKeyDown={(event) => {
                   if (event.key === 'Escape') {
@@ -83,7 +122,7 @@ export function SelectedCardDetails(props: SelectedCardDetailsProps) {
                   }
                   if (event.key === 'Enter') {
                     event.preventDefault();
-                    onApplySelectedImageUrl();
+                    onApplySelectedImageUrl(imageUrlDraft);
                   }
                 }}
               />

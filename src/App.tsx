@@ -145,11 +145,11 @@ export default function App() {
     updateRow(rowId, setImageFromDataUrl(dataUrl));
   }
 
-  function onApplySelectedImageUrl() {
+  function onApplySelectedImageUrl(value?: string) {
     if (!selectedRow) {
       return;
     }
-    const trimmed = imageUrlDraft.trim();
+    const trimmed = (value ?? imageUrlDraft).trim();
     if (!trimmed) {
       return;
     }
