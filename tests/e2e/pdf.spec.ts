@@ -121,3 +121,27 @@ test('generates downloadable PDF in double-sided mode', async ({ page }) => {
   expect(await download.failure()).toBeNull();
   expect(download.suggestedFilename().toLowerCase()).toContain('.pdf');
 });
+
+test('dragging on canvas does not produce NaN coordinate warnings', async ({ page }) => {
+  const warnings: string[] = [];
+  page.on('console', (msg) => {
+    if (msg.type() === 'warning' || msg.type() === 'error') {
+      warnings.push(msg.text());
+    }
+  });
+
+  await page.goto('/');
+
+  const stage = page.locator('canvas').first();
+  const box = await stage.boundingBox();
+  expect(box).toBeTruthy();
+  if (!box) return;
+
+  await page.mouse.move(box.x + 340, box.y + 110);
+  await page.mouse.down();
+  await page.mouse.move(box.x + 380, box.y + 160, { steps: 10 });
+  await page.mouse.up();
+
+  const bad = warnings.find((text) => text.includes('NaN is a not valid value for "y" attribute'));
+  expect(bad).toBeUndefined();
+});
