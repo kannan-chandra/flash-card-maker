@@ -45,6 +45,31 @@ function getImageSourceKey(row: FlashcardRow): string | null {
   return null;
 }
 
+// In-memory cache for image bytes across PDF generations in this browser session.
+const imageBytesMemoryCache = new Map<string, Uint8Array>();
+const imageBytesInflight = new Map<string, Promise<Uint8Array>>();
+
+async function fetchImageBytesWithMemoryCache(sourceKey: string, row: FlashcardRow): Promise<{ bytes: Uint8Array; fromCache: boolean }> {
+  const cached = imageBytesMemoryCache.get(sourceKey);
+  if (cached) {
+    return { bytes: cached, fromCache: true };
+  }
+
+  let inflight = imageBytesInflight.get(sourceKey);
+  if (!inflight) {
+    inflight = fetchImageBytes(row);
+    imageBytesInflight.set(sourceKey, inflight);
+  }
+
+  try {
+    const bytes = await inflight;
+    imageBytesMemoryCache.set(sourceKey, bytes);
+    return { bytes, fromCache: false };
+  } finally {
+    imageBytesInflight.delete(sourceKey);
+  }
+}
+
 async function fetchImageBytes(row: FlashcardRow): Promise<Uint8Array> {
   if (row.localImageDataUrl) {
     return dataUrlToBytes(row.localImageDataUrl);
@@ -131,6 +156,7 @@ export async function generatePdfBytes(options: GeneratePdfOptions): Promise<Pdf
   const perfStart = performance.now();
   const perf = {
     imagePrefetchMs: 0,
+    imageCacheHits: 0,
     imageFetchMs: 0,
     imageEmbedMs: 0,
     textDrawMs: 0,
@@ -203,10 +229,18 @@ export async function generatePdfBytes(options: GeneratePdfOptions): Promise<Pdf
         sourceIndex += 1;
         const [, rowsForSource] = sourceEntries[currentIndex];
         const representativeRow = rowsForSource[0];
+        const sourceKey = rowImageSourceKey.get(representativeRow.id);
+        if (!sourceKey) {
+          continue;
+        }
         try {
           const fetchStart = performance.now();
-          const bytes = await fetchImageBytes(representativeRow);
-          perf.imageFetchMs += performance.now() - fetchStart;
+          const { bytes, fromCache } = await fetchImageBytesWithMemoryCache(sourceKey, representativeRow);
+          if (fromCache) {
+            perf.imageCacheHits += 1;
+          } else {
+            perf.imageFetchMs += performance.now() - fetchStart;
+          }
           for (const row of rowsForSource) {
             rowImageBytes.set(row.id, bytes);
           }
@@ -412,6 +446,7 @@ export async function generatePdfBytes(options: GeneratePdfOptions): Promise<Pdf
       doubleSided: project.doubleSided,
       totalMs: Number(totalMs.toFixed(1)),
       imagePrefetchMs: Number(perf.imagePrefetchMs.toFixed(1)),
+      imageCacheHits: perf.imageCacheHits,
       imageSources: perf.imageSources,
       imageRows: perf.imageRows,
       imageFetchMs: Number(perf.imageFetchMs.toFixed(1)),
