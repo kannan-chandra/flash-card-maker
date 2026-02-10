@@ -462,8 +462,8 @@ export function CanvasEditor(props: CanvasEditorProps) {
                     y={toCanvasY(project.template.image.y, project.template.image.side)}
                     width={project.template.image.width}
                     height={project.template.image.height}
-                    stroke={selectedElement === 'image' ? '#2563eb' : '#94a3b8'}
-                    strokeWidth={selectedElement === 'image' ? 2 : 1}
+                    stroke={selectedElement === 'image' ? '#2563eb' : imageIsEmpty ? '#94a3b8' : undefined}
+                    strokeWidth={selectedElement === 'image' ? 2 : imageIsEmpty ? 1 : 0}
                     dash={imageIsEmpty ? [4, 4] : undefined}
                     fill="rgba(0,0,0,0)"
                     draggable
