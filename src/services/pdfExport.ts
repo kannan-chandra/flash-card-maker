@@ -89,16 +89,18 @@ interface PdfTextDebugConfig {
   yNudgePx: number;
 }
 
+const DEFAULT_PDF_TEXT_Y_NUDGE_PX = 11;
+
 function getPdfTextDebugConfig(): PdfTextDebugConfig {
   if (typeof window === 'undefined') {
-    return { enabled: false, yNudgePx: 0 };
+    return { enabled: false, yNudgePx: DEFAULT_PDF_TEXT_Y_NUDGE_PX };
   }
 
   const enabled = window.localStorage.getItem('pdfTextDebug') === '1';
-  const yNudgeRaw = Number(window.localStorage.getItem('pdfTextYNudgePx') ?? '0');
+  const yNudgeRaw = Number(window.localStorage.getItem('pdfTextYNudgePx') ?? String(DEFAULT_PDF_TEXT_Y_NUDGE_PX));
   return {
     enabled,
-    yNudgePx: Number.isFinite(yNudgeRaw) ? yNudgeRaw : 0
+    yNudgePx: Number.isFinite(yNudgeRaw) ? yNudgeRaw : DEFAULT_PDF_TEXT_Y_NUDGE_PX
   };
 }
 
