@@ -365,7 +365,7 @@ export function WordListPanel(props: WordListPanelProps) {
   return (
     <section className="panel data-panel">
       <h2>Word List</h2>
-      <p>Type directly like a spreadsheet. Press Enter to move down. Image is edited in Selected Card Details.</p>
+      <p>Type directly like a spreadsheet. Press Enter to move down. Select the image box in Master Card Layout to edit image.</p>
       <div className="row-buttons">
         <button type="button" onClick={() => setCsvModalOpen(true)}>
           Import CSV

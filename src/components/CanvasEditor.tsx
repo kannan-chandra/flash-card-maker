@@ -280,6 +280,10 @@ export function CanvasEditor(props: CanvasEditorProps) {
       : selectedElement === 'text2'
         ? project.template.textElements[1]
         : null;
+  const showImagePanel = selectedElement === 'image' && Boolean(children);
+  const imagePanelLeft = Math.max(0, Math.min(project.template.image.x * stageScale, Math.max(0, scaledStageWidth - 340)));
+  const imagePanelTop =
+    (toCanvasY(project.template.image.y, project.template.image.side) + project.template.image.height) * stageScale + 8;
 
   return (
     <section className="panel editor-panel">
@@ -727,9 +731,19 @@ export function CanvasEditor(props: CanvasEditorProps) {
                 />
               )}
               </div>
+              {showImagePanel && (
+                <div
+                  className="floating-image-panel"
+                  style={{
+                    left: imagePanelLeft,
+                    top: imagePanelTop
+                  }}
+                >
+                  {children}
+                </div>
+              )}
             </div>
           </div>
-          {children}
 
           <div className="preview-meta">
             <h3>Row preview</h3>
