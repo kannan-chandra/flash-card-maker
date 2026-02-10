@@ -52,6 +52,27 @@ async function fetchImageBytes(row: FlashcardRow): Promise<Uint8Array> {
   return new Uint8Array(arrayBuffer);
 }
 
+function parseHexColor(value: string): { r: number; g: number; b: number } {
+  const normalized = value.trim();
+  const short = /^#([0-9a-f]{3})$/i.exec(normalized);
+  if (short) {
+    const [r, g, b] = short[1].split('').map((char) => parseInt(char + char, 16) / 255);
+    return { r, g, b };
+  }
+
+  const full = /^#([0-9a-f]{6})$/i.exec(normalized);
+  if (full) {
+    const hex = full[1];
+    return {
+      r: parseInt(hex.slice(0, 2), 16) / 255,
+      g: parseInt(hex.slice(2, 4), 16) / 255,
+      b: parseInt(hex.slice(4, 6), 16) / 255
+    };
+  }
+
+  return { r: 0.1, g: 0.1, b: 0.1 };
+}
+
 export interface PdfGenerationResult {
   bytes: Uint8Array;
   imageIssues: Record<string, string>;
@@ -148,16 +169,28 @@ export async function generatePdfBytes(options: GeneratePdfOptions): Promise<Pdf
 
     for (const textElement of project.template.textElements.filter((item) => item.side === side)) {
       const rawText = fitTextValue(row, textElement.role);
-      const lines = splitTextForPdf(rawText, textElement);
+      const textPadding = 4;
+      const lines = splitTextForPdf(rawText, {
+        ...textElement,
+        width: Math.max(textElement.width - textPadding * 2, 0)
+      });
 
       const scaledFontSize = (textElement.fontSize / project.template.width) * cardWidth;
       const lineHeight = scaledFontSize * textElement.lineHeight;
-      const maxLines = Math.floor(((textElement.height / project.template.height) * cardHeight) / lineHeight);
+      const boxH = (textElement.height / project.template.height) * cardHeight;
+      const paddingY = (textPadding / project.template.height) * cardHeight;
+      const innerH = Math.max(boxH - paddingY * 2, 0);
+      const maxLines = Math.floor(innerH / lineHeight);
       const clipped = lines.slice(0, Math.max(maxLines, 0));
 
-      const textX = cardX + (textElement.x / project.template.width) * cardWidth;
+      const paddingX = (textPadding / project.template.width) * cardWidth;
+      const textX = cardX + (textElement.x / project.template.width) * cardWidth + paddingX;
       const textYTop = cardY + cardHeight - (textElement.y / project.template.height) * cardHeight;
-      const boxW = (textElement.width / project.template.width) * cardWidth;
+      const boxW = Math.max((textElement.width / project.template.width) * cardWidth - paddingX * 2, 0);
+      const textBlockHeight = clipped.length * lineHeight;
+      const topInset = paddingY + Math.max((innerH - textBlockHeight) / 2, 0);
+      const firstBaselineY = textYTop - topInset - lineHeight;
+      const textColor = parseHexColor(textElement.color);
 
       clipped.forEach((line, lineIndex) => {
         const shouldUseTamilFont = textElement.fontFamily === 'Noto Sans Tamil' || hasTamil(line);
@@ -179,10 +212,10 @@ export async function generatePdfBytes(options: GeneratePdfOptions): Promise<Pdf
 
         page.drawText(line, {
           x,
-          y: textYTop - lineHeight * (lineIndex + 1),
+          y: firstBaselineY - lineHeight * lineIndex,
           size: scaledFontSize,
           font: activeFont,
-          color: rgb(0.1, 0.1, 0.1)
+          color: rgb(textColor.r, textColor.g, textColor.b)
         });
       });
     }
