@@ -89,18 +89,18 @@ interface PdfTextDebugConfig {
   yNudgePx: number;
 }
 
-const DEFAULT_PDF_TEXT_Y_NUDGE_PX = 11;
+const BASELINE_NUDGE_LINE_HEIGHT_RATIO = 0.21;
 
 function getPdfTextDebugConfig(): PdfTextDebugConfig {
   if (typeof window === 'undefined') {
-    return { enabled: false, yNudgePx: DEFAULT_PDF_TEXT_Y_NUDGE_PX };
+    return { enabled: false, yNudgePx: 0 };
   }
 
   const enabled = window.localStorage.getItem('pdfTextDebug') === '1';
-  const yNudgeRaw = Number(window.localStorage.getItem('pdfTextYNudgePx') ?? String(DEFAULT_PDF_TEXT_Y_NUDGE_PX));
+  const yNudgeRaw = Number(window.localStorage.getItem('pdfTextYNudgePx') ?? '0');
   return {
     enabled,
-    yNudgePx: Number.isFinite(yNudgeRaw) ? yNudgeRaw : DEFAULT_PDF_TEXT_Y_NUDGE_PX
+    yNudgePx: Number.isFinite(yNudgeRaw) ? yNudgeRaw : 0
   };
 }
 
@@ -212,7 +212,9 @@ export async function generatePdfBytes(options: GeneratePdfOptions): Promise<Pdf
       const topInset = paddingY + Math.max((innerH - textBlockHeight) / 2, 0);
       const textTopY = textYTop - topInset;
       const textColor = parseHexColor(textElement.color);
-      const yNudgePdf = (pdfTextDebug.yNudgePx / project.template.height) * cardHeight;
+      const proportionalNudgeTemplatePx = textElement.fontSize * textElement.lineHeight * BASELINE_NUDGE_LINE_HEIGHT_RATIO;
+      const yNudgeTemplatePx = proportionalNudgeTemplatePx + pdfTextDebug.yNudgePx;
+      const yNudgePdf = (yNudgeTemplatePx / project.template.height) * cardHeight;
 
       clipped.forEach((line, lineIndex) => {
         const shouldUseTamilFont = textElement.fontFamily === 'Noto Sans Tamil' || hasTamil(line);
@@ -254,7 +256,10 @@ export async function generatePdfBytes(options: GeneratePdfOptions): Promise<Pdf
             fontFamily: textElement.fontFamily,
             fontSize: textElement.fontSize,
             lineHeight: textElement.lineHeight,
-            yNudgePx: pdfTextDebug.yNudgePx,
+            baselineNudgeRatio: BASELINE_NUDGE_LINE_HEIGHT_RATIO,
+            proportionalNudgeTemplatePx: Number(proportionalNudgeTemplatePx.toFixed(3)),
+            manualNudgeTemplatePx: pdfTextDebug.yNudgePx,
+            totalNudgeTemplatePx: Number(yNudgeTemplatePx.toFixed(3)),
             boxTopTemplateY: textElement.y,
             boxHeightTemplate: textElement.height,
             textTopPdfY: Number(textTopY.toFixed(3)),
