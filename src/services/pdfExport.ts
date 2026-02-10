@@ -89,6 +89,10 @@ interface PdfTextDebugConfig {
   yNudgePx: number;
 }
 
+interface PdfPerfDebugConfig {
+  enabled: boolean;
+}
+
 const BASELINE_NUDGE_LINE_HEIGHT_RATIO = 0.21;
 
 function getPdfTextDebugConfig(): PdfTextDebugConfig {
@@ -104,8 +108,24 @@ function getPdfTextDebugConfig(): PdfTextDebugConfig {
   };
 }
 
+function getPdfPerfDebugConfig(): PdfPerfDebugConfig {
+  if (typeof window === 'undefined') {
+    return { enabled: false };
+  }
+  return { enabled: window.localStorage.getItem('pdfPerfDebug') === '1' };
+}
+
 export async function generatePdfBytes(options: GeneratePdfOptions): Promise<PdfGenerationResult> {
   const { project, tamilFontUrl, onProgress } = options;
+  const perfConfig = getPdfPerfDebugConfig();
+  const perfStart = performance.now();
+  const perf = {
+    imageFetchMs: 0,
+    imageEmbedMs: 0,
+    textDrawMs: 0,
+    pagesMs: 0,
+    saveMs: 0
+  };
   const doc = await PDFDocument.create();
   doc.registerFontkit(fontkit);
   const pdfTextDebug = getPdfTextDebugConfig();
@@ -155,6 +175,7 @@ export async function generatePdfBytes(options: GeneratePdfOptions): Promise<Pdf
     colInPage: number,
     side: 1 | 2
   ) {
+    const sideStart = performance.now();
     const { cardX, cardY } = getCardPosition(rowInPage, colInPage);
     page.drawRectangle({
       x: cardX,
@@ -176,9 +197,13 @@ export async function generatePdfBytes(options: GeneratePdfOptions): Promise<Pdf
         const imageH = (imageElement.height / project.template.height) * cardHeight;
 
         try {
+          const fetchStart = performance.now();
           const imageBytes = await fetchImageBytes(row);
+          perf.imageFetchMs += performance.now() - fetchStart;
+          const embedStart = performance.now();
           const embeddedImage =
             detectImageType(imageBytes) === 'png' ? await doc.embedPng(imageBytes) : await doc.embedJpg(imageBytes);
+          perf.imageEmbedMs += performance.now() - embedStart;
           page.drawImage(embeddedImage, {
             x: imageX,
             y: imageY,
@@ -219,6 +244,7 @@ export async function generatePdfBytes(options: GeneratePdfOptions): Promise<Pdf
         const yNudgePdf = (yNudgeTemplatePx / project.template.height) * cardHeight;
 
         clipped.forEach((line, lineIndex) => {
+          const drawStart = performance.now();
           const shouldUseTamilFont = textElement.fontFamily === 'Noto Sans Tamil' || hasTamil(line);
           const standardFontName = mapFontForPdf(textElement.fontFamily);
           let font = standardFontCache.get(standardFontName);
@@ -247,6 +273,7 @@ export async function generatePdfBytes(options: GeneratePdfOptions): Promise<Pdf
             font: activeFont,
             color: rgb(textColor.r, textColor.g, textColor.b)
           });
+          perf.textDrawMs += performance.now() - drawStart;
 
           if (pdfTextDebug.enabled && lineIndex === 0) {
             const baselineByLineHeight = textTopY - lineHeight;
@@ -276,6 +303,7 @@ export async function generatePdfBytes(options: GeneratePdfOptions): Promise<Pdf
       }
     } finally {
       page.pushOperators(popGraphicsState());
+      perf.pagesMs += performance.now() - sideStart;
     }
   }
 
@@ -308,7 +336,23 @@ export async function generatePdfBytes(options: GeneratePdfOptions): Promise<Pdf
   }
 
   onProgress(92, 'Finalizing PDF file...');
+  const saveStart = performance.now();
   const bytes = await doc.save();
+  perf.saveMs = performance.now() - saveStart;
+
+  if (perfConfig.enabled) {
+    const totalMs = performance.now() - perfStart;
+    console.log('[pdf-perf]', {
+      rows: totalRows,
+      doubleSided: project.doubleSided,
+      totalMs: Number(totalMs.toFixed(1)),
+      imageFetchMs: Number(perf.imageFetchMs.toFixed(1)),
+      imageEmbedMs: Number(perf.imageEmbedMs.toFixed(1)),
+      textDrawMs: Number(perf.textDrawMs.toFixed(1)),
+      pagesMs: Number(perf.pagesMs.toFixed(1)),
+      saveMs: Number(perf.saveMs.toFixed(1))
+    });
+  }
 
   return {
     bytes: new Uint8Array(bytes),
