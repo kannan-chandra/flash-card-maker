@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { readFile } from 'node:fs/promises';
 
 const ONE_BY_ONE_PNG = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO2XK7kAAAAASUVORK5CYII=',
@@ -10,6 +11,18 @@ async function importCsv(page: Page, value: string) {
   const dialog = page.getByRole('dialog', { name: 'CSV import' });
   await dialog.getByLabel('CSV input').fill(value);
   await dialog.getByRole('button', { name: 'Import', exact: true }).click();
+}
+
+async function dragOnStage(page: Page, from: { x: number; y: number }, to: { x: number; y: number }) {
+  const stage = page.locator('canvas').first();
+  const box = await stage.boundingBox();
+  expect(box).toBeTruthy();
+  if (!box) return;
+
+  await page.mouse.move(box.x + from.x, box.y + from.y);
+  await page.mouse.down();
+  await page.mouse.move(box.x + to.x, box.y + to.y, { steps: 15 });
+  await page.mouse.up();
 }
 
 test('generates downloadable PDF for Tamil text without runtime errors', async ({ page }) => {
@@ -140,4 +153,47 @@ test('dragging on canvas does not produce NaN coordinate warnings', async ({ pag
 
   const bad = warnings.find((text) => text.includes('NaN is a not valid value for "y" attribute'));
   expect(bad).toBeUndefined();
+});
+
+test('pdf text layout remains visually aligned at large font sizes', async ({ page, context, browserName }) => {
+  test.skip(browserName !== 'chromium', 'PDF viewer screenshot assertions are chromium-specific');
+  test.setTimeout(60000);
+
+  await page.goto('/');
+  await importCsv(page, 'word,subtitle\nLOM,LOM');
+
+  await dragOnStage(page, { x: 500, y: 165 }, { x: 500, y: 165 });
+  await dragOnStage(page, { x: 500, y: 165 }, { x: 668, y: 34 });
+  await dragOnStage(page, { x: 500, y: 346 }, { x: 20, y: 487 });
+
+  await page.getByLabel('Size').fill('100');
+  await page.keyboard.press('Enter');
+
+  const stageCanvas = page.locator('.stage-canvas');
+  await expect(stageCanvas).toHaveScreenshot('canvas-large-font-edge.png');
+
+  const downloadPromise = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Generate PDF' }).click();
+  const download = await downloadPromise;
+  const pdfPath = await download.path();
+  expect(pdfPath).toBeTruthy();
+  if (!pdfPath) return;
+
+  const pdfBytes = await readFile(pdfPath);
+  const pdfBase64 = pdfBytes.toString('base64');
+
+  const pdfPage = await context.newPage();
+  await pdfPage.setViewportSize({ width: 1280, height: 900 });
+  await pdfPage.setContent(`
+    <html>
+      <body style="margin:0;background:#1f2937;display:flex;justify-content:center;align-items:flex-start;">
+        <embed src="data:application/pdf;base64,${pdfBase64}" type="application/pdf" width="920" height="860" />
+      </body>
+    </html>
+  `);
+  await pdfPage.waitForTimeout(1000);
+  await expect(pdfPage).toHaveScreenshot('pdf-large-font-edge.png', {
+    fullPage: true
+  });
+  await pdfPage.close();
 });
