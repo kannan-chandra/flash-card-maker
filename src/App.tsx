@@ -199,6 +199,8 @@ export default function App() {
   const imagePlaceholderRef = useRef<Konva.Rect>(null);
   const text1Ref = useRef<Konva.Text>(null);
   const text2Ref = useRef<Konva.Text>(null);
+  const text1PlaceholderRef = useRef<Konva.Rect>(null);
+  const text2PlaceholderRef = useRef<Konva.Rect>(null);
   const transformerRef = useRef<Konva.Transformer>(null);
 
   const project = useMemo(() => {
@@ -302,11 +304,25 @@ export default function App() {
     const nodes: Konva.Node[] = [];
     if (selectedElement === 'image' && imageIsEmpty && imagePlaceholderRef.current) nodes.push(imagePlaceholderRef.current);
     if (selectedElement === 'image' && !imageIsEmpty && imageRef.current) nodes.push(imageRef.current);
-    if (selectedElement === 'text1' && text1Ref.current) nodes.push(text1Ref.current);
-    if (selectedElement === 'text2' && text2Ref.current) nodes.push(text2Ref.current);
+    if (selectedElement === 'text1') {
+      const wordValue = selectedRow ? fitTextValue(selectedRow, project.template.textElements[0].role) : '';
+      if (!wordValue.trim() && text1PlaceholderRef.current) {
+        nodes.push(text1PlaceholderRef.current);
+      } else if (text1Ref.current) {
+        nodes.push(text1Ref.current);
+      }
+    }
+    if (selectedElement === 'text2') {
+      const subtitleValue = selectedRow ? fitTextValue(selectedRow, project.template.textElements[1].role) : '';
+      if (!subtitleValue.trim() && text2PlaceholderRef.current) {
+        nodes.push(text2PlaceholderRef.current);
+      } else if (text2Ref.current) {
+        nodes.push(text2Ref.current);
+      }
+    }
     transformerRef.current.nodes(nodes);
     transformerRef.current.getLayer()?.batchDraw();
-  }, [selectedElement, project, imageIsEmpty]);
+  }, [selectedElement, project, imageIsEmpty, selectedRow]);
 
   function onStagePointerDown(event: Konva.KonvaEventObject<MouseEvent | TouchEvent>) {
     const target = event.target;
@@ -1057,6 +1073,7 @@ export default function App() {
                         ,
                         textIsEmpty && (
                           <Rect
+                            ref={textElement.id === 'text1' ? text1PlaceholderRef : text2PlaceholderRef}
                             key={`${textElement.id}-empty`}
                             x={textElement.x}
                             y={toCanvasY(textElement.y, textElement.side)}
@@ -1066,8 +1083,34 @@ export default function App() {
                             strokeWidth={1}
                             dash={[4, 4]}
                             fill="rgba(0,0,0,0)"
+                            draggable
                             onClick={() => setSelectedElement(textElement.id)}
                             onTap={() => setSelectedElement(textElement.id)}
+                            onDragEnd={(event) => {
+                              const sideResult = fromCanvasY(event.target.y(), textElement.height);
+                              patchTextElement(textElement.id, {
+                                x: event.target.x(),
+                                y: sideResult.y,
+                                side: sideResult.side
+                              });
+                            }}
+                            onTransformEnd={(event) => {
+                              const node = event.target;
+                              const scaleX = node.scaleX();
+                              const scaleY = node.scaleY();
+                              const nextWidth = Math.max(40, node.width() * scaleX);
+                              const nextHeight = Math.max(30, node.height() * scaleY);
+                              const sideResult = fromCanvasY(node.y(), nextHeight);
+                              patchTextElement(textElement.id, {
+                                x: node.x(),
+                                y: sideResult.y,
+                                side: sideResult.side,
+                                width: nextWidth,
+                                height: nextHeight
+                              });
+                              node.scaleX(1);
+                              node.scaleY(1);
+                            }}
                           />
                         )
                       ]
