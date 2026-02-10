@@ -175,6 +175,27 @@ main {
   gap: 8px;
 }
 
+.image-url-mode {
+  position: relative;
+}
+
+.image-url-close {
+  position: absolute;
+  right: 0;
+  top: 0;
+  min-width: 28px;
+  padding: 4px 8px;
+  line-height: 1;
+}
+
+.image-url-input-active {
+  width: 100%;
+  padding-right: 42px;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+  outline: none;
+}
+
 .visually-hidden {
   position: absolute;
   width: 1px;
