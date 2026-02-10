@@ -99,6 +99,12 @@ export function CanvasEditor(props: CanvasEditorProps) {
   const [editingTextId, setEditingTextId] = useState<'text1' | 'text2' | null>(null);
   const [editingValue, setEditingValue] = useState('');
   const textEditorRef = useRef<HTMLTextAreaElement>(null);
+  const stageShellRef = useRef<HTMLDivElement>(null);
+  const [stageViewportWidth, setStageViewportWidth] = useState<number>(0);
+
+  const stageScale = stageViewportWidth > 0 ? Math.min(1, stageViewportWidth / project.template.width) : 1;
+  const scaledStageWidth = project.template.width * stageScale;
+  const scaledStageHeight = stageHeight * stageScale;
 
   const editingTextElement = useMemo(
     () => project.template.textElements.find((item) => item.id === editingTextId),
@@ -132,6 +138,27 @@ export function CanvasEditor(props: CanvasEditorProps) {
     textEditorRef.current.focus();
     textEditorRef.current.select();
   }, [editingTextId]);
+
+  useEffect(() => {
+    const shell = stageShellRef.current;
+    if (!shell) {
+      return;
+    }
+
+    const syncWidth = () => {
+      setStageViewportWidth(shell.clientWidth);
+    };
+
+    syncWidth();
+    if (typeof ResizeObserver === 'undefined') {
+      window.addEventListener('resize', syncWidth);
+      return () => window.removeEventListener('resize', syncWidth);
+    }
+
+    const observer = new ResizeObserver(() => syncWidth());
+    observer.observe(shell);
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     if (!transformerRef.current) {
@@ -313,11 +340,14 @@ export function CanvasEditor(props: CanvasEditorProps) {
             </label>
           </div>
 
-          <div className="stage-wrap">
-            <div className="stage-canvas" style={{ width: project.template.width, height: stageHeight }}>
+          <div className="stage-shell" ref={stageShellRef}>
+            <div className="stage-wrap" style={{ width: scaledStageWidth, height: scaledStageHeight }}>
+              <div className="stage-canvas" style={{ width: scaledStageWidth, height: scaledStageHeight }}>
               <Stage
-                width={project.template.width}
-                height={stageHeight}
+                width={scaledStageWidth}
+                height={scaledStageHeight}
+                scaleX={stageScale}
+                scaleY={stageScale}
                 className="stage"
                 onMouseDown={onStagePointerDown}
                 onTouchStart={onStagePointerDown}
@@ -601,13 +631,13 @@ export function CanvasEditor(props: CanvasEditorProps) {
                     }
                   }}
                   style={{
-                    left: editingTextElement.x,
-                    top: toCanvasY(editingTextElement.y, editingTextElement.side),
-                    width: editingTextElement.width,
-                    height: editingTextElement.height,
-                    paddingTop: editingTextareaPadding.top,
-                    paddingBottom: editingTextareaPadding.bottom,
-                    fontSize: editingTextElement.fontSize,
+                    left: editingTextElement.x * stageScale,
+                    top: toCanvasY(editingTextElement.y, editingTextElement.side) * stageScale,
+                    width: editingTextElement.width * stageScale,
+                    height: editingTextElement.height * stageScale,
+                    paddingTop: editingTextareaPadding.top * stageScale,
+                    paddingBottom: editingTextareaPadding.bottom * stageScale,
+                    fontSize: editingTextElement.fontSize * stageScale,
                     fontFamily: editingTextElement.fontFamily,
                     color: editingTextElement.color,
                     textAlign: editingTextElement.align,
@@ -615,6 +645,7 @@ export function CanvasEditor(props: CanvasEditorProps) {
                   }}
                 />
               )}
+              </div>
             </div>
           </div>
           {children}

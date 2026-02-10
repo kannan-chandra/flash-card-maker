@@ -196,14 +196,16 @@ input[type='color'] {
 }
 
 .stage-wrap {
-  border: 1px dashed #94a3b8;
-  max-width: 100%;
-  overflow: auto;
   position: relative;
+  max-width: 100%;
 }
 
 .stage-canvas {
   position: relative;
+}
+
+.stage-shell {
+  width: 100%;
 }
 
 .stage {
@@ -507,8 +509,4 @@ td input:not([type]) {
     grid-template-columns: 1fr;
   }
 
-  .stage {
-    width: 100%;
-    overflow-x: auto;
-  }
 }
