@@ -3,14 +3,12 @@ import { Group, Image as KonvaImage, Layer, Rect, Stage, Text, Transformer } fro
 import type Konva from 'konva';
 import { FONT_FAMILIES } from '../constants/project';
 import { FloatingInspectorPanel } from './FloatingInspectorPanel';
-import type { CardTemplate, FlashcardRow, FlashcardSet, FontFamily, RowValidation, TextElement } from '../types';
+import type { CardTemplate, FlashcardRow, FlashcardSet, FontFamily, TextElement } from '../types';
 
 interface CanvasEditorProps {
   project: FlashcardSet;
   selection: {
     selectedRow?: FlashcardRow;
-    selectedRowIndex: number;
-    currentValidation?: RowValidation;
     selectedElement: 'image' | 'text1' | 'text2' | null;
     previewImage?: HTMLImageElement;
     imageIsEmpty: boolean;
@@ -29,10 +27,6 @@ interface CanvasEditorProps {
     onUpdateRow: (rowId: string, patch: Partial<FlashcardRow>) => void;
     onToggleDoubleSided: (value: boolean) => void;
     onCanvasImageDrop: (file: File) => void;
-    onSelectPreviousRow: () => void;
-    onSelectNextRow: () => void;
-    canSelectPreviousRow: boolean;
-    canSelectNextRow: boolean;
   };
   children?: ReactNode;
 }
@@ -98,20 +92,9 @@ function getContainSize(containerWidth: number, containerHeight: number, sourceW
 
 export function CanvasEditor(props: CanvasEditorProps) {
   const { project, selection, canvas, actions, children } = props;
-  const { selectedRow, selectedRowIndex, currentValidation, selectedElement, previewImage, imageIsEmpty, imageIsLoading } = selection;
+  const { selectedRow, selectedElement, previewImage, imageIsEmpty, imageIsLoading } = selection;
   const { cardHeight, stageHeight, toCanvasY, fromCanvasY } = canvas;
-  const {
-    onSelectElement,
-    onPatchTemplate,
-    onPatchTextElement,
-    onUpdateRow,
-    onToggleDoubleSided,
-    onCanvasImageDrop,
-    onSelectPreviousRow,
-    onSelectNextRow,
-    canSelectPreviousRow,
-    canSelectNextRow
-  } = actions;
+  const { onSelectElement, onPatchTemplate, onPatchTextElement, onUpdateRow, onToggleDoubleSided, onCanvasImageDrop } = actions;
 
   const imageRef = useRef<Konva.Image>(null);
   const imageControlRef = useRef<Konva.Rect>(null);
@@ -807,27 +790,6 @@ export function CanvasEditor(props: CanvasEditorProps) {
             </div>
           </div>
 
-          <div className="preview-meta">
-            <h3>Row preview</h3>
-            {selectedRow ? (
-              <p>
-                Previewing: <strong>{selectedRow.word || '(empty word)'}</strong>
-              </p>
-            ) : (
-              <p>No rows yet.</p>
-            )}
-            <div className="row-buttons">
-              <button onClick={onSelectPreviousRow} disabled={!canSelectPreviousRow}>
-                Previous
-              </button>
-              <button onClick={onSelectNextRow} disabled={!canSelectNextRow}>
-                Next
-              </button>
-            </div>
-            {currentValidation && (currentValidation.wordOverflow || currentValidation.subtitleOverflow) && (
-              <p className="warn">This row has text overflow in one or more text boxes.</p>
-            )}
-          </div>
         </div>
       </div>
     </section>

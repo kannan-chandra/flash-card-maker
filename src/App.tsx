@@ -69,11 +69,6 @@ export default function App() {
     }
     return merged.slice(0, 5);
   }, [selectedRow]);
-  const selectedRowIndex = useMemo(
-    () => (project ? project.rows.findIndex((row) => row.id === selectedRow?.id) : -1),
-    [project, selectedRow?.id]
-  );
-
   const previewImageSrc = selectedRow?.localImageDataUrl || selectedRow?.imageUrl;
   const { image: previewImage, isLoading: previewImageLoading } = useImage(previewImageSrc);
   const imageIsEmpty = !previewImageSrc;
@@ -223,8 +218,6 @@ export default function App() {
     setPdfStatus('PDF generated successfully.');
   }
 
-  const currentValidation = validations.find((item) => item.rowId === selectedRow?.id);
-
   function onAppendRow(row: { word: string; subtitle: string }) {
     const nextRow = {
       id: makeRowId(),
@@ -331,8 +324,6 @@ export default function App() {
           project={project}
           selection={{
             selectedRow,
-            selectedRowIndex,
-            currentValidation,
             selectedElement,
             previewImage,
             imageIsEmpty,
@@ -359,19 +350,7 @@ export default function App() {
                   doubleSidedTemplate: fallbackDouble,
                   template: doubleSided ? fallbackDouble : fallbackSingle
                 };
-              }),
-            onSelectPreviousRow: () =>
-              updateActiveSet((current) => ({
-                ...current,
-                selectedRowId: current.rows[Math.max((selectedRowIndex || 0) - 1, 0)]?.id
-              })),
-            onSelectNextRow: () =>
-              updateActiveSet((current) => ({
-                ...current,
-                selectedRowId: current.rows[Math.min((selectedRowIndex || 0) + 1, Math.max(current.rows.length - 1, 0))]?.id
-              })),
-            canSelectPreviousRow: selectedRowIndex > 0,
-            canSelectNextRow: selectedRowIndex >= 0 && selectedRowIndex < project.rows.length - 1
+              })
           }}
         >
           <SelectedCardDetails
