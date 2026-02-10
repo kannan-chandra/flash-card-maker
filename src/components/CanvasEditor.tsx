@@ -75,6 +75,26 @@ function estimateWrappedLineCount(text: string, textElement: TextElement): numbe
   return Math.max(1, lineCount);
 }
 
+function getContainSize(containerWidth: number, containerHeight: number, sourceWidth: number, sourceHeight: number) {
+  if (containerWidth <= 0 || containerHeight <= 0 || sourceWidth <= 0 || sourceHeight <= 0) {
+    return {
+      width: containerWidth,
+      height: containerHeight,
+      offsetX: 0,
+      offsetY: 0
+    };
+  }
+  const scale = Math.min(containerWidth / sourceWidth, containerHeight / sourceHeight);
+  const width = sourceWidth * scale;
+  const height = sourceHeight * scale;
+  return {
+    width,
+    height,
+    offsetX: (containerWidth - width) / 2,
+    offsetY: (containerHeight - height) / 2
+  };
+}
+
 export function CanvasEditor(props: CanvasEditorProps) {
   const { project, selection, canvas, actions, children } = props;
   const { selectedRow, selectedRowIndex, currentValidation, selectedElement, previewImage, imageIsEmpty } = selection;
@@ -93,7 +113,7 @@ export function CanvasEditor(props: CanvasEditorProps) {
   } = actions;
 
   const imageRef = useRef<Konva.Image>(null);
-  const imagePlaceholderRef = useRef<Konva.Rect>(null);
+  const imageControlRef = useRef<Konva.Rect>(null);
   const text1Ref = useRef<Konva.Text>(null);
   const text2Ref = useRef<Konva.Text>(null);
   const text1PlaceholderRef = useRef<Konva.Rect>(null);
@@ -128,6 +148,16 @@ export function CanvasEditor(props: CanvasEditorProps) {
       bottom: verticalPad
     };
   }, [editingTextElement, editingValue]);
+  const imageContainSize = useMemo(
+    () =>
+      getContainSize(
+        project.template.image.width,
+        project.template.image.height,
+        previewImage?.width ?? project.template.image.width,
+        previewImage?.height ?? project.template.image.height
+      ),
+    [project.template.image.width, project.template.image.height, previewImage]
+  );
 
   useEffect(() => {
     if (!selectedRow && editingTextId) {
@@ -171,8 +201,7 @@ export function CanvasEditor(props: CanvasEditorProps) {
     }
 
     const nodes: Konva.Node[] = [];
-    if (selectedElement === 'image' && imageIsEmpty && imagePlaceholderRef.current) nodes.push(imagePlaceholderRef.current);
-    if (selectedElement === 'image' && !imageIsEmpty && imageRef.current) nodes.push(imageRef.current);
+    if (selectedElement === 'image' && imageControlRef.current) nodes.push(imageControlRef.current);
     if (selectedElement === 'text1') {
       const wordValue = selectedRow ? fitTextValue(selectedRow, project.template.textElements[0].role) : '';
       if (!wordValue.trim() && text1PlaceholderRef.current) {
@@ -414,76 +443,27 @@ export function CanvasEditor(props: CanvasEditorProps) {
               {wrapWithSideClip(
                 project.template.image.side,
                 'image-clip',
-                <KonvaImage
-                  ref={imageRef}
-                  image={previewImage}
-                  x={project.template.image.x}
-                  y={toCanvasY(project.template.image.y, project.template.image.side)}
-                  width={project.template.image.width}
-                  height={project.template.image.height}
-                  draggable
-                  onClick={() => onSelectElement('image')}
-                  onTap={() => onSelectElement('image')}
-                  onDragMove={(event) => {
-                    const sideResult = fromCanvasY(event.target.y(), project.template.image.height);
-                    if (sideResult.side !== project.template.image.side) {
-                      onPatchTemplate({
-                        image: {
-                          ...project.template.image,
-                          x: event.target.x(),
-                          y: sideResult.y,
-                          side: sideResult.side
-                        }
-                      });
-                    }
-                  }}
-                  onDragEnd={(event) => {
-                    const sideResult = fromCanvasY(event.target.y(), project.template.image.height);
-                    onPatchTemplate({
-                      image: {
-                        ...project.template.image,
-                        x: event.target.x(),
-                        y: sideResult.y,
-                        side: sideResult.side
-                      }
-                    });
-                  }}
-                  onTransformEnd={(event) => {
-                    const node = event.target;
-                    const scaleX = node.scaleX();
-                    const scaleY = node.scaleY();
-                    const nextWidth = Math.max(20, node.width() * scaleX);
-                    const nextHeight = Math.max(20, node.height() * scaleY);
-                    const sideResult = fromCanvasY(node.y(), nextHeight);
-                    onPatchTemplate({
-                      image: {
-                        x: node.x(),
-                        y: sideResult.y,
-                        side: sideResult.side,
-                        width: nextWidth,
-                        height: nextHeight
-                      }
-                    });
-                    node.scaleX(1);
-                    node.scaleY(1);
-                  }}
-                  stroke={selectedElement === 'image' ? '#2563eb' : undefined}
-                  strokeWidth={selectedElement === 'image' ? 2 : 0}
-                />
-              )}
-              {imageIsEmpty && (
-                wrapWithSideClip(
-                  project.template.image.side,
-                  'image-empty-clip',
+                <>
+                  {!imageIsEmpty && (
+                    <KonvaImage
+                      ref={imageRef}
+                      image={previewImage}
+                      x={project.template.image.x + imageContainSize.offsetX}
+                      y={toCanvasY(project.template.image.y, project.template.image.side) + imageContainSize.offsetY}
+                      width={imageContainSize.width}
+                      height={imageContainSize.height}
+                      listening={false}
+                    />
+                  )}
                   <Rect
-                    ref={imagePlaceholderRef}
+                    ref={imageControlRef}
                     x={project.template.image.x}
                     y={toCanvasY(project.template.image.y, project.template.image.side)}
                     width={project.template.image.width}
                     height={project.template.image.height}
                     stroke={selectedElement === 'image' ? '#2563eb' : '#94a3b8'}
-                    strokeWidth={1}
-                    dash={[4, 4]}
+                    strokeWidth={selectedElement === 'image' ? 2 : 1}
+                    dash={imageIsEmpty ? [4, 4] : undefined}
                     fill="rgba(0,0,0,0)"
                     draggable
                     onClick={() => onSelectElement('image')}
@@ -532,7 +512,7 @@ export function CanvasEditor(props: CanvasEditorProps) {
                       node.scaleY(1);
                     }}
                   />
-                )
+                </>
               )}
 
               {project.template.textElements.map((textElement, index) => {

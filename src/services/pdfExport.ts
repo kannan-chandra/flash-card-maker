@@ -108,6 +108,26 @@ function parseHexColor(value: string): { r: number; g: number; b: number } {
   return { r: 0.1, g: 0.1, b: 0.1 };
 }
 
+function getContainRect(containerX: number, containerY: number, containerWidth: number, containerHeight: number, sourceWidth: number, sourceHeight: number) {
+  if (containerWidth <= 0 || containerHeight <= 0 || sourceWidth <= 0 || sourceHeight <= 0) {
+    return {
+      x: containerX,
+      y: containerY,
+      width: containerWidth,
+      height: containerHeight
+    };
+  }
+  const scale = Math.min(containerWidth / sourceWidth, containerHeight / sourceHeight);
+  const width = sourceWidth * scale;
+  const height = sourceHeight * scale;
+  return {
+    x: containerX + (containerWidth - width) / 2,
+    y: containerY + (containerHeight - height) / 2,
+    width,
+    height
+  };
+}
+
 export interface PdfGenerationResult {
   bytes: Uint8Array;
   imageIssues: Record<string, string>;
@@ -301,12 +321,8 @@ export async function generatePdfBytes(options: GeneratePdfOptions): Promise<Pdf
             embeddedImageBySourceKey.set(sourceKey, embeddedImage);
           }
           perf.imageEmbedMs += performance.now() - embedStart;
-          page.drawImage(embeddedImage, {
-            x: imageX,
-            y: imageY,
-            width: imageW,
-            height: imageH
-          });
+          const containRect = getContainRect(imageX, imageY, imageW, imageH, embeddedImage.width, embeddedImage.height);
+          page.drawImage(embeddedImage, containRect);
         } else if (!nextIssues[row.id]) {
           nextIssues[row.id] = 'Unable to load image. Workaround: save the image and upload it from your computer.';
         }
