@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type DragEvent } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import tamilFontUrl from '@fontsource/noto-sans-tamil/files/noto-sans-tamil-tamil-400-normal.woff?url';
 import '@fontsource/noto-sans-tamil/400.css';
 import type { RowValidation } from './types';
@@ -133,27 +133,11 @@ export default function App() {
     }));
   }
 
-  async function onRowImageDrop(event: DragEvent<HTMLElement>, rowId: string) {
-    event.preventDefault();
-    const file = event.dataTransfer.files?.[0];
-    if (!file || !file.type.startsWith('image/')) {
-      return;
-    }
-    await onRowImageUpload(rowId, file);
-  }
-
   async function onSelectedRowImageUpload(file: File) {
     if (!selectedRow) {
       return;
     }
     await onRowImageUpload(selectedRow.id, file);
-  }
-
-  async function onSelectedRowImageDrop(event: DragEvent<HTMLDivElement>) {
-    if (!selectedRow) {
-      return;
-    }
-    await onRowImageDrop(event, selectedRow.id);
   }
 
   function applyEmojiToRow(rowId: string, emoji: string) {
@@ -397,10 +381,8 @@ export default function App() {
               selectedRowEmojiMatches
             }}
             actions={{
-              onUpdateRow: updateRow,
               onImageUrlDraftChange: setImageUrlDraft,
               onApplySelectedImageUrl,
-              onSelectedRowImageDrop: (event) => void onSelectedRowImageDrop(event),
               onSelectedRowImageUpload: (file) => void onSelectedRowImageUpload(file),
               onApplyEmoji: applyEmojiToRow,
               onRemoveSelectedRowImage

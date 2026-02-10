@@ -1,4 +1,4 @@
-import type { DragEvent } from 'react';
+import { useRef, useState } from 'react';
 
 interface EmojiMatch {
   emoji: string;
@@ -17,10 +17,8 @@ interface SelectedCardDetailsProps {
     selectedRowEmojiMatches: EmojiMatch[];
   };
   actions: {
-    onUpdateRow: (rowId: string, patch: Partial<SelectedRowData> & { imageUrl?: string }) => void;
     onImageUrlDraftChange: (value: string) => void;
     onApplySelectedImageUrl: () => void;
-    onSelectedRowImageDrop: (event: DragEvent<HTMLDivElement>) => void;
     onSelectedRowImageUpload: (file: File) => void;
     onApplyEmoji: (rowId: string, emoji: string) => void;
     onRemoveSelectedRowImage: () => void;
@@ -30,88 +28,90 @@ interface SelectedCardDetailsProps {
 export function SelectedCardDetails(props: SelectedCardDetailsProps) {
   const { data, actions } = props;
   const { selectedRow, selectedRowHasImage, imageUrlDraft, selectedRowEmojiMatches } = data;
-  const {
-    onUpdateRow,
-    onImageUrlDraftChange,
-    onApplySelectedImageUrl,
-    onSelectedRowImageDrop,
-    onSelectedRowImageUpload,
-    onApplyEmoji,
-    onRemoveSelectedRowImage
-  } = actions;
+  const { onImageUrlDraftChange, onApplySelectedImageUrl, onSelectedRowImageUpload, onApplyEmoji, onRemoveSelectedRowImage } = actions;
+  const [showUrlInput, setShowUrlInput] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   return (
     <aside className="card-detail-panel">
-      <h3>Image</h3>
+      <div className="card-detail-heading">
+        <h3>Image</h3>
+        {selectedRowHasImage ? (
+          <button type="button" className="danger subtle" onClick={onRemoveSelectedRowImage}>
+            Remove image
+          </button>
+        ) : null}
+      </div>
       {selectedRow ? (
-        <>
-          {selectedRowHasImage ? (
-            <div className="image-selected-state">
-              <p>Image is set for this row.</p>
-              <button type="button" className="danger" onClick={onRemoveSelectedRowImage}>
-                Remove image
-              </button>
-            </div>
-          ) : (
-            <div className="image-options">
-              <label>
-                Image URL
-                <input
-                  value={imageUrlDraft}
-                  onChange={(event) => onImageUrlDraftChange(event.target.value)}
-                  aria-label="Selected row image URL"
-                  placeholder="https://..."
-                />
-              </label>
+        <div className="image-options">
+          <div className="image-actions-row">
+            <button
+              type="button"
+              onClick={() => setShowUrlInput((current) => !current)}
+              aria-expanded={showUrlInput}
+              aria-controls="selected-row-image-url"
+            >
+              Upload with URL
+            </button>
+            <button type="button" onClick={() => fileInputRef.current?.click()}>
+              Upload Image
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              aria-label="Selected row image upload"
+              className="visually-hidden"
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                if (file) {
+                  onSelectedRowImageUpload(file);
+                  event.target.value = '';
+                }
+              }}
+            />
+          </div>
+          {showUrlInput ? (
+            <div className="image-url-inline" id="selected-row-image-url">
+              <input
+                value={imageUrlDraft}
+                onChange={(event) => onImageUrlDraftChange(event.target.value)}
+                aria-label="Selected row image URL"
+                placeholder="Paste image URL"
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') {
+                    event.preventDefault();
+                    onApplySelectedImageUrl();
+                  }
+                }}
+              />
               <button type="button" onClick={onApplySelectedImageUrl} disabled={!imageUrlDraft.trim()}>
-                Set image from URL
+                Apply
               </button>
-              <div
-                className="drop-zone large"
-                onDragOver={(event) => event.preventDefault()}
-                onDrop={(event) => void onSelectedRowImageDrop(event)}
-              >
-                Drop image here
-              </div>
-              <label>
-                Upload local image
-                <input
-                  type="file"
-                  accept="image/*"
-                  aria-label="Selected row image upload"
-                  onChange={(event) => {
-                    const file = event.target.files?.[0];
-                    if (file) {
-                      onSelectedRowImageUpload(file);
-                    }
-                  }}
-                />
-              </label>
-
-              <div className="emoji-options">
-                <p>Emoji choices</p>
-                {selectedRowEmojiMatches.length > 0 ? (
-                  <div className="emoji-grid">
-                    {selectedRowEmojiMatches.map((match) => (
-                      <button
-                        type="button"
-                        key={match.emoji}
-                        className="emoji-choice"
-                        aria-label={`Use emoji ${match.emoji}`}
-                        title={`Keywords: ${match.keywords.join(', ')}`}
-                        onClick={() => onApplyEmoji(selectedRow.id, match.emoji)}
-                      >
-                        {match.emoji}
-                      </button>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="hint">No emoji matches found for this word.</p>
-                )}
-              </div>
             </div>
-          )}
-        </>
+          ) : null}
+          <div className="emoji-options">
+            <p>Emoji choices</p>
+            {selectedRowEmojiMatches.length > 0 ? (
+              <div className="emoji-grid">
+                {selectedRowEmojiMatches.map((match) => (
+                  <button
+                    type="button"
+                    key={match.emoji}
+                    className="emoji-choice"
+                    aria-label={`Use emoji ${match.emoji}`}
+                    title={`Keywords: ${match.keywords.join(', ')}`}
+                    onClick={() => onApplyEmoji(selectedRow.id, match.emoji)}
+                  >
+                    {match.emoji}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <p className="hint">No emoji matches found for this word.</p>
+            )}
+          </div>
+        </div>
       ) : (
         <p>Select a row from the list to edit details.</p>
       )}
