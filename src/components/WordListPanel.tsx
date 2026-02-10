@@ -33,6 +33,7 @@ export function WordListPanel(props: WordListPanelProps) {
   } = props;
   const [csvModalOpen, setCsvModalOpen] = useState(false);
   const [draftRow, setDraftRow] = useState({ word: '', subtitle: '' });
+  const listTableRef = useRef<HTMLDivElement | null>(null);
   const wordRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const subtitleRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const draftWordRef = useRef<HTMLInputElement | null>(null);
@@ -92,17 +93,36 @@ export function WordListPanel(props: WordListPanelProps) {
     return messages.join('. ');
   }
 
-  function focusWordInput(rowId: string) {
-    const input = rowId === '__draft__' ? draftWordRef.current : wordRefs.current[rowId];
-    if (!input) {
+  function scrollByOneRowIfNeeded(input: HTMLInputElement, direction: 'up' | 'down') {
+    const container = listTableRef.current;
+    const row = input.closest('tr');
+    if (!container || !row) {
       return;
     }
-    input.focus();
-    input.select();
-    input.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+
+    const rowRect = row.getBoundingClientRect();
+    const containerRect = container.getBoundingClientRect();
+    const header = container.querySelector('thead');
+    const headerHeight = header ? header.getBoundingClientRect().height : 0;
+    const visibleTop = containerRect.top + headerHeight;
+    const visibleBottom = containerRect.bottom;
+    const rowHeight = rowRect.height || 40;
+
+    if (direction === 'down' && rowRect.bottom > visibleBottom) {
+      container.scrollTop += rowHeight;
+      return;
+    }
+
+    if (direction === 'up' && rowRect.top < visibleTop) {
+      container.scrollTop -= rowHeight;
+    }
   }
 
-  function focusInput(rowId: string, column: 'word' | 'subtitle') {
+  function focusInput(
+    rowId: string,
+    column: 'word' | 'subtitle',
+    options?: { arrowDirection?: 'up' | 'down' }
+  ) {
     let input: HTMLInputElement | null = null;
     if (rowId === '__draft__') {
       input = column === 'word' ? draftWordRef.current : draftSubtitleRef.current;
@@ -112,12 +132,14 @@ export function WordListPanel(props: WordListPanelProps) {
     if (!input) {
       return;
     }
-    input.focus();
+    input.focus({ preventScroll: true });
     const length = input.value.length;
     if (document.activeElement === input) {
       input.setSelectionRange(length, length);
     }
-    input.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    if (options?.arrowDirection) {
+      scrollByOneRowIfNeeded(input, options.arrowDirection);
+    }
   }
 
   function isRowEmpty(row: Pick<FlashcardRow, 'word' | 'subtitle'>): boolean {
@@ -154,11 +176,11 @@ export function WordListPanel(props: WordListPanelProps) {
     const nextRow = rows[rowIndex + 1];
     if (!nextRow) {
       scheduleSelectionCommit(undefined);
-      focusWordInput('__draft__');
+      focusInput('__draft__', 'word', { arrowDirection: 'down' });
       return;
     }
     scheduleSelectionCommit(nextRow.id);
-    focusWordInput(nextRow.id);
+    focusInput(nextRow.id, 'word', { arrowDirection: 'down' });
   }
 
   function atStart(input: HTMLInputElement): boolean {
@@ -198,7 +220,7 @@ export function WordListPanel(props: WordListPanelProps) {
       } else {
         scheduleSelectionCommit(undefined);
       }
-      focusInput(previousRowId, column);
+      focusInput(previousRowId, column, { arrowDirection: 'up' });
       return;
     }
 
@@ -213,7 +235,7 @@ export function WordListPanel(props: WordListPanelProps) {
       } else {
         scheduleSelectionCommit(undefined);
       }
-      focusInput(nextRowId, column);
+      focusInput(nextRowId, column, { arrowDirection: 'down' });
       return;
     }
 
@@ -249,7 +271,7 @@ export function WordListPanel(props: WordListPanelProps) {
       subtitle: draftRow.subtitle
     });
     setDraftRow({ word: '', subtitle: '' });
-    focusWordInput('__draft__');
+    focusInput('__draft__', 'word', { arrowDirection: 'down' });
   }
 
   return (
@@ -303,7 +325,7 @@ export function WordListPanel(props: WordListPanelProps) {
         </>
       )}
 
-      <div className="list-table" role="region" aria-label="Rows list">
+      <div className="list-table" role="region" aria-label="Rows list" ref={listTableRef}>
         <table>
           <thead>
             <tr>
