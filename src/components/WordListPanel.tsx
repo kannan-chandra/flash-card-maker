@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type FocusEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type FocusEvent, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import type { FlashcardRow, RowValidation } from '../types';
 
 interface WordListPanelProps {
@@ -41,6 +41,8 @@ export function WordListPanel(props: WordListPanelProps) {
   const draftWordRef = useRef<HTMLInputElement | null>(null);
   const draftSubtitleRef = useRef<HTMLInputElement | null>(null);
   const selectDebounceTimerRef = useRef<number | null>(null);
+  const isComposingRef = useRef(false);
+  const pendingTabNavigationRef = useRef<{ rowId: string; column: 'word' | 'subtitle'; shiftKey: boolean } | null>(null);
   const validationById = useMemo(
     () => Object.fromEntries(validations.map((item) => [item.rowId, item])),
     [validations]
@@ -166,7 +168,7 @@ export function WordListPanel(props: WordListPanelProps) {
     }
   }
 
-  function onExistingRowEnter(event: KeyboardEvent<HTMLInputElement>, rowId: string) {
+  function onExistingRowEnter(event: ReactKeyboardEvent<HTMLInputElement>, rowId: string) {
     if (event.key !== 'Enter') {
       return;
     }
@@ -204,7 +206,7 @@ export function WordListPanel(props: WordListPanelProps) {
     return start === length && end === length;
   }
 
-  function onArrowNavigation(event: KeyboardEvent<HTMLInputElement>, rowId: string, column: 'word' | 'subtitle') {
+  function onArrowNavigation(event: ReactKeyboardEvent<HTMLInputElement>, rowId: string, column: 'word' | 'subtitle') {
     const rowsWithDraft = [...rows.map((row) => row.id), '__draft__'];
     const currentIndex = rowsWithDraft.indexOf(rowId);
     if (currentIndex < 0) {
@@ -260,29 +262,23 @@ export function WordListPanel(props: WordListPanelProps) {
     }
   }
 
-  function onTabNavigation(event: KeyboardEvent<HTMLInputElement>, rowId: string, column: 'word' | 'subtitle') {
-    if (event.key !== 'Tab') {
-      return;
-    }
-
+  function runTabNavigation(rowId: string, column: 'word' | 'subtitle', shiftKey: boolean): boolean {
     const rowsWithDraft = [...rows.map((row) => row.id), '__draft__'];
     const currentIndex = rowsWithDraft.indexOf(rowId);
     if (currentIndex < 0) {
-      return;
+      return false;
     }
 
-    if (event.shiftKey) {
+    if (shiftKey) {
       if (column === 'subtitle') {
-        event.preventDefault();
         if (rowId !== '__draft__') {
           scheduleSelectionCommit(rowId);
         }
         focusInput(rowId, 'word');
-        return;
+        return true;
       }
 
       if (column === 'word' && currentIndex > 0) {
-        event.preventDefault();
         const previousRowId = rowsWithDraft[currentIndex - 1];
         if (previousRowId !== '__draft__') {
           scheduleSelectionCommit(previousRowId);
@@ -290,21 +286,20 @@ export function WordListPanel(props: WordListPanelProps) {
           scheduleSelectionCommit(undefined);
         }
         focusInput(previousRowId, 'subtitle', { arrowDirection: 'up' });
+        return true;
       }
-      return;
+      return false;
     }
 
     if (column === 'word') {
-      event.preventDefault();
       if (rowId !== '__draft__') {
         scheduleSelectionCommit(rowId);
       }
       focusInput(rowId, 'subtitle');
-      return;
+      return true;
     }
 
     if (column === 'subtitle' && currentIndex < rowsWithDraft.length - 1) {
-      event.preventDefault();
       const nextRowId = rowsWithDraft[currentIndex + 1];
       if (nextRowId !== '__draft__') {
         scheduleSelectionCommit(nextRowId);
@@ -312,10 +307,46 @@ export function WordListPanel(props: WordListPanelProps) {
         scheduleSelectionCommit(undefined);
       }
       focusInput(nextRowId, 'word', { arrowDirection: 'down' });
+      return true;
+    }
+    return false;
+  }
+
+  function onCompositionStart() {
+    isComposingRef.current = true;
+  }
+
+  function onCompositionEnd() {
+    isComposingRef.current = false;
+    const pending = pendingTabNavigationRef.current;
+    if (!pending) {
+      return;
+    }
+    pendingTabNavigationRef.current = null;
+    requestAnimationFrame(() => {
+      runTabNavigation(pending.rowId, pending.column, pending.shiftKey);
+    });
+  }
+
+  function onTabNavigation(event: ReactKeyboardEvent<HTMLInputElement>, rowId: string, column: 'word' | 'subtitle') {
+    if (event.key !== 'Tab') {
+      return;
+    }
+
+    const nativeEvent = event.nativeEvent as globalThis.KeyboardEvent;
+    const composing = isComposingRef.current || nativeEvent.isComposing || nativeEvent.keyCode === 229;
+    if (composing) {
+      event.preventDefault();
+      pendingTabNavigationRef.current = { rowId, column, shiftKey: event.shiftKey };
+      return;
+    }
+
+    if (runTabNavigation(rowId, column, event.shiftKey)) {
+      event.preventDefault();
     }
   }
 
-  function onDraftEnter(event: KeyboardEvent<HTMLInputElement>) {
+  function onDraftEnter(event: ReactKeyboardEvent<HTMLInputElement>) {
     if (event.key !== 'Enter') {
       return;
     }
@@ -412,6 +443,8 @@ export function WordListPanel(props: WordListPanelProps) {
                       onChange={(event) => onUpdateRow(row.id, { word: event.target.value })}
                       onFocus={() => scheduleSelectionCommit(row.id)}
                       onBlur={(event) => onRowBlur(row.id, event)}
+                      onCompositionStart={onCompositionStart}
+                      onCompositionEnd={onCompositionEnd}
                       onKeyDown={(event) => {
                         onTabNavigation(event, row.id, 'word');
                         onArrowNavigation(event, row.id, 'word');
@@ -431,6 +464,8 @@ export function WordListPanel(props: WordListPanelProps) {
                         onChange={(event) => onUpdateRow(row.id, { subtitle: event.target.value })}
                         onFocus={() => scheduleSelectionCommit(row.id)}
                         onBlur={(event) => onRowBlur(row.id, event)}
+                        onCompositionStart={onCompositionStart}
+                        onCompositionEnd={onCompositionEnd}
                         onKeyDown={(event) => {
                           onTabNavigation(event, row.id, 'subtitle');
                           onArrowNavigation(event, row.id, 'subtitle');
@@ -455,6 +490,8 @@ export function WordListPanel(props: WordListPanelProps) {
                   data-row-id="__draft__"
                   value={draftRow.word}
                   onChange={(event) => setDraftRow((current) => ({ ...current, word: event.target.value }))}
+                  onCompositionStart={onCompositionStart}
+                  onCompositionEnd={onCompositionEnd}
                   onKeyDown={(event) => {
                     onTabNavigation(event, '__draft__', 'word');
                     onArrowNavigation(event, '__draft__', 'word');
@@ -471,6 +508,8 @@ export function WordListPanel(props: WordListPanelProps) {
                     data-row-id="__draft__"
                     value={draftRow.subtitle}
                     onChange={(event) => setDraftRow((current) => ({ ...current, subtitle: event.target.value }))}
+                    onCompositionStart={onCompositionStart}
+                    onCompositionEnd={onCompositionEnd}
                     onKeyDown={(event) => {
                       onTabNavigation(event, '__draft__', 'subtitle');
                       onArrowNavigation(event, '__draft__', 'subtitle');
