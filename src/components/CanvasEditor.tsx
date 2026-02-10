@@ -279,8 +279,7 @@ export function CanvasEditor(props: CanvasEditorProps) {
       ? project.template.textElements[0]
       : selectedElement === 'text2'
         ? project.template.textElements[1]
-        : project.template.textElements[0];
-  const textControlsDisabled = selectedElement !== 'text1' && selectedElement !== 'text2';
+        : null;
 
   return (
     <section className="panel editor-panel">
@@ -298,52 +297,52 @@ export function CanvasEditor(props: CanvasEditorProps) {
                 onChange={(event) => onPatchTemplate({ backgroundColor: event.target.value })}
               />
             </label>
-            <label>
-              Font
-              <select
-                disabled={textControlsDisabled}
-                value={selectedText.fontFamily}
-                onChange={(event) => onPatchTextElement(selectedText.id, { fontFamily: event.target.value as FontFamily })}
-              >
-                {FONT_FAMILIES.map((font) => (
-                  <option key={font} value={font}>
-                    {font}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Size
-              <input
-                disabled={textControlsDisabled}
-                type="number"
-                min={10}
-                max={120}
-                value={selectedText.fontSize}
-                onChange={(event) => onPatchTextElement(selectedText.id, { fontSize: Number(event.target.value) || 10 })}
-              />
-            </label>
-            <label>
-              Align
-              <select
-                disabled={textControlsDisabled}
-                value={selectedText.align}
-                onChange={(event) => onPatchTextElement(selectedText.id, { align: event.target.value as TextElement['align'] })}
-              >
-                <option value="left">Left</option>
-                <option value="center">Center</option>
-                <option value="right">Right</option>
-              </select>
-            </label>
-            <label>
-              Text Color
-              <input
-                disabled={textControlsDisabled}
-                type="color"
-                value={selectedText.color}
-                onChange={(event) => onPatchTextElement(selectedText.id, { color: event.target.value })}
-              />
-            </label>
+            {selectedText ? (
+              <>
+                <label>
+                  Font
+                  <select
+                    value={selectedText.fontFamily}
+                    onChange={(event) => onPatchTextElement(selectedText.id, { fontFamily: event.target.value as FontFamily })}
+                  >
+                    {FONT_FAMILIES.map((font) => (
+                      <option key={font} value={font}>
+                        {font}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  Size
+                  <input
+                    type="number"
+                    min={10}
+                    max={120}
+                    value={selectedText.fontSize}
+                    onChange={(event) => onPatchTextElement(selectedText.id, { fontSize: Number(event.target.value) || 10 })}
+                  />
+                </label>
+                <label>
+                  Align
+                  <select
+                    value={selectedText.align}
+                    onChange={(event) => onPatchTextElement(selectedText.id, { align: event.target.value as TextElement['align'] })}
+                  >
+                    <option value="left">Left</option>
+                    <option value="center">Center</option>
+                    <option value="right">Right</option>
+                  </select>
+                </label>
+                <label>
+                  Text Color
+                  <input
+                    type="color"
+                    value={selectedText.color}
+                    onChange={(event) => onPatchTextElement(selectedText.id, { color: event.target.value })}
+                  />
+                </label>
+              </>
+            ) : null}
             <label className="checkbox-row control-checkbox">
               <input
                 type="checkbox"
