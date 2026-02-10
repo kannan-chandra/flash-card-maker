@@ -389,7 +389,7 @@ td input:not([type]) {
   font-size: 13px;
 }
 
-tr.selected {
+.list-table:not(:focus-within) tr.selected {
   background: #eff6ff;
 }
 

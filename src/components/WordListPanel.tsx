@@ -33,7 +33,6 @@ export function WordListPanel(props: WordListPanelProps) {
   } = props;
   const [csvModalOpen, setCsvModalOpen] = useState(false);
   const [draftRow, setDraftRow] = useState({ word: '', subtitle: '' });
-  const [highlightedRowId, setHighlightedRowId] = useState<string | undefined>(selectedRowId);
   const wordRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const subtitleRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const draftWordRef = useRef<HTMLInputElement | null>(null);
@@ -43,10 +42,6 @@ export function WordListPanel(props: WordListPanelProps) {
     () => Object.fromEntries(validations.map((item) => [item.rowId, item])),
     [validations]
   );
-
-  useEffect(() => {
-    setHighlightedRowId(selectedRowId);
-  }, [selectedRowId]);
 
   useEffect(
     () => () => {
@@ -80,18 +75,6 @@ export function WordListPanel(props: WordListPanelProps) {
       selectDebounceTimerRef.current = null;
     }
     onSelectRow(rowId);
-  }
-
-  function setRowHighlight(rowId?: string, options?: { commit?: 'none' | 'deferred' | 'immediate' }) {
-    setHighlightedRowId(rowId);
-    const commitMode = options?.commit ?? 'none';
-    if (commitMode === 'immediate') {
-      commitSelectionNow(rowId);
-      return;
-    }
-    if (commitMode === 'deferred') {
-      scheduleSelectionCommit(rowId);
-    }
   }
 
   function getIssueText(rowId: string): string {
@@ -170,10 +153,11 @@ export function WordListPanel(props: WordListPanelProps) {
     }
     const nextRow = rows[rowIndex + 1];
     if (!nextRow) {
+      scheduleSelectionCommit(undefined);
       focusWordInput('__draft__');
       return;
     }
-    setRowHighlight(nextRow.id, { commit: 'deferred' });
+    scheduleSelectionCommit(nextRow.id);
     focusWordInput(nextRow.id);
   }
 
@@ -210,9 +194,9 @@ export function WordListPanel(props: WordListPanelProps) {
       event.preventDefault();
       const previousRowId = rowsWithDraft[currentIndex - 1];
       if (previousRowId !== '__draft__') {
-        setRowHighlight(previousRowId, { commit: 'deferred' });
+        scheduleSelectionCommit(previousRowId);
       } else {
-        setRowHighlight(undefined, { commit: 'none' });
+        scheduleSelectionCommit(undefined);
       }
       focusInput(previousRowId, column);
       return;
@@ -225,9 +209,9 @@ export function WordListPanel(props: WordListPanelProps) {
       event.preventDefault();
       const nextRowId = rowsWithDraft[currentIndex + 1];
       if (nextRowId !== '__draft__') {
-        setRowHighlight(nextRowId, { commit: 'deferred' });
+        scheduleSelectionCommit(nextRowId);
       } else {
-        setRowHighlight(undefined, { commit: 'none' });
+        scheduleSelectionCommit(undefined);
       }
       focusInput(nextRowId, column);
       return;
@@ -237,7 +221,7 @@ export function WordListPanel(props: WordListPanelProps) {
     if (event.key === 'ArrowLeft' && column === 'subtitle' && atStart(target)) {
       event.preventDefault();
       if (rowId !== '__draft__') {
-        setRowHighlight(rowId, { commit: 'deferred' });
+        scheduleSelectionCommit(rowId);
       }
       focusInput(rowId, 'word');
       return;
@@ -246,7 +230,7 @@ export function WordListPanel(props: WordListPanelProps) {
     if (event.key === 'ArrowRight' && column === 'word' && atEnd(target)) {
       event.preventDefault();
       if (rowId !== '__draft__') {
-        setRowHighlight(rowId, { commit: 'deferred' });
+        scheduleSelectionCommit(rowId);
       }
       focusInput(rowId, 'subtitle');
     }
@@ -334,9 +318,9 @@ export function WordListPanel(props: WordListPanelProps) {
               return (
                 <tr
                   key={row.id}
-                  className={row.id === highlightedRowId ? 'selected' : undefined}
+                  className={row.id === selectedRowId ? 'selected' : undefined}
                   onClick={() => {
-                    setRowHighlight(row.id, { commit: 'immediate' });
+                    commitSelectionNow(row.id);
                   }}
                 >
                   <td>
@@ -347,7 +331,7 @@ export function WordListPanel(props: WordListPanelProps) {
                       data-row-id={row.id}
                       value={row.word}
                       onChange={(event) => onUpdateRow(row.id, { word: event.target.value })}
-                      onFocus={() => setRowHighlight(row.id, { commit: 'deferred' })}
+                      onFocus={() => scheduleSelectionCommit(row.id)}
                       onBlur={(event) => onRowBlur(row.id, event)}
                       onKeyDown={(event) => {
                         onArrowNavigation(event, row.id, 'word');
@@ -365,7 +349,7 @@ export function WordListPanel(props: WordListPanelProps) {
                         data-row-id={row.id}
                         value={row.subtitle}
                         onChange={(event) => onUpdateRow(row.id, { subtitle: event.target.value })}
-                        onFocus={() => setRowHighlight(row.id, { commit: 'deferred' })}
+                        onFocus={() => scheduleSelectionCommit(row.id)}
                         onBlur={(event) => onRowBlur(row.id, event)}
                         onKeyDown={(event) => {
                           onArrowNavigation(event, row.id, 'subtitle');
