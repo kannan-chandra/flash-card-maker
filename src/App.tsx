@@ -358,6 +358,7 @@ export default function App() {
             onSelectElement: setSelectedElement,
             onPatchTemplate: patchTemplate,
             onPatchTextElement: patchTextElement,
+            onUpdateRow: updateRow,
             onToggleDoubleSided: (doubleSided) => updateActiveSet((current) => ({ ...current, doubleSided })),
             onSelectPreviousRow: () =>
               updateActiveSet((current) => ({

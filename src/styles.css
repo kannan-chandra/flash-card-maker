@@ -195,10 +195,35 @@ input[type='color'] {
   height: 36px;
 }
 
-.stage {
+.stage-wrap {
   border: 1px dashed #94a3b8;
   max-width: 100%;
   overflow: auto;
+  position: relative;
+}
+
+.stage-canvas {
+  position: relative;
+}
+
+.stage {
+  display: block;
+}
+
+.canvas-text-editor {
+  position: absolute;
+  z-index: 10;
+  margin: 0;
+  padding: 4px;
+  border: 2px solid #2563eb;
+  border-radius: 2px;
+  outline: none;
+  resize: none;
+  background: rgba(255, 255, 255, 0.97);
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.2);
+  overflow: hidden;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 .preview-meta {

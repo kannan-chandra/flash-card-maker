@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Image as KonvaImage, Layer, Rect, Stage, Text, Transformer } from 'react-konva';
 import type Konva from 'konva';
 import { FONT_FAMILIES } from '../constants/project';
@@ -24,6 +24,7 @@ interface CanvasEditorProps {
     onSelectElement: (element: 'image' | 'text1' | 'text2' | null) => void;
     onPatchTemplate: (patch: Partial<CardTemplate>) => void;
     onPatchTextElement: (id: 'text1' | 'text2', patch: Partial<TextElement>) => void;
+    onUpdateRow: (rowId: string, patch: Partial<FlashcardRow>) => void;
     onToggleDoubleSided: (value: boolean) => void;
     onSelectPreviousRow: () => void;
     onSelectNextRow: () => void;
@@ -45,6 +46,7 @@ export function CanvasEditor(props: CanvasEditorProps) {
     onSelectElement,
     onPatchTemplate,
     onPatchTextElement,
+    onUpdateRow,
     onToggleDoubleSided,
     onSelectPreviousRow,
     onSelectNextRow,
@@ -59,6 +61,29 @@ export function CanvasEditor(props: CanvasEditorProps) {
   const text1PlaceholderRef = useRef<Konva.Rect>(null);
   const text2PlaceholderRef = useRef<Konva.Rect>(null);
   const transformerRef = useRef<Konva.Transformer>(null);
+  const [editingTextId, setEditingTextId] = useState<'text1' | 'text2' | null>(null);
+  const [editingValue, setEditingValue] = useState('');
+  const textEditorRef = useRef<HTMLTextAreaElement>(null);
+
+  const editingTextElement = useMemo(
+    () => project.template.textElements.find((item) => item.id === editingTextId),
+    [editingTextId, project.template.textElements]
+  );
+
+  useEffect(() => {
+    if (!selectedRow && editingTextId) {
+      setEditingTextId(null);
+      setEditingValue('');
+    }
+  }, [editingTextId, selectedRow]);
+
+  useEffect(() => {
+    if (!editingTextId || !textEditorRef.current) {
+      return;
+    }
+    textEditorRef.current.focus();
+    textEditorRef.current.select();
+  }, [editingTextId]);
 
   useEffect(() => {
     if (!transformerRef.current) {
@@ -86,7 +111,51 @@ export function CanvasEditor(props: CanvasEditorProps) {
     }
     transformerRef.current.nodes(nodes);
     transformerRef.current.getLayer()?.batchDraw();
-  }, [selectedElement, project, imageIsEmpty, selectedRow]);
+  }, [selectedElement, project, imageIsEmpty, selectedRow, editingTextId]);
+
+  function getRowTextValue(role: TextElement['role']): string {
+    if (!selectedRow) {
+      return '';
+    }
+    return role === 'word' ? selectedRow.word : selectedRow.subtitle;
+  }
+
+  function startEditingText(textId: 'text1' | 'text2') {
+    if (!selectedRow) {
+      return;
+    }
+    const textElement = project.template.textElements.find((item) => item.id === textId);
+    if (!textElement) {
+      return;
+    }
+    setEditingTextId(textId);
+    setEditingValue(getRowTextValue(textElement.role));
+    onSelectElement(textId);
+  }
+
+  function commitEditingText() {
+    if (!editingTextId || !selectedRow) {
+      return;
+    }
+    const textElement = project.template.textElements.find((item) => item.id === editingTextId);
+    if (!textElement) {
+      setEditingTextId(null);
+      setEditingValue('');
+      return;
+    }
+    if (textElement.role === 'word') {
+      onUpdateRow(selectedRow.id, { word: editingValue });
+    } else {
+      onUpdateRow(selectedRow.id, { subtitle: editingValue });
+    }
+    setEditingTextId(null);
+    setEditingValue('');
+  }
+
+  function cancelEditingText() {
+    setEditingTextId(null);
+    setEditingValue('');
+  }
 
   function onStagePointerDown(event: Konva.KonvaEventObject<MouseEvent | TouchEvent>) {
     const target = event.target;
@@ -196,14 +265,16 @@ export function CanvasEditor(props: CanvasEditorProps) {
             </label>
           </div>
 
-          <Stage
-            width={project.template.width}
-            height={stageHeight}
-            className="stage"
-            onMouseDown={onStagePointerDown}
-            onTouchStart={onStagePointerDown}
-          >
-            <Layer>
+          <div className="stage-wrap">
+            <div className="stage-canvas" style={{ width: project.template.width, height: stageHeight }}>
+              <Stage
+                width={project.template.width}
+                height={stageHeight}
+                className="stage"
+                onMouseDown={onStagePointerDown}
+                onTouchStart={onStagePointerDown}
+              >
+                <Layer>
               <Rect
                 name="canvas-bg"
                 x={0}
@@ -330,6 +401,7 @@ export function CanvasEditor(props: CanvasEditorProps) {
               {project.template.textElements.map((textElement, index) => {
                 const textValue = selectedRow ? fitTextValue(selectedRow, textElement.role) : '';
                 const textIsEmpty = !textValue.trim();
+                const isEditing = editingTextId === textElement.id;
                 return [
                   <Text
                     key={`${textElement.id}-text`}
@@ -348,9 +420,12 @@ export function CanvasEditor(props: CanvasEditorProps) {
                     padding={4}
                     ellipsis
                     wrap="word"
-                    draggable
+                    visible={!isEditing}
+                    draggable={!isEditing}
                     onClick={() => onSelectElement(textElement.id)}
                     onTap={() => onSelectElement(textElement.id)}
+                    onDblClick={() => startEditingText(textElement.id)}
+                    onDblTap={() => startEditingText(textElement.id)}
                     onDragEnd={(event) => {
                       const sideResult = fromCanvasY(event.target.y(), textElement.height);
                       onPatchTextElement(textElement.id, {
@@ -379,7 +454,7 @@ export function CanvasEditor(props: CanvasEditorProps) {
                     stroke={selectedElement === textElement.id ? '#2563eb' : '#9ca3af'}
                     strokeWidth={1}
                   />,
-                  textIsEmpty && (
+                  textIsEmpty && !isEditing && (
                     <Rect
                       ref={textElement.id === 'text1' ? text1PlaceholderRef : text2PlaceholderRef}
                       key={`${textElement.id}-empty`}
@@ -394,6 +469,8 @@ export function CanvasEditor(props: CanvasEditorProps) {
                       draggable
                       onClick={() => onSelectElement(textElement.id)}
                       onTap={() => onSelectElement(textElement.id)}
+                      onDblClick={() => startEditingText(textElement.id)}
+                      onDblTap={() => startEditingText(textElement.id)}
                       onDragEnd={(event) => {
                         const sideResult = fromCanvasY(event.target.y(), textElement.height);
                         onPatchTextElement(textElement.id, {
@@ -455,8 +532,41 @@ export function CanvasEditor(props: CanvasEditorProps) {
               })()}
 
               <Transformer ref={transformerRef} rotateEnabled={false} flipEnabled={false} keepRatio={false} />
-            </Layer>
-          </Stage>
+                </Layer>
+              </Stage>
+              {editingTextElement && (
+                <textarea
+                  ref={textEditorRef}
+                  className="canvas-text-editor"
+                  value={editingValue}
+                  onChange={(event) => setEditingValue(event.target.value)}
+                  onBlur={commitEditingText}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Escape') {
+                      event.preventDefault();
+                      cancelEditingText();
+                      return;
+                    }
+                    if (event.key === 'Enter' && !event.shiftKey) {
+                      event.preventDefault();
+                      commitEditingText();
+                    }
+                  }}
+                  style={{
+                    left: editingTextElement.x,
+                    top: toCanvasY(editingTextElement.y, editingTextElement.side),
+                    width: editingTextElement.width,
+                    height: editingTextElement.height,
+                    fontSize: editingTextElement.fontSize,
+                    fontFamily: editingTextElement.fontFamily,
+                    color: editingTextElement.color,
+                    textAlign: editingTextElement.align,
+                    lineHeight: String(editingTextElement.lineHeight)
+                  }}
+                />
+              )}
+            </div>
+          </div>
 
           <div className="preview-meta">
             <h3>Row preview</h3>
