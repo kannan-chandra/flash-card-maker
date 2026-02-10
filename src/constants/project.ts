@@ -9,28 +9,28 @@ export const FONT_FAMILIES: FontFamily[] = [
   'Noto Sans Tamil'
 ];
 
-export const DEFAULT_TEMPLATE: CardTemplate = {
+export const SINGLE_SIDED_DEFAULT_TEMPLATE: CardTemplate = {
   width: 700,
   height: 500,
   backgroundColor: '#ffffff',
   image: {
     side: 1,
-    x: 35,
-    y: 35,
-    width: 260,
-    height: 250
+    x: 175,
+    y: 100,
+    width: 350,
+    height: 260
   },
   textElements: [
     {
       id: 'text1',
       role: 'word',
       side: 1,
-      x: 320,
-      y: 80,
-      width: 340,
-      height: 160,
+      x: 70,
+      y: 20,
+      width: 560,
+      height: 70,
       fontFamily: 'Arial',
-      fontSize: 44,
+      fontSize: 56,
       color: '#1f2937',
       align: 'center',
       lineHeight: 1.2
@@ -39,10 +39,53 @@ export const DEFAULT_TEMPLATE: CardTemplate = {
       id: 'text2',
       role: 'subtitle',
       side: 1,
-      x: 320,
-      y: 260,
-      width: 340,
-      height: 140,
+      x: 70,
+      y: 375,
+      width: 560,
+      height: 85,
+      fontFamily: 'Verdana',
+      fontSize: 30,
+      color: '#374151',
+      align: 'center',
+      lineHeight: 1.2
+    }
+  ]
+};
+
+export const DOUBLE_SIDED_DEFAULT_TEMPLATE: CardTemplate = {
+  width: 700,
+  height: 500,
+  backgroundColor: '#ffffff',
+  image: {
+    side: 2,
+    x: 175,
+    y: 80,
+    width: 350,
+    height: 280
+  },
+  textElements: [
+    {
+      id: 'text1',
+      role: 'word',
+      side: 1,
+      x: 70,
+      y: 160,
+      width: 560,
+      height: 180,
+      fontFamily: 'Arial',
+      fontSize: 80,
+      color: '#1f2937',
+      align: 'center',
+      lineHeight: 1.2
+    },
+    {
+      id: 'text2',
+      role: 'subtitle',
+      side: 2,
+      x: 70,
+      y: 380,
+      width: 560,
+      height: 70,
       fontFamily: 'Verdana',
       fontSize: 28,
       color: '#374151',
@@ -52,8 +95,20 @@ export const DEFAULT_TEMPLATE: CardTemplate = {
   ]
 };
 
+export const DEFAULT_TEMPLATE = SINGLE_SIDED_DEFAULT_TEMPLATE;
+
+function cloneTemplate(template: CardTemplate): CardTemplate {
+  return {
+    ...template,
+    image: { ...template.image },
+    textElements: template.textElements.map((item) => ({ ...item })) as CardTemplate['textElements']
+  };
+}
+
 export const EMPTY_SET_BASE: Omit<FlashcardSet, 'id' | 'name' | 'createdAt'> = {
-  template: DEFAULT_TEMPLATE,
+  template: cloneTemplate(SINGLE_SIDED_DEFAULT_TEMPLATE),
+  singleSidedTemplate: cloneTemplate(SINGLE_SIDED_DEFAULT_TEMPLATE),
+  doubleSidedTemplate: cloneTemplate(DOUBLE_SIDED_DEFAULT_TEMPLATE),
   doubleSided: false,
   rows: [],
   preset: 6,
@@ -65,11 +120,9 @@ export function makeNewSet(name: string, index: number): FlashcardSet {
   const now = Date.now();
   return {
     ...EMPTY_SET_BASE,
-    template: {
-      ...DEFAULT_TEMPLATE,
-      image: { ...DEFAULT_TEMPLATE.image },
-      textElements: DEFAULT_TEMPLATE.textElements.map((item) => ({ ...item })) as CardTemplate['textElements']
-    },
+    template: cloneTemplate(SINGLE_SIDED_DEFAULT_TEMPLATE),
+    singleSidedTemplate: cloneTemplate(SINGLE_SIDED_DEFAULT_TEMPLATE),
+    doubleSidedTemplate: cloneTemplate(DOUBLE_SIDED_DEFAULT_TEMPLATE),
     id: `set-${now}-${Math.random().toString(36).slice(2, 7)}`,
     name: name.trim() || `Set ${index}`,
     createdAt: now,
@@ -78,7 +131,7 @@ export function makeNewSet(name: string, index: number): FlashcardSet {
 }
 
 export function normalizeTemplate(template: CardTemplate): CardTemplate {
-  const fallback = DEFAULT_TEMPLATE;
+  const fallback = SINGLE_SIDED_DEFAULT_TEMPLATE;
   const safeNumber = (value: unknown, defaultValue: number) =>
     typeof value === 'number' && Number.isFinite(value) ? value : defaultValue;
   const safeSide = (value: unknown, defaultSide: 1 | 2): 1 | 2 => (value === 2 ? 2 : defaultSide);
@@ -124,9 +177,18 @@ export function normalizeTemplate(template: CardTemplate): CardTemplate {
 }
 
 export function normalizeSet(setItem: FlashcardSet): FlashcardSet {
+  const singleSidedTemplate = normalizeTemplate(
+    setItem.singleSidedTemplate ?? (setItem.doubleSided ? SINGLE_SIDED_DEFAULT_TEMPLATE : setItem.template)
+  );
+  const doubleSidedTemplate = normalizeTemplate(
+    setItem.doubleSidedTemplate ?? (setItem.doubleSided ? setItem.template : DOUBLE_SIDED_DEFAULT_TEMPLATE)
+  );
+  const doubleSided = setItem.doubleSided ?? false;
   return {
     ...setItem,
-    doubleSided: setItem.doubleSided ?? false,
-    template: normalizeTemplate(setItem.template)
+    doubleSided,
+    singleSidedTemplate,
+    doubleSidedTemplate,
+    template: doubleSided ? doubleSidedTemplate : singleSidedTemplate
   };
 }

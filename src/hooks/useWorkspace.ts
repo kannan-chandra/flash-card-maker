@@ -102,7 +102,19 @@ export function useWorkspace(): UseWorkspaceResult {
         template: {
           ...current.template,
           ...patch
-        }
+        },
+        singleSidedTemplate: current.doubleSided
+          ? current.singleSidedTemplate
+          : {
+              ...(current.singleSidedTemplate ?? current.template),
+              ...patch
+            },
+        doubleSidedTemplate: current.doubleSided
+          ? {
+              ...(current.doubleSidedTemplate ?? current.template),
+              ...patch
+            }
+          : current.doubleSidedTemplate
       }));
     },
     [updateActiveSet]
@@ -110,15 +122,23 @@ export function useWorkspace(): UseWorkspaceResult {
 
   const patchTextElement = useCallback(
     (id: 'text1' | 'text2', patch: Partial<TextElement>) => {
-      updateActiveSet((current) => ({
-        ...current,
-        template: {
+      updateActiveSet((current) => {
+        const nextTextElements = current.template.textElements.map((item) => (item.id === id ? { ...item, ...patch } : item)) as [
+          TextElement,
+          TextElement
+        ];
+        const nextTemplate = {
           ...current.template,
-          textElements: current.template.textElements.map((item) =>
-            item.id === id ? { ...item, ...patch } : item
-          ) as [TextElement, TextElement]
-        }
-      }));
+          textElements: nextTextElements
+        };
+
+        return {
+          ...current,
+          template: nextTemplate,
+          singleSidedTemplate: current.doubleSided ? current.singleSidedTemplate : nextTemplate,
+          doubleSidedTemplate: current.doubleSided ? nextTemplate : current.doubleSidedTemplate
+        };
+      });
     },
     [updateActiveSet]
   );

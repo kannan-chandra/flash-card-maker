@@ -52,6 +52,8 @@ export interface RowValidation {
 
 export interface ProjectData {
   template: CardTemplate;
+  singleSidedTemplate?: CardTemplate;
+  doubleSidedTemplate?: CardTemplate;
   doubleSided: boolean;
   rows: FlashcardRow[];
   preset: CardPreset;

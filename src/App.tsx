@@ -359,7 +359,21 @@ export default function App() {
             onPatchTemplate: patchTemplate,
             onPatchTextElement: patchTextElement,
             onUpdateRow: updateRow,
-            onToggleDoubleSided: (doubleSided) => updateActiveSet((current) => ({ ...current, doubleSided })),
+            onToggleDoubleSided: (doubleSided) =>
+              updateActiveSet((current) => {
+                const currentTemplate = current.template;
+                const nextSingleSidedTemplate = current.doubleSided ? current.singleSidedTemplate : currentTemplate;
+                const nextDoubleSidedTemplate = current.doubleSided ? currentTemplate : current.doubleSidedTemplate;
+                const fallbackSingle = nextSingleSidedTemplate ?? currentTemplate;
+                const fallbackDouble = nextDoubleSidedTemplate ?? currentTemplate;
+                return {
+                  ...current,
+                  doubleSided,
+                  singleSidedTemplate: fallbackSingle,
+                  doubleSidedTemplate: fallbackDouble,
+                  template: doubleSided ? fallbackDouble : fallbackSingle
+                };
+              }),
             onSelectPreviousRow: () =>
               updateActiveSet((current) => ({
                 ...current,
