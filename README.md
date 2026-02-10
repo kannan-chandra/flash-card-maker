@@ -4,6 +4,7 @@ Frontend-only flashcard generator for GitHub Pages. Users design one master card
 
 ## Features
 - Master card editor with drag/resize for one image and two text boxes
+- Optional double-sided card mode with stacked side-1/side-2 editor canvas
 - Multiple flashcard sets stored locally, with set browser/create/delete
 - Text settings: role mapping (`word` or `subtitle`), font, size, alignment
 - Row list management via CSV paste/import (header or no-header) and manual edits
@@ -18,6 +19,7 @@ Frontend-only flashcard generator for GitHub Pages. Users design one master card
   - Missing/blocked image indicators
 - Preview-by-row workflow (click a row to inspect it on the canvas)
 - PDF export for US Letter with fixed presets: 6, 8, or 12 cards per page
+- Double-sided export places side 2 on alternate pages with mirrored column placement for duplex alignment
 - Optional cut guide borders
 - Local persistence in IndexedDB, with clear local-only data warning
 

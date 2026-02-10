@@ -335,6 +335,12 @@ tr.selected {
   align-items: center;
 }
 
+.control-checkbox {
+  margin-top: 0;
+  align-self: flex-end;
+  padding-bottom: 2px;
+}
+
 .status {
   margin-top: 10px;
   font-weight: 600;

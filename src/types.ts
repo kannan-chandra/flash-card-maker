@@ -5,6 +5,7 @@ export type FontFamily = 'Arial' | 'Verdana' | 'Times New Roman' | 'Georgia' | '
 export type TextRole = 'word' | 'subtitle';
 
 export interface ImageElement {
+  side: 1 | 2;
   x: number;
   y: number;
   width: number;
@@ -14,6 +15,7 @@ export interface ImageElement {
 export interface TextElement {
   id: 'text1' | 'text2';
   role: TextRole;
+  side: 1 | 2;
   x: number;
   y: number;
   width: number;
@@ -50,6 +52,7 @@ export interface RowValidation {
 
 export interface ProjectData {
   template: CardTemplate;
+  doubleSided: boolean;
   rows: FlashcardRow[];
   preset: CardPreset;
   showCutGuides: boolean;

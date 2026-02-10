@@ -27,6 +27,7 @@ const DEFAULT_TEMPLATE: CardTemplate = {
   height: 500,
   backgroundColor: '#ffffff',
   image: {
+    side: 1,
     x: 35,
     y: 35,
     width: 260,
@@ -36,6 +37,7 @@ const DEFAULT_TEMPLATE: CardTemplate = {
     {
       id: 'text1',
       role: 'word',
+      side: 1,
       x: 320,
       y: 80,
       width: 340,
@@ -49,6 +51,7 @@ const DEFAULT_TEMPLATE: CardTemplate = {
     {
       id: 'text2',
       role: 'subtitle',
+      side: 1,
       x: 320,
       y: 260,
       width: 340,
@@ -64,6 +67,7 @@ const DEFAULT_TEMPLATE: CardTemplate = {
 
 const EMPTY_PROJECT: ProjectData = {
   template: DEFAULT_TEMPLATE,
+  doubleSided: false,
   rows: [],
   preset: 6,
   showCutGuides: true,
@@ -83,6 +87,28 @@ function makeNewSet(name: string, index: number): FlashcardSet {
     name: name.trim() || `Set ${index}`,
     createdAt: now,
     updatedAt: now
+  };
+}
+
+function normalizeTemplate(template: CardTemplate): CardTemplate {
+  return {
+    ...template,
+    image: {
+      ...template.image,
+      side: template.image.side ?? 1
+    },
+    textElements: template.textElements.map((item) => ({
+      ...item,
+      side: item.side ?? 1
+    })) as CardTemplate['textElements']
+  };
+}
+
+function normalizeSet(setItem: FlashcardSet): FlashcardSet {
+  return {
+    ...setItem,
+    doubleSided: setItem.doubleSided ?? false,
+    template: normalizeTemplate(setItem.template)
   };
 }
 
@@ -219,6 +245,20 @@ export default function App() {
   const previewImageSrc = selectedRow?.localImageDataUrl || selectedRow?.imageUrl;
   const previewImage = useImage(previewImageSrc);
   const imageIsEmpty = !previewImageSrc;
+  const cardHeight = project?.template.height ?? DEFAULT_TEMPLATE.height;
+  const stageHeight = project?.doubleSided ? cardHeight * 2 : cardHeight;
+  const sideOffset = (side: 1 | 2) => (project?.doubleSided ? (side - 1) * cardHeight : 0);
+  const toCanvasY = (y: number, side: 1 | 2) => y + sideOffset(side);
+
+  function fromCanvasY(canvasY: number, elementHeight: number): { side: 1 | 2; y: number } {
+    if (!project?.doubleSided) {
+      return { side: 1, y: Math.max(0, Math.min(canvasY, cardHeight - elementHeight)) };
+    }
+    const side: 1 | 2 = canvasY >= cardHeight ? 2 : 1;
+    const offset = side === 2 ? cardHeight : 0;
+    const localY = canvasY - offset;
+    return { side, y: Math.max(0, Math.min(localY, cardHeight - elementHeight)) };
+  }
 
   const validations: RowValidation[] = useMemo(() => {
     if (!project) {
@@ -230,7 +270,8 @@ export default function App() {
   useEffect(() => {
     loadWorkspace().then((saved) => {
       if (saved?.sets.length) {
-        setSets(saved.sets);
+        const normalizedSets = saved.sets.map(normalizeSet);
+        setSets(normalizedSets);
         setActiveSetId(saved.activeSetId);
       } else {
         const firstSet = makeNewSet('Set 1', 1);
@@ -438,7 +479,7 @@ export default function App() {
     if (selectedElement === 'image') {
       return {
         x: project.template.image.x,
-        y: project.template.image.y,
+        y: toCanvasY(project.template.image.y, project.template.image.side),
         width: project.template.image.width,
         label: 'Image'
       };
@@ -449,7 +490,7 @@ export default function App() {
     }
     return {
       x: textElement.x,
-      y: textElement.y,
+      y: toCanvasY(textElement.y, textElement.side),
       width: textElement.width,
       label: textElement.role === 'word' ? 'Word' : 'Subtitle'
     };
@@ -517,29 +558,25 @@ export default function App() {
     const perPage = grid.cols * grid.rows;
     const nextIssues: Record<string, string> = {};
     const totalRows = project.rows.length;
+    const totalPagePairs = Math.ceil(totalRows / perPage);
 
-    for (let i = 0; i < project.rows.length; i += 1) {
-      const renderPercent = 10 + ((i + 1) / totalRows) * 80;
-      setProgress(renderPercent, `Rendering card ${i + 1} of ${totalRows}...`);
-      if (i % 4 === 0) {
-        await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-      }
-
-      if (i % perPage === 0) {
-        doc.addPage([pageWidth, pageHeight]);
-      }
-
-      const page = doc.getPages()[Math.floor(i / perPage)];
-      const row = project.rows[i];
-      const slotIndex = i % perPage;
-      const rowInPage = Math.floor(slotIndex / cols);
-      const colInPage = slotIndex % cols;
+    function getCardPosition(rowInPage: number, colInPage: number): { cardX: number; cardY: number } {
       const slotX = margin + colInPage * (slotWidth + gutter);
       const slotYTop = margin + rowInPage * (slotHeight + gutter);
+      return {
+        cardX: slotX + (slotWidth - cardWidth) / 2,
+        cardY: pageHeight - slotYTop - cardHeight - (slotHeight - cardHeight) / 2
+      };
+    }
 
-      const cardX = slotX + (slotWidth - cardWidth) / 2;
-      const cardY = pageHeight - slotYTop - cardHeight - (slotHeight - cardHeight) / 2;
-
+    async function drawCardSide(
+      page: ReturnType<typeof doc.getPages>[number],
+      row: FlashcardRow,
+      rowInPage: number,
+      colInPage: number,
+      side: 1 | 2
+    ) {
+      const { cardX, cardY } = getCardPosition(rowInPage, colInPage);
       page.drawRectangle({
         x: cardX,
         y: cardY,
@@ -551,32 +588,34 @@ export default function App() {
       });
 
       const imageElement = project.template.image;
-      const imageX = cardX + (imageElement.x / project.template.width) * cardWidth;
-      const imageY = cardY + cardHeight - ((imageElement.y + imageElement.height) / project.template.height) * cardHeight;
-      const imageW = (imageElement.width / project.template.width) * cardWidth;
-      const imageH = (imageElement.height / project.template.height) * cardHeight;
+      if (imageElement.side === side) {
+        const imageX = cardX + (imageElement.x / project.template.width) * cardWidth;
+        const imageY = cardY + cardHeight - ((imageElement.y + imageElement.height) / project.template.height) * cardHeight;
+        const imageW = (imageElement.width / project.template.width) * cardWidth;
+        const imageH = (imageElement.height / project.template.height) * cardHeight;
 
-      try {
-        const imageBytes = await fetchImageBytes(row);
-        const embeddedImage = detectImageType(imageBytes) === 'png' ? await doc.embedPng(imageBytes) : await doc.embedJpg(imageBytes);
-        page.drawImage(embeddedImage, {
-          x: imageX,
-          y: imageY,
-          width: imageW,
-          height: imageH
-        });
-      } catch {
-        nextIssues[row.id] = 'Unable to load image. Workaround: save the image and upload it from your computer.';
+        try {
+          const imageBytes = await fetchImageBytes(row);
+          const embeddedImage =
+            detectImageType(imageBytes) === 'png' ? await doc.embedPng(imageBytes) : await doc.embedJpg(imageBytes);
+          page.drawImage(embeddedImage, {
+            x: imageX,
+            y: imageY,
+            width: imageW,
+            height: imageH
+          });
+        } catch {
+          nextIssues[row.id] = 'Unable to load image. Workaround: save the image and upload it from your computer.';
+        }
       }
 
-      for (const textElement of project.template.textElements) {
+      for (const textElement of project.template.textElements.filter((item) => item.side === side)) {
         const rawText = fitTextValue(row, textElement.role);
         const lines = splitTextForPdf(rawText, textElement);
 
         const scaledFontSize = (textElement.fontSize / project.template.width) * cardWidth;
         const lineHeight = scaledFontSize * textElement.lineHeight;
         const maxLines = Math.floor(((textElement.height / project.template.height) * cardHeight) / lineHeight);
-
         const clipped = lines.slice(0, Math.max(maxLines, 0));
 
         const textX = cardX + (textElement.x / project.template.width) * cardWidth;
@@ -592,8 +631,8 @@ export default function App() {
             standardFontCache.set(standardFontName, font);
           }
           const activeFont = shouldUseTamilFont ? tamilFont! : font;
-
           const lineWidth = activeFont.widthOfTextAtSize(line, scaledFontSize);
+
           let x = textX;
           if (textElement.align === 'center') {
             x = textX + Math.max((boxW - lineWidth) / 2, 0);
@@ -609,6 +648,34 @@ export default function App() {
             color: rgb(0.1, 0.1, 0.1)
           });
         });
+      }
+    }
+
+    for (let pagePairIndex = 0; pagePairIndex < totalPagePairs; pagePairIndex += 1) {
+      const frontPage = doc.addPage([pageWidth, pageHeight]);
+      const backPage = project.doubleSided ? doc.addPage([pageWidth, pageHeight]) : null;
+
+      for (let slotIndex = 0; slotIndex < perPage; slotIndex += 1) {
+        const rowIndex = pagePairIndex * perPage + slotIndex;
+        if (rowIndex >= project.rows.length) {
+          continue;
+        }
+
+        const renderPercent = 10 + ((rowIndex + 1) / totalRows) * 80;
+        setProgress(renderPercent, `Rendering card ${rowIndex + 1} of ${totalRows}...`);
+        if (rowIndex % 4 === 0) {
+          await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+        }
+
+        const row = project.rows[rowIndex];
+        const rowInPage = Math.floor(slotIndex / cols);
+        const colInPage = slotIndex % cols;
+        await drawCardSide(frontPage, row, rowInPage, colInPage, 1);
+
+        if (backPage) {
+          const mirroredCol = cols - 1 - colInPage;
+          await drawCardSide(backPage, row, rowInPage, mirroredCol, 2);
+        }
       }
     }
 
@@ -724,7 +791,7 @@ export default function App() {
                       : selectedElement === 'text2'
                         ? project.template.textElements[1]
                         : project.template.textElements[0];
-                  const textControlsDisabled = selectedElement === 'image';
+                  const textControlsDisabled = selectedElement !== 'text1' && selectedElement !== 'text2';
                   return (
                     <>
                       <label>
@@ -779,6 +846,19 @@ export default function App() {
                           onChange={(event) => patchTextElement(selectedText.id, { color: event.target.value })}
                         />
                       </label>
+                      <label className="checkbox-row control-checkbox">
+                        <input
+                          type="checkbox"
+                          checked={project.doubleSided}
+                          onChange={(event) =>
+                            updateActiveSet((current) => ({
+                              ...current,
+                              doubleSided: event.target.checked
+                            }))
+                          }
+                        />
+                        Double-sided cards
+                      </label>
                     </>
                   );
                 })()}
@@ -786,7 +866,7 @@ export default function App() {
 
               <Stage
                 width={project.template.width}
-                height={project.template.height}
+                height={stageHeight}
                 className="stage"
                 onMouseDown={onStagePointerDown}
                 onTouchStart={onStagePointerDown}
@@ -797,41 +877,71 @@ export default function App() {
                     x={0}
                     y={0}
                     width={project.template.width}
-                    height={project.template.height}
-                    fill={project.template.backgroundColor}
+                    height={stageHeight}
+                    fill="#f8fafc"
                     stroke="#d1d5db"
                     strokeWidth={1}
                   />
+                  <Rect
+                    x={0}
+                    y={0}
+                    width={project.template.width}
+                    height={cardHeight}
+                    fill={project.template.backgroundColor}
+                    stroke="#94a3b8"
+                    strokeWidth={1}
+                    listening={false}
+                  />
+                  {project.doubleSided && (
+                    <Rect
+                      x={0}
+                      y={cardHeight}
+                      width={project.template.width}
+                      height={cardHeight}
+                      fill={project.template.backgroundColor}
+                      stroke="#94a3b8"
+                      strokeWidth={1}
+                      listening={false}
+                    />
+                  )}
 
                   <KonvaImage
                     ref={imageRef}
                     image={previewImage}
                     x={project.template.image.x}
-                    y={project.template.image.y}
+                    y={toCanvasY(project.template.image.y, project.template.image.side)}
                     width={project.template.image.width}
                     height={project.template.image.height}
                     draggable
                     onClick={() => setSelectedElement('image')}
                     onTap={() => setSelectedElement('image')}
                     onDragEnd={(event) =>
-                      patchTemplate({
-                        image: {
-                          ...project.template.image,
-                          x: event.target.x(),
-                          y: event.target.y()
-                        }
-                      })
+                      (() => {
+                        const sideResult = fromCanvasY(event.target.y(), project.template.image.height);
+                        patchTemplate({
+                          image: {
+                            ...project.template.image,
+                            x: event.target.x(),
+                            y: sideResult.y,
+                            side: sideResult.side
+                          }
+                        });
+                      })()
                     }
                     onTransformEnd={(event) => {
                       const node = event.target;
                       const scaleX = node.scaleX();
                       const scaleY = node.scaleY();
+                      const nextWidth = Math.max(20, node.width() * scaleX);
+                      const nextHeight = Math.max(20, node.height() * scaleY);
+                      const sideResult = fromCanvasY(node.y(), nextHeight);
                       patchTemplate({
                         image: {
                           x: node.x(),
-                          y: node.y(),
-                          width: Math.max(20, node.width() * scaleX),
-                          height: Math.max(20, node.height() * scaleY)
+                          y: sideResult.y,
+                          side: sideResult.side,
+                          width: nextWidth,
+                          height: nextHeight
                         }
                       });
                       node.scaleX(1);
@@ -844,7 +954,7 @@ export default function App() {
                     <Rect
                       ref={imagePlaceholderRef}
                       x={project.template.image.x}
-                      y={project.template.image.y}
+                      y={toCanvasY(project.template.image.y, project.template.image.side)}
                       width={project.template.image.width}
                       height={project.template.image.height}
                       stroke={selectedElement === 'image' ? '#2563eb' : '#94a3b8'}
@@ -855,24 +965,32 @@ export default function App() {
                       onClick={() => setSelectedElement('image')}
                       onTap={() => setSelectedElement('image')}
                       onDragEnd={(event) =>
-                        patchTemplate({
-                          image: {
-                            ...project.template.image,
-                            x: event.target.x(),
-                            y: event.target.y()
-                          }
-                        })
+                        (() => {
+                          const sideResult = fromCanvasY(event.target.y(), project.template.image.height);
+                          patchTemplate({
+                            image: {
+                              ...project.template.image,
+                              x: event.target.x(),
+                              y: sideResult.y,
+                              side: sideResult.side
+                            }
+                          });
+                        })()
                       }
                       onTransformEnd={(event) => {
                         const node = event.target;
                         const scaleX = node.scaleX();
                         const scaleY = node.scaleY();
+                        const nextWidth = Math.max(20, node.width() * scaleX);
+                        const nextHeight = Math.max(20, node.height() * scaleY);
+                        const sideResult = fromCanvasY(node.y(), nextHeight);
                         patchTemplate({
                           image: {
                             x: node.x(),
-                            y: node.y(),
-                            width: Math.max(20, node.width() * scaleX),
-                            height: Math.max(20, node.height() * scaleY)
+                            y: sideResult.y,
+                            side: sideResult.side,
+                            width: nextWidth,
+                            height: nextHeight
                           }
                         });
                         node.scaleX(1);
@@ -891,7 +1009,7 @@ export default function App() {
                           ref={index === 0 ? text1Ref : text2Ref}
                           text={textValue}
                           x={textElement.x}
-                          y={textElement.y}
+                          y={toCanvasY(textElement.y, textElement.side)}
                           width={textElement.width}
                           height={textElement.height}
                           fontSize={textElement.fontSize}
@@ -907,20 +1025,28 @@ export default function App() {
                           onClick={() => setSelectedElement(textElement.id)}
                           onTap={() => setSelectedElement(textElement.id)}
                           onDragEnd={(event) =>
-                            patchTextElement(textElement.id, {
-                              x: event.target.x(),
-                              y: event.target.y()
-                            })
+                            (() => {
+                              const sideResult = fromCanvasY(event.target.y(), textElement.height);
+                              patchTextElement(textElement.id, {
+                                x: event.target.x(),
+                                y: sideResult.y,
+                                side: sideResult.side
+                              });
+                            })()
                           }
                           onTransformEnd={(event) => {
                             const node = event.target;
                             const scaleX = node.scaleX();
                             const scaleY = node.scaleY();
+                            const nextWidth = Math.max(40, node.width() * scaleX);
+                            const nextHeight = Math.max(30, node.height() * scaleY);
+                            const sideResult = fromCanvasY(node.y(), nextHeight);
                             patchTextElement(textElement.id, {
                               x: node.x(),
-                              y: node.y(),
-                              width: Math.max(40, node.width() * scaleX),
-                              height: Math.max(30, node.height() * scaleY)
+                              y: sideResult.y,
+                              side: sideResult.side,
+                              width: nextWidth,
+                              height: nextHeight
                             });
                             node.scaleX(1);
                             node.scaleY(1);
@@ -933,7 +1059,7 @@ export default function App() {
                           <Rect
                             key={`${textElement.id}-empty`}
                             x={textElement.x}
-                            y={textElement.y}
+                            y={toCanvasY(textElement.y, textElement.side)}
                             width={textElement.width}
                             height={textElement.height}
                             stroke={selectedElement === textElement.id ? '#2563eb' : '#94a3b8'}

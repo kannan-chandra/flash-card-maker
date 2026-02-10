@@ -98,3 +98,26 @@ test('uses subtitle emoji keywords when word has no match', async ({ page }) => 
   expect(count).toBeGreaterThan(0);
   expect(count).toBeLessThanOrEqual(5);
 });
+
+test('generates downloadable PDF in double-sided mode', async ({ page }) => {
+  await page.goto('/');
+
+  await page.locator('textarea').first().fill('word,subtitle\nDog,Animal');
+  await page.getByRole('button', { name: 'Import CSV' }).click();
+
+  const upload = page.getByLabel('Selected row image upload');
+  await upload.setInputFiles({
+    name: 'dog.png',
+    mimeType: 'image/png',
+    buffer: ONE_BY_ONE_PNG
+  });
+
+  await page.getByLabel('Double-sided cards').check();
+
+  const downloadPromise = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Generate PDF' }).click();
+  const download = await downloadPromise;
+
+  expect(await download.failure()).toBeNull();
+  expect(download.suggestedFilename().toLowerCase()).toContain('.pdf');
+});
