@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
+import path from 'node:path';
 
 const ONE_BY_ONE_PNG = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO2XK7kAAAAASUVORK5CYII=',
@@ -23,6 +24,45 @@ async function dragOnStage(page: Page, from: { x: number; y: number }, to: { x: 
   await page.mouse.down();
   await page.mouse.move(box.x + to.x, box.y + to.y, { steps: 15 });
   await page.mouse.up();
+}
+
+async function renderPdfFirstPageToCanvas(page: Page, pdfBytes: Buffer, scale = 2) {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.setContent(`
+    <html>
+      <body style="margin:0;background:#111827;display:flex;justify-content:center;align-items:flex-start;padding:20px;">
+        <canvas id="pdf-page-canvas"></canvas>
+      </body>
+    </html>
+  `);
+
+  await page.addScriptTag({
+    path: path.resolve(process.cwd(), 'node_modules/pdfjs-dist/build/pdf.min.mjs'),
+    type: 'module'
+  });
+  const workerSource = await readFile(path.resolve(process.cwd(), 'node_modules/pdfjs-dist/build/pdf.worker.min.mjs'), 'utf8');
+  const workerSrc = `data:text/javascript;base64,${Buffer.from(workerSource).toString('base64')}`;
+
+  await page.waitForFunction(() => Boolean((window as unknown as { pdfjsLib?: unknown }).pdfjsLib));
+  await page.evaluate(
+    async ({ bytes, viewportScale, workerUrl }) => {
+      const pdfjsLib = (window as unknown as { pdfjsLib: any }).pdfjsLib;
+      pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
+      const loadingTask = pdfjsLib.getDocument({ data: bytes, disableWorker: true });
+      const pdf = await loadingTask.promise;
+      const firstPage = await pdf.getPage(1);
+      const viewport = firstPage.getViewport({ scale: viewportScale });
+      const canvas = document.getElementById('pdf-page-canvas') as HTMLCanvasElement;
+      canvas.width = Math.ceil(viewport.width);
+      canvas.height = Math.ceil(viewport.height);
+      const context = canvas.getContext('2d');
+      if (!context) {
+        throw new Error('Failed to create 2d context for PDF render canvas');
+      }
+      await firstPage.render({ canvasContext: context, viewport }).promise;
+    },
+    { bytes: Array.from(pdfBytes), viewportScale: scale, workerUrl: workerSrc }
+  );
 }
 
 test('generates downloadable PDF for Tamil text without runtime errors', async ({ page }) => {
@@ -180,20 +220,9 @@ test('pdf text layout remains visually aligned at large font sizes', async ({ pa
   if (!pdfPath) return;
 
   const pdfBytes = await readFile(pdfPath);
-  const pdfBase64 = pdfBytes.toString('base64');
 
   const pdfPage = await context.newPage();
-  await pdfPage.setViewportSize({ width: 1280, height: 900 });
-  await pdfPage.setContent(`
-    <html>
-      <body style="margin:0;background:#1f2937;display:flex;justify-content:center;align-items:flex-start;">
-        <embed src="data:application/pdf;base64,${pdfBase64}" type="application/pdf" width="920" height="860" />
-      </body>
-    </html>
-  `);
-  await pdfPage.waitForTimeout(1000);
-  await expect(pdfPage).toHaveScreenshot('pdf-large-font-edge.png', {
-    fullPage: true
-  });
+  await renderPdfFirstPageToCanvas(pdfPage, pdfBytes, 2);
+  await expect(pdfPage.locator('#pdf-page-canvas')).toHaveScreenshot('pdf-large-font-edge.png');
   await pdfPage.close();
 });
