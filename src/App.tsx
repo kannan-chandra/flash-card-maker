@@ -280,47 +280,50 @@ export default function App() {
       <main>
         <CanvasEditor
           project={project}
-          selectedRow={selectedRow}
-          selectedRowIndex={selectedRowIndex}
-          currentValidation={currentValidation}
-          selectedElement={selectedElement}
-          previewImage={previewImage}
-          imageIsEmpty={imageIsEmpty}
-          cardHeight={cardHeight}
-          stageHeight={stageHeight}
-          toCanvasY={toCanvasY}
-          fromCanvasY={fromCanvasY}
-          onSelectElement={setSelectedElement}
-          onPatchTemplate={patchTemplate}
-          onPatchTextElement={patchTextElement}
-          onToggleDoubleSided={(doubleSided) => updateActiveSet((current) => ({ ...current, doubleSided }))}
-          onSelectPreviousRow={() =>
-            updateActiveSet((current) => ({
-              ...current,
-              selectedRowId: current.rows[Math.max((selectedRowIndex || 0) - 1, 0)]?.id
-            }))
-          }
-          onSelectNextRow={() =>
-            updateActiveSet((current) => ({
-              ...current,
-              selectedRowId: current.rows[Math.min((selectedRowIndex || 0) + 1, Math.max(current.rows.length - 1, 0))]?.id
-            }))
-          }
-          canSelectPreviousRow={selectedRowIndex > 0}
-          canSelectNextRow={selectedRowIndex >= 0 && selectedRowIndex < project.rows.length - 1}
+          selection={{
+            selectedRow,
+            selectedRowIndex,
+            currentValidation,
+            selectedElement,
+            previewImage,
+            imageIsEmpty
+          }}
+          canvas={{ cardHeight, stageHeight, toCanvasY, fromCanvasY }}
+          actions={{
+            onSelectElement: setSelectedElement,
+            onPatchTemplate: patchTemplate,
+            onPatchTextElement: patchTextElement,
+            onToggleDoubleSided: (doubleSided) => updateActiveSet((current) => ({ ...current, doubleSided })),
+            onSelectPreviousRow: () =>
+              updateActiveSet((current) => ({
+                ...current,
+                selectedRowId: current.rows[Math.max((selectedRowIndex || 0) - 1, 0)]?.id
+              })),
+            onSelectNextRow: () =>
+              updateActiveSet((current) => ({
+                ...current,
+                selectedRowId: current.rows[Math.min((selectedRowIndex || 0) + 1, Math.max(current.rows.length - 1, 0))]?.id
+              })),
+            canSelectPreviousRow: selectedRowIndex > 0,
+            canSelectNextRow: selectedRowIndex >= 0 && selectedRowIndex < project.rows.length - 1
+          }}
         >
           <SelectedCardDetails
-            selectedRow={selectedRow}
-            selectedRowHasImage={selectedRowHasImage}
-            imageUrlDraft={imageUrlDraft}
-            selectedRowEmojiMatches={selectedRowEmojiMatches}
-            onUpdateRow={updateRow}
-            onImageUrlDraftChange={setImageUrlDraft}
-            onApplySelectedImageUrl={onApplySelectedImageUrl}
-            onSelectedRowImageDrop={(event) => void onSelectedRowImageDrop(event)}
-            onSelectedRowImageUpload={(file) => void onSelectedRowImageUpload(file)}
-            onApplyEmoji={applyEmojiToRow}
-            onRemoveSelectedRowImage={onRemoveSelectedRowImage}
+            data={{
+              selectedRow,
+              selectedRowHasImage,
+              imageUrlDraft,
+              selectedRowEmojiMatches
+            }}
+            actions={{
+              onUpdateRow: updateRow,
+              onImageUrlDraftChange: setImageUrlDraft,
+              onApplySelectedImageUrl,
+              onSelectedRowImageDrop: (event) => void onSelectedRowImageDrop(event),
+              onSelectedRowImageUpload: (file) => void onSelectedRowImageUpload(file),
+              onApplyEmoji: applyEmojiToRow,
+              onRemoveSelectedRowImage
+            }}
           />
         </CanvasEditor>
 

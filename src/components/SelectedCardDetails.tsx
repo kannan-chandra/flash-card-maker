@@ -12,25 +12,27 @@ interface SelectedRowData {
 }
 
 interface SelectedCardDetailsProps {
-  selectedRow?: SelectedRowData;
-  selectedRowHasImage: boolean;
-  imageUrlDraft: string;
-  selectedRowEmojiMatches: EmojiMatch[];
-  onUpdateRow: (rowId: string, patch: Partial<SelectedRowData> & { imageUrl?: string }) => void;
-  onImageUrlDraftChange: (value: string) => void;
-  onApplySelectedImageUrl: () => void;
-  onSelectedRowImageDrop: (event: DragEvent<HTMLDivElement>) => void;
-  onSelectedRowImageUpload: (file: File) => void;
-  onApplyEmoji: (rowId: string, emoji: string) => void;
-  onRemoveSelectedRowImage: () => void;
+  data: {
+    selectedRow?: SelectedRowData;
+    selectedRowHasImage: boolean;
+    imageUrlDraft: string;
+    selectedRowEmojiMatches: EmojiMatch[];
+  };
+  actions: {
+    onUpdateRow: (rowId: string, patch: Partial<SelectedRowData> & { imageUrl?: string }) => void;
+    onImageUrlDraftChange: (value: string) => void;
+    onApplySelectedImageUrl: () => void;
+    onSelectedRowImageDrop: (event: DragEvent<HTMLDivElement>) => void;
+    onSelectedRowImageUpload: (file: File) => void;
+    onApplyEmoji: (rowId: string, emoji: string) => void;
+    onRemoveSelectedRowImage: () => void;
+  };
 }
 
 export function SelectedCardDetails(props: SelectedCardDetailsProps) {
+  const { data, actions } = props;
+  const { selectedRow, selectedRowHasImage, imageUrlDraft, selectedRowEmojiMatches } = data;
   const {
-    selectedRow,
-    selectedRowHasImage,
-    imageUrlDraft,
-    selectedRowEmojiMatches,
     onUpdateRow,
     onImageUrlDraftChange,
     onApplySelectedImageUrl,
@@ -38,7 +40,7 @@ export function SelectedCardDetails(props: SelectedCardDetailsProps) {
     onSelectedRowImageUpload,
     onApplyEmoji,
     onRemoveSelectedRowImage
-  } = props;
+  } = actions;
 
   return (
     <aside className="card-detail-panel">

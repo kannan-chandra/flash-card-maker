@@ -6,24 +6,30 @@ import type { CardTemplate, FlashcardRow, FlashcardSet, FontFamily, RowValidatio
 
 interface CanvasEditorProps {
   project: FlashcardSet;
-  selectedRow?: FlashcardRow;
-  selectedRowIndex: number;
-  currentValidation?: RowValidation;
-  selectedElement: 'image' | 'text1' | 'text2' | null;
-  previewImage?: HTMLImageElement;
-  imageIsEmpty: boolean;
-  cardHeight: number;
-  stageHeight: number;
-  toCanvasY: (y: number, side: 1 | 2) => number;
-  fromCanvasY: (canvasY: number, elementHeight: number) => { side: 1 | 2; y: number };
-  onSelectElement: (element: 'image' | 'text1' | 'text2' | null) => void;
-  onPatchTemplate: (patch: Partial<CardTemplate>) => void;
-  onPatchTextElement: (id: 'text1' | 'text2', patch: Partial<TextElement>) => void;
-  onToggleDoubleSided: (value: boolean) => void;
-  onSelectPreviousRow: () => void;
-  onSelectNextRow: () => void;
-  canSelectPreviousRow: boolean;
-  canSelectNextRow: boolean;
+  selection: {
+    selectedRow?: FlashcardRow;
+    selectedRowIndex: number;
+    currentValidation?: RowValidation;
+    selectedElement: 'image' | 'text1' | 'text2' | null;
+    previewImage?: HTMLImageElement;
+    imageIsEmpty: boolean;
+  };
+  canvas: {
+    cardHeight: number;
+    stageHeight: number;
+    toCanvasY: (y: number, side: 1 | 2) => number;
+    fromCanvasY: (canvasY: number, elementHeight: number) => { side: 1 | 2; y: number };
+  };
+  actions: {
+    onSelectElement: (element: 'image' | 'text1' | 'text2' | null) => void;
+    onPatchTemplate: (patch: Partial<CardTemplate>) => void;
+    onPatchTextElement: (id: 'text1' | 'text2', patch: Partial<TextElement>) => void;
+    onToggleDoubleSided: (value: boolean) => void;
+    onSelectPreviousRow: () => void;
+    onSelectNextRow: () => void;
+    canSelectPreviousRow: boolean;
+    canSelectNextRow: boolean;
+  };
   children?: ReactNode;
 }
 
@@ -32,18 +38,10 @@ function fitTextValue(row: FlashcardRow, role: TextElement['role']): string {
 }
 
 export function CanvasEditor(props: CanvasEditorProps) {
+  const { project, selection, canvas, actions, children } = props;
+  const { selectedRow, selectedRowIndex, currentValidation, selectedElement, previewImage, imageIsEmpty } = selection;
+  const { cardHeight, stageHeight, toCanvasY, fromCanvasY } = canvas;
   const {
-    project,
-    selectedRow,
-    selectedRowIndex,
-    currentValidation,
-    selectedElement,
-    previewImage,
-    imageIsEmpty,
-    cardHeight,
-    stageHeight,
-    toCanvasY,
-    fromCanvasY,
     onSelectElement,
     onPatchTemplate,
     onPatchTextElement,
@@ -51,9 +49,8 @@ export function CanvasEditor(props: CanvasEditorProps) {
     onSelectPreviousRow,
     onSelectNextRow,
     canSelectPreviousRow,
-    canSelectNextRow,
-    children
-  } = props;
+    canSelectNextRow
+  } = actions;
 
   const imageRef = useRef<Konva.Image>(null);
   const imagePlaceholderRef = useRef<Konva.Rect>(null);
