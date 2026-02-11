@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { makeNewSet, normalizeSet } from '../constants/project';
 import { loadWorkspace, saveWorkspace } from '../storage';
 import type { CardTemplate, FlashcardRow, FlashcardSet, TextElement } from '../types';
@@ -23,6 +23,7 @@ export function useWorkspace(): UseWorkspaceResult {
   const [sets, setSets] = useState<FlashcardSet[]>([]);
   const [activeSetId, setActiveSetId] = useState<string>('');
   const [loading, setLoading] = useState(true);
+  const pendingCreatedSetIdRef = useRef<string | null>(null);
 
   const project = useMemo(() => {
     return sets.find((setItem) => setItem.id === activeSetId) ?? sets[0] ?? null;
@@ -55,6 +56,18 @@ export function useWorkspace(): UseWorkspaceResult {
     });
   }, [sets, activeSetId, loading]);
 
+  useEffect(() => {
+    const pendingCreatedSetId = pendingCreatedSetIdRef.current;
+    if (!pendingCreatedSetId) {
+      return;
+    }
+    if (!sets.some((item) => item.id === pendingCreatedSetId)) {
+      return;
+    }
+    setActiveSetId(pendingCreatedSetId);
+    pendingCreatedSetIdRef.current = null;
+  }, [sets]);
+
   const updateActiveSet = useCallback(
     (updater: (current: FlashcardSet) => FlashcardSet) => {
       setSets((currentSets) =>
@@ -72,7 +85,7 @@ export function useWorkspace(): UseWorkspaceResult {
   const createSet = useCallback((name: string) => {
     setSets((currentSets) => {
       const nextSet = makeNewSet(name, currentSets.length + 1);
-      setActiveSetId(nextSet.id);
+      pendingCreatedSetIdRef.current = nextSet.id;
       return [...currentSets, nextSet];
     });
   }, []);
