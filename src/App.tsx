@@ -21,11 +21,12 @@ function makeRowId(): string {
 }
 
 export default function App() {
-  const { sets, project, loading, setActiveSetId, createSet, deleteSet, updateActiveSet, patchTemplate, patchTextElement, replaceRows, appendRows, updateRow } =
+  const { sets, project, loading, setActiveSetId, createSet, deleteSet, updateActiveSet, patchTemplate, patchTextElement, appendRows, updateRow } =
     useWorkspace();
   const [newSetName, setNewSetName] = useState('');
   const [setsMenuOpen, setSetsMenuOpen] = useState(false);
   const [exportModalOpen, setExportModalOpen] = useState(false);
+  const [importModalOpen, setImportModalOpen] = useState(false);
   const [csvInput, setCsvInput] = useState('');
   const [imageUrlDraft, setImageUrlDraft] = useState('');
   const [selectedElement, setSelectedElement] = useState<'image' | 'text1' | 'text2' | null>(null);
@@ -350,9 +351,14 @@ export default function App() {
           <span />
         </button>
         <h1>Flash Card Maker</h1>
-        <button type="button" className="primary export-btn" onClick={() => setExportModalOpen(true)}>
-          Export
-        </button>
+        <div className="header-actions">
+          <button type="button" onClick={() => setImportModalOpen(true)}>
+            Import
+          </button>
+          <button type="button" className="primary" onClick={() => setExportModalOpen(true)}>
+            Export
+          </button>
+        </div>
         <p>Design one master card layout. Every row in your list uses the same layout.</p>
       </header>
 
@@ -368,6 +374,38 @@ export default function App() {
         onDeleteSet={onDeleteSet}
         onClose={() => setSetsMenuOpen(false)}
       />
+      {importModalOpen && (
+        <>
+          <button type="button" className="menu-backdrop csv-backdrop" onClick={() => setImportModalOpen(false)} aria-label="Close CSV import" />
+          <div className="csv-modal" role="dialog" aria-modal="true" aria-label="CSV import">
+            <h3>Import CSV</h3>
+            <p>Columns: `word`, `subtitle`, `imageUrl`. Header row is optional.</p>
+            <textarea
+              value={csvInput}
+              onChange={(event) => setCsvInput(event.target.value)}
+              placeholder={'word,subtitle,imageUrl\nDog,Animal,https://example.com/dog.jpg'}
+              rows={8}
+              aria-label="CSV input"
+            />
+            <div className="row-buttons">
+              <button
+                type="button"
+                onClick={() => {
+                  const imported = onCsvImport();
+                  if (imported) {
+                    setImportModalOpen(false);
+                  }
+                }}
+              >
+                Import
+              </button>
+              <button type="button" onClick={() => setImportModalOpen(false)}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        </>
+      )}
       {exportModalOpen && (
         <>
           <button type="button" className="menu-backdrop csv-backdrop" onClick={() => setExportModalOpen(false)} aria-label="Close export" />
@@ -468,14 +506,10 @@ export default function App() {
         </CanvasEditor>
 
         <WordListPanel
-          csvInput={csvInput}
           rows={project.rows}
           validations={validations}
           imageIssues={imageIssues}
           selectedRowId={selectedRow?.id}
-          onCsvInputChange={setCsvInput}
-          onCsvImport={onCsvImport}
-          onClearRows={() => replaceRows([])}
           onSelectRow={(rowId) => updateActiveSet((current) => ({ ...current, selectedRowId: rowId }))}
           onUpdateRow={updateRow}
           onAppendRow={onAppendRow}

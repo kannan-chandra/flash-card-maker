@@ -34,7 +34,7 @@ header {
   margin-bottom: 18px;
   position: relative;
   padding-left: 56px;
-  padding-right: 120px;
+  padding-right: 220px;
 }
 
 h1,
@@ -82,10 +82,12 @@ main {
   background: #1f2937;
 }
 
-.export-btn {
+.header-actions {
   position: absolute;
   top: 0;
   right: 0;
+  display: inline-flex;
+  gap: 8px;
 }
 
 .menu-backdrop {
@@ -803,7 +805,7 @@ td input:not([type]) {
     left: 0;
   }
 
-  .export-btn {
+  .header-actions {
     top: 0;
     right: 0;
   }

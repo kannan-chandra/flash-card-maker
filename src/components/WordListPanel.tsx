@@ -2,14 +2,10 @@ import { useEffect, useMemo, useRef, useState, type FocusEvent, type KeyboardEve
 import type { FlashcardRow, RowValidation } from '../types';
 
 interface WordListPanelProps {
-  csvInput: string;
   rows: FlashcardRow[];
   validations: RowValidation[];
   imageIssues: Record<string, string>;
   selectedRowId?: string;
-  onCsvInputChange: (value: string) => void;
-  onCsvImport: () => boolean;
-  onClearRows: () => void;
   onSelectRow: (rowId: string) => void;
   onUpdateRow: (rowId: string, patch: Partial<FlashcardRow>) => void;
   onAppendRow: (row: Pick<FlashcardRow, 'word' | 'subtitle'>) => void;
@@ -19,21 +15,16 @@ interface WordListPanelProps {
 
 export function WordListPanel(props: WordListPanelProps) {
   const {
-    csvInput,
     rows,
     validations,
     imageIssues,
     selectedRowId,
-    onCsvInputChange,
-    onCsvImport,
-    onClearRows,
     onSelectRow,
     onUpdateRow,
     onAppendRow,
     onInsertRowAfter,
     onDeleteRow
   } = props;
-  const [csvModalOpen, setCsvModalOpen] = useState(false);
   const [draftRow, setDraftRow] = useState({ word: '', subtitle: '' });
   const listTableRef = useRef<HTMLDivElement | null>(null);
   const wordRefs = useRef<Record<string, HTMLInputElement | null>>({});
@@ -364,53 +355,6 @@ export function WordListPanel(props: WordListPanelProps) {
 
   return (
     <section className="panel data-panel">
-      <div className="row-buttons">
-        <button type="button" onClick={() => setCsvModalOpen(true)}>
-          Import CSV
-        </button>
-        <button type="button" onClick={onClearRows} className="danger">
-          Clear Rows
-        </button>
-      </div>
-
-      {csvModalOpen && (
-        <>
-          <button
-            type="button"
-            className="menu-backdrop csv-backdrop"
-            onClick={() => setCsvModalOpen(false)}
-            aria-label="Close CSV import"
-          />
-          <div className="csv-modal" role="dialog" aria-modal="true" aria-label="CSV import">
-            <h3>Import CSV</h3>
-            <p>Columns: `word`, `subtitle`, `imageUrl`. Header row is optional.</p>
-            <textarea
-              value={csvInput}
-              onChange={(event) => onCsvInputChange(event.target.value)}
-              placeholder={'word,subtitle,imageUrl\nDog,Animal,https://example.com/dog.jpg'}
-              rows={8}
-              aria-label="CSV input"
-            />
-            <div className="row-buttons">
-              <button
-                type="button"
-                onClick={() => {
-                  const imported = onCsvImport();
-                  if (imported) {
-                    setCsvModalOpen(false);
-                  }
-                }}
-              >
-                Import
-              </button>
-              <button type="button" onClick={() => setCsvModalOpen(false)}>
-                Cancel
-              </button>
-            </div>
-          </div>
-        </>
-      )}
-
       <div className="list-table" role="region" aria-label="Rows list" ref={listTableRef}>
         <table>
           <thead>
