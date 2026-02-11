@@ -93,7 +93,7 @@ function getContainSize(containerWidth: number, containerHeight: number, sourceW
 export function CanvasEditor(props: CanvasEditorProps) {
   const singleColumnBreakpoint = 1180;
   const compactSplitBreakpoint = 720;
-  const compactToggleBreakpoint = 500;
+  const compactToggleBreakpoint = 420;
   const { project, selection, canvas, actions, children } = props;
   const { selectedRow, selectedElement, previewImage, imageIsEmpty, imageIsLoading } = selection;
   const { cardHeight } = canvas;
