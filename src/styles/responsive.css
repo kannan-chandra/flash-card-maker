@@ -1,0 +1,55 @@
+@media (max-width: 1180px) {
+  main {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(0, 2fr) minmax(0, 1fr);
+  }
+
+  header {
+    padding-left: 0;
+    padding-top: 50px;
+    padding-right: 0;
+  }
+
+  .hamburger-btn {
+    top: 0;
+    left: 0;
+  }
+
+  .header-actions {
+    top: 0;
+    right: 0;
+  }
+
+  .editor-panel {
+    grid-column: auto;
+    grid-row: 1;
+    min-height: 0;
+  }
+
+  .data-panel {
+    grid-column: auto;
+    grid-row: 2;
+    min-height: 0;
+  }
+
+  .editor-layout {
+    grid-template-columns: 1fr;
+  }
+
+}
+
+@media (max-width: 420px) {
+  .editor-controls {
+    gap: 8px;
+  }
+
+  .double-sided-switch {
+    padding: 4px 6px;
+    gap: 6px;
+  }
+
+  .double-sided-option {
+    min-height: 34px;
+    padding: 6px 12px;
+  }
+}

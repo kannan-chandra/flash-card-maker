@@ -1,0 +1,84 @@
+.list-table {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  border-bottom: 1px solid #e5e7eb;
+  padding: 6px;
+  font-size: 13px;
+  vertical-align: middle;
+}
+
+td input[type='text'],
+td input:not([type]) {
+  width: 100%;
+}
+
+.list-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #f8fafc;
+  text-align: left;
+  padding: 9px 10px;
+}
+
+.list-table td {
+  padding: 0;
+}
+
+.list-table td input {
+  border: 0;
+  border-radius: 0;
+  padding: 9px 10px;
+  min-height: 40px;
+}
+
+.list-table td input:focus {
+  outline: 2px solid #93c5fd;
+  outline-offset: -2px;
+  background: #eff6ff;
+}
+
+.subtitle-cell {
+  display: flex;
+  align-items: center;
+}
+
+.subtitle-cell input {
+  flex: 1;
+}
+
+.row-warning {
+  margin-right: 8px;
+  color: #b91c1c;
+  font-weight: 700;
+}
+
+.sheet-hint-row td {
+  padding: 8px 10px;
+  color: var(--app-text-muted-color);
+  font-size: 12px;
+}
+
+.draft-row td {
+  background: #fcfcff;
+}
+.list-table:not(:focus-within) tr.selected {
+  background: #eff6ff;
+}
+
+.list-table tbody tr:focus-within {
+  background: #eff6ff;
+}

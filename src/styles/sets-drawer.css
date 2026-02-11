@@ -1,0 +1,169 @@
+.panel.sets-drawer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: min(360px, 90vw);
+  height: 100vh;
+  z-index: 30;
+  border-radius: 0 12px 12px 0;
+  transform: translateX(-105%);
+  transition: transform 180ms ease;
+  overflow: auto;
+  background: #262626;
+  border-color: #3f3f46;
+  color: #d4d4d4;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sets-drawer.open {
+  transform: translateX(0);
+}
+
+.sets-drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sets-drawer-close {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid #52525b;
+  border-radius: 999px;
+  background: #262626;
+  color: #d4d4d4;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sets-drawer-close span {
+  position: relative;
+  width: 14px;
+  height: 14px;
+}
+
+.sets-drawer-close span::before,
+.sets-drawer-close span::after {
+  content: '';
+  position: absolute;
+  left: 6px;
+  top: 0;
+  width: 2px;
+  height: 14px;
+  background: currentColor;
+  border-radius: 999px;
+}
+
+.sets-drawer-close span::before {
+  transform: rotate(45deg);
+}
+
+.sets-drawer-close span::after {
+  transform: rotate(-45deg);
+}
+
+.sets-drawer p {
+  color: #d4d4d4;
+}
+
+.set-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+.set-item {
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 8px;
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.set-item.active {
+  border-color: #2563eb;
+  background: #eff6ff;
+}
+
+.set-select {
+  flex: 1;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sets-drawer .set-item,
+.sets-drawer .set-select,
+.sets-drawer .set-item .danger {
+  background: #ffffff;
+  color: #171717;
+}
+
+.sets-drawer .set-item {
+  border-color: #cbd5e1;
+}
+
+.sets-drawer .set-item.active {
+  border-color: #2563eb;
+  background: #eff6ff;
+}
+
+.sets-drawer .set-create-item {
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  border-style: dotted;
+  border-color: #d4d4d4;
+  background: transparent;
+  color: #d4d4d4;
+}
+
+.sets-drawer .set-create-icon {
+  font-size: 18px;
+  line-height: 1;
+  font-weight: 600;
+}
+
+.set-create-backdrop {
+  z-index: 40;
+}
+
+.set-create-modal {
+  position: fixed;
+  z-index: 50;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(380px, calc(100vw - 28px));
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  padding: 12px;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.2);
+}
+
+.set-create-modal h3 {
+  margin: 0 0 10px;
+}
+
+.set-create-modal-label {
+  display: grid;
+  gap: 6px;
+}
+
+.set-create-modal-actions {
+  margin-top: 12px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
