@@ -670,6 +670,7 @@ td input:not([type]) {
   z-index: 1;
   background: #f8fafc;
   text-align: left;
+  padding: 9px 10px;
 }
 
 .list-table td {
