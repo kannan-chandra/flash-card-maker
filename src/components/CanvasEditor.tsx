@@ -124,8 +124,8 @@ export function CanvasEditor(props: CanvasEditorProps) {
   const selectionBadgeTextRef = useRef<Konva.Text>(null);
 
   const isCompactLayout = viewportWidth > 0 && viewportWidth <= compactSplitBreakpoint;
-  const isHorizontalDoubleSidedReference = isNarrowLayout && !isCompactLayout;
-  const isHorizontalSplit = project.doubleSided && isHorizontalDoubleSidedReference;
+  const isHorizontalDoubleSidedReference = isNarrowLayout;
+  const isHorizontalSplit = project.doubleSided && isNarrowLayout && !isCompactLayout;
   const useCompactToggleLabels = viewportWidth > 0 && viewportWidth <= compactToggleBreakpoint;
   const sideWidth = project.template.width;
   const sideHeight = cardHeight;
