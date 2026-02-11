@@ -33,7 +33,6 @@ export function SetsDrawer(props: SetsDrawerProps) {
           <span aria-hidden="true" />
         </button>
       </div>
-      <p>Browse and switch between locally stored sets.</p>
       <div className="set-create">
         <input
           value={newSetName}
