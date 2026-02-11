@@ -95,6 +95,9 @@ function singularize(word: string): string {
 const keywordToEmojis = new Map<string, Set<string>>();
 const keywordToEmojiRank = new Map<string, Map<string, number>>();
 const emojiToKeywords = new Map<string, string[]>();
+const allEmojiKeywordList = new Map<string, string[]>();
+const allEmojiLabel = new Map<string, string>();
+const allEmojiOrder = new Map<string, number>();
 
 function getTamilKeywords(emoji: string): string[] {
   const exact = tamilByEmoji[emoji];
@@ -139,6 +142,26 @@ function keywordRankBonus(keyword: string, emoji: string): number {
 }
 
 for (const item of records) {
+  if (item.emoji) {
+    if (!allEmojiOrder.has(item.emoji)) {
+      allEmojiOrder.set(item.emoji, allEmojiOrder.size);
+    }
+    if (item.label && !allEmojiLabel.has(item.emoji)) {
+      allEmojiLabel.set(item.emoji, item.label);
+    }
+    const keywordSet = new Set<string>(allEmojiKeywordList.get(item.emoji) ?? []);
+    if (item.label) {
+      splitKeywords(item.label).forEach((keyword) => keywordSet.add(keyword));
+    }
+    for (const tag of item.tags ?? []) {
+      splitKeywords(tag).forEach((keyword) => keywordSet.add(keyword));
+    }
+    for (const taKeyword of getTamilKeywords(item.emoji)) {
+      splitKeywords(taKeyword).forEach((keyword) => keywordSet.add(keyword));
+    }
+    allEmojiKeywordList.set(item.emoji, [...keywordSet]);
+  }
+
   const inNounGroup = item.group !== undefined && NOUN_GROUPS.has(item.group);
   const inAllowedPersonSubgroup = item.subgroup !== undefined && PERSON_SUBGROUP_ORDERS.has(item.subgroup);
   if ((item.type !== 1 && item.type !== 0) || !item.emoji || (!inNounGroup && !inAllowedPersonSubgroup)) {
@@ -246,4 +269,75 @@ export function createEmojiImageDataUrl(emoji: string, size = 512): string {
   context.font = `${Math.floor(size * 0.72)}px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif`;
   context.fillText(emoji, size / 2, size / 2);
   return canvas.toDataURL('image/png');
+}
+
+export function searchAllEmojis(query: string, limit = 120): Array<{ emoji: string; label: string; keywords: string[] }> {
+  const normalized = normalizeWord(query);
+  const maxResults = Math.max(0, limit);
+  const entries = [...allEmojiOrder.keys()];
+
+  if (!normalized) {
+    return entries.slice(0, maxResults).map((emoji) => ({
+      emoji,
+      label: allEmojiLabel.get(emoji) ?? '',
+      keywords: (allEmojiKeywordList.get(emoji) ?? []).slice(0, 8)
+    }));
+  }
+
+  const parts = normalized.split(' ').filter(Boolean);
+  const scoreByEmoji = new Map<string, number>();
+  const bump = (emoji: string, points: number) => {
+    scoreByEmoji.set(emoji, (scoreByEmoji.get(emoji) ?? 0) + points);
+  };
+
+  for (const emoji of entries) {
+    const label = normalizeWord(allEmojiLabel.get(emoji) ?? '');
+    const keywords = allEmojiKeywordList.get(emoji) ?? [];
+    const keywordSet = new Set(keywords);
+    const keywordBlob = keywords.join(' ');
+
+    if (label === normalized) {
+      bump(emoji, 120);
+    } else if (label.startsWith(normalized)) {
+      bump(emoji, 90);
+    } else if (label.includes(normalized)) {
+      bump(emoji, 45);
+    }
+
+    if (keywordSet.has(normalized)) {
+      bump(emoji, 100);
+    }
+
+    for (const part of parts) {
+      const singular = singularize(part);
+      if (keywordSet.has(part)) {
+        bump(emoji, 60);
+      }
+      if (singular !== part && keywordSet.has(singular)) {
+        bump(emoji, 50);
+      }
+      for (const keyword of keywords) {
+        if (keyword.startsWith(part)) {
+          bump(emoji, 30);
+        }
+      }
+      if (label.includes(part) || keywordBlob.includes(part)) {
+        bump(emoji, 15);
+      }
+    }
+  }
+
+  return [...scoreByEmoji.entries()]
+    .sort((a, b) => {
+      if (b[1] !== a[1]) {
+        return b[1] - a[1];
+      }
+      return (allEmojiOrder.get(a[0]) ?? 0) - (allEmojiOrder.get(b[0]) ?? 0);
+    })
+    .slice(0, maxResults)
+    .map(([emoji]) => ({
+      emoji,
+      label: allEmojiLabel.get(emoji) ?? '',
+      keywords: (allEmojiKeywordList.get(emoji) ?? []).slice(0, 8)
+    }));
 }

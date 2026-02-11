@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { searchAllEmojis } from '../utils/emoji';
 
 interface EmojiMatch {
   emoji: string;
@@ -33,9 +34,13 @@ export function SelectedCardDetails(props: SelectedCardDetailsProps) {
   const { onImageUrlDraftChange, onApplySelectedImageUrl, onSelectedRowImageUpload, onApplyEmoji, onRemoveSelectedRowImage, onUseEmojiForAllWords } =
     actions;
   const [showUrlInput, setShowUrlInput] = useState(false);
+  const [showEmojiSearch, setShowEmojiSearch] = useState(false);
+  const [emojiSearchQuery, setEmojiSearchQuery] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const urlInputRef = useRef<HTMLInputElement>(null);
   const applyAttemptIdRef = useRef(0);
+  const emojiSearchInputRef = useRef<HTMLInputElement>(null);
+  const emojiSearchResults = useMemo(() => searchAllEmojis(emojiSearchQuery, 120), [emojiSearchQuery]);
 
   useEffect(() => {
     if (!showUrlInput) {
@@ -48,8 +53,17 @@ export function SelectedCardDetails(props: SelectedCardDetailsProps) {
   useEffect(() => {
     if (selectedRowHasImage) {
       setShowUrlInput(false);
+      setShowEmojiSearch(false);
+      setEmojiSearchQuery('');
     }
   }, [selectedRowHasImage]);
+
+  useEffect(() => {
+    if (!showEmojiSearch) {
+      return;
+    }
+    emojiSearchInputRef.current?.focus();
+  }, [showEmojiSearch]);
 
   function tryApplyImageUrl(value: string) {
     const trimmed = value.trim();
@@ -167,27 +181,73 @@ export function SelectedCardDetails(props: SelectedCardDetailsProps) {
                     }}
                   />
                 </div>
-                <div className="emoji-options">
-                  <p>Emoji choices</p>
-                  {selectedRowEmojiMatches.length > 0 ? (
+                {showEmojiSearch ? (
+                  <div className="emoji-search-mode">
+                    <div className="emoji-search-header">
+                      <input
+                        ref={emojiSearchInputRef}
+                        value={emojiSearchQuery}
+                        onChange={(event) => setEmojiSearchQuery(event.target.value)}
+                        placeholder="Search emoji keywords..."
+                        aria-label="Search emoji"
+                      />
+                      <button
+                        type="button"
+                        aria-label="Close emoji search"
+                        onClick={() => {
+                          setShowEmojiSearch(false);
+                          setEmojiSearchQuery('');
+                        }}
+                      >
+                        X
+                      </button>
+                    </div>
                     <div className="emoji-grid">
-                      {selectedRowEmojiMatches.map((match) => (
+                      {emojiSearchResults.map((match) => (
                         <button
                           type="button"
                           key={match.emoji}
                           className="emoji-choice"
                           aria-label={`Use emoji ${match.emoji}`}
-                          title={`Keywords: ${match.keywords.join(', ')}`}
+                          title={`${match.label}${match.keywords.length ? ` (${match.keywords.join(', ')})` : ''}`}
                           onClick={() => onApplyEmoji(selectedRow.id, match.emoji)}
                         >
                           {match.emoji}
                         </button>
                       ))}
                     </div>
-                  ) : (
-                    <p className="hint">No emoji matches found for this word.</p>
-                  )}
-                </div>
+                    {emojiSearchResults.length === 0 ? <p className="hint">No matching emoji found.</p> : null}
+                  </div>
+                ) : (
+                  <div className="emoji-options">
+                    <p>Emoji choices</p>
+                    {selectedRowEmojiMatches.length > 0 ? (
+                      <div className="emoji-grid">
+                        {selectedRowEmojiMatches.slice(0, 4).map((match) => (
+                          <button
+                            type="button"
+                            key={match.emoji}
+                            className="emoji-choice"
+                            aria-label={`Use emoji ${match.emoji}`}
+                            title={`Keywords: ${match.keywords.join(', ')}`}
+                            onClick={() => onApplyEmoji(selectedRow.id, match.emoji)}
+                          >
+                            {match.emoji}
+                          </button>
+                        ))}
+                        <button type="button" className="emoji-choice emoji-search-trigger" aria-label="Search all emoji" onClick={() => setShowEmojiSearch(true)}>
+                          🔍
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="emoji-grid">
+                        <button type="button" className="emoji-choice emoji-search-trigger" aria-label="Search all emoji" onClick={() => setShowEmojiSearch(true)}>
+                          🔍
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
               </>
             )}
           </div>
