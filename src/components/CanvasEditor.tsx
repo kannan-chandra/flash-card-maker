@@ -91,9 +91,10 @@ function getContainSize(containerWidth: number, containerHeight: number, sourceW
 }
 
 export function CanvasEditor(props: CanvasEditorProps) {
+  const singleColumnBreakpoint = 1180;
   const { project, selection, canvas, actions, children } = props;
   const { selectedRow, selectedElement, previewImage, imageIsEmpty, imageIsLoading } = selection;
-  const { cardHeight, stageHeight, toCanvasY, fromCanvasY } = canvas;
+  const { cardHeight } = canvas;
   const { onSelectElement, onPatchTemplate, onPatchTextElement, onUpdateRow, onToggleDoubleSided, onCanvasImageDrop } = actions;
 
   const imageRef = useRef<Konva.Image>(null);
@@ -109,6 +110,7 @@ export function CanvasEditor(props: CanvasEditorProps) {
   const stageShellRef = useRef<HTMLDivElement>(null);
   const [stageViewportWidth, setStageViewportWidth] = useState<number>(0);
   const [stageViewportHeight, setStageViewportHeight] = useState<number>(0);
+  const [isNarrowLayout, setIsNarrowLayout] = useState<boolean>(false);
   const [stageShellLeft, setStageShellLeft] = useState<number>(0);
   const [stageShellTop, setStageShellTop] = useState<number>(0);
   const [imagePanelHeight, setImagePanelHeight] = useState<number>(220);
@@ -118,16 +120,67 @@ export function CanvasEditor(props: CanvasEditorProps) {
   const selectionBadgeRectRef = useRef<Konva.Rect>(null);
   const selectionBadgeTextRef = useRef<Konva.Text>(null);
 
+  const isHorizontalSplit = project.doubleSided && isNarrowLayout;
+  const sideWidth = project.template.width;
+  const sideHeight = cardHeight;
+  const stageContentWidth = project.doubleSided && isHorizontalSplit ? sideWidth * 2 : sideWidth;
+  const stageContentHeight = project.doubleSided ? (isHorizontalSplit ? sideHeight : sideHeight * 2) : sideHeight;
+  const referenceWidth = isNarrowLayout ? sideWidth * 2 : sideWidth;
+  const referenceHeight = isNarrowLayout ? sideHeight : sideHeight * 2;
+
+  function getSideOffset(side: 1 | 2) {
+    if (!project.doubleSided) {
+      return { x: 0, y: 0 };
+    }
+    if (isHorizontalSplit) {
+      return { x: side === 2 ? sideWidth : 0, y: 0 };
+    }
+    return { x: 0, y: side === 2 ? sideHeight : 0 };
+  }
+
+  function toCanvasPosition(x: number, y: number, side: 1 | 2) {
+    const offset = getSideOffset(side);
+    return {
+      x: x + offset.x,
+      y: y + offset.y
+    };
+  }
+
+  function fromCanvasPosition(canvasX: number, canvasY: number, elementWidth: number, elementHeight: number) {
+    if (!project.doubleSided) {
+      return { side: 1 as const, x: canvasX, y: canvasY };
+    }
+
+    if (isHorizontalSplit) {
+      const midpointX = canvasX + elementWidth / 2;
+      const side: 1 | 2 = midpointX >= sideWidth ? 2 : 1;
+      const offsetX = side === 2 ? sideWidth : 0;
+      return {
+        side,
+        x: canvasX - offsetX,
+        y: canvasY
+      };
+    }
+
+    const midpointY = canvasY + elementHeight / 2;
+    const side: 1 | 2 = midpointY >= sideHeight ? 2 : 1;
+    const offsetY = side === 2 ? sideHeight : 0;
+    return {
+      side,
+      x: canvasX,
+      y: canvasY - offsetY
+    };
+  }
+
   const stageScale = useMemo(() => {
-    const widthScale = stageViewportWidth > 0 ? stageViewportWidth / project.template.width : 1;
-    // Keep card apparent size consistent across single/double mode by always
-    // deriving scale from the double-sided vertical requirement (two cards).
-    const doubleSidedReferenceHeight = cardHeight * 2;
-    const heightScale = stageViewportHeight > 0 ? stageViewportHeight / doubleSidedReferenceHeight : 1;
+    // Keep apparent card size consistent across single/double mode by always
+    // scaling against a double-sided reference footprint for the current layout.
+    const widthScale = stageViewportWidth > 0 ? stageViewportWidth / referenceWidth : 1;
+    const heightScale = stageViewportHeight > 0 ? stageViewportHeight / referenceHeight : 1;
     return Math.max(0.01, Math.min(widthScale, heightScale));
-  }, [cardHeight, project.template.width, stageViewportHeight, stageViewportWidth]);
-  const scaledStageWidth = project.template.width * stageScale;
-  const scaledStageHeight = stageHeight * stageScale;
+  }, [referenceHeight, referenceWidth, stageViewportHeight, stageViewportWidth]);
+  const scaledStageWidth = stageContentWidth * stageScale;
+  const scaledStageHeight = stageContentHeight * stageScale;
 
   const editingTextElement = useMemo(
     () => project.template.textElements.find((item) => item.id === editingTextId),
@@ -180,24 +233,35 @@ export function CanvasEditor(props: CanvasEditorProps) {
 
     const syncWidth = () => {
       setStageViewportWidth(shell.clientWidth);
+      const viewportWidth = window.visualViewport?.width ?? window.innerWidth;
+      setIsNarrowLayout(viewportWidth <= singleColumnBreakpoint);
       const rect = shell.getBoundingClientRect();
       setStageShellLeft(rect.left);
       setStageShellTop(rect.top);
       const rootStyle = window.getComputedStyle(document.documentElement);
       const gutterPx = Number.parseFloat(rootStyle.getPropertyValue('--app-gutter')) || 20;
-      const availableHeight = Math.max(0, window.innerHeight - rect.top - gutterPx);
+      const viewportHeight = window.visualViewport?.height ?? window.innerHeight;
+      const availableHeight = Math.max(0, viewportHeight - rect.top - gutterPx);
       setStageViewportHeight(availableHeight);
     };
 
     syncWidth();
-    if (typeof ResizeObserver === 'undefined') {
-      window.addEventListener('resize', syncWidth);
-      return () => window.removeEventListener('resize', syncWidth);
+    window.addEventListener('resize', syncWidth);
+
+    const viewport = window.visualViewport;
+    viewport?.addEventListener('resize', syncWidth);
+
+    let observer: ResizeObserver | null = null;
+    if (typeof ResizeObserver !== 'undefined') {
+      observer = new ResizeObserver(() => syncWidth());
+      observer.observe(shell);
     }
 
-    const observer = new ResizeObserver(() => syncWidth());
-    observer.observe(shell);
-    return () => observer.disconnect();
+    return () => {
+      window.removeEventListener('resize', syncWidth);
+      viewport?.removeEventListener('resize', syncWidth);
+      observer?.disconnect();
+    };
   }, []);
 
   useEffect(() => {
@@ -356,9 +420,10 @@ export function CanvasEditor(props: CanvasEditorProps) {
 
   function getSelectionInfo() {
     if (selectedElement === 'image') {
+      const imagePos = toCanvasPosition(project.template.image.x, project.template.image.y, project.template.image.side);
       return {
-        x: project.template.image.x,
-        y: toCanvasY(project.template.image.y, project.template.image.side),
+        x: imagePos.x,
+        y: imagePos.y,
         width: project.template.image.width,
         label: 'Image'
       };
@@ -367,22 +432,24 @@ export function CanvasEditor(props: CanvasEditorProps) {
     if (!textElement) {
       return null;
     }
+    const textPos = toCanvasPosition(textElement.x, textElement.y, textElement.side);
     return {
-      x: textElement.x,
-      y: toCanvasY(textElement.y, textElement.side),
+      x: textPos.x,
+      y: textPos.y,
       width: textElement.width,
       label: textElement.role === 'word' ? 'Word' : 'Subtitle'
     };
   }
 
   function wrapWithSideClip(side: 1 | 2, key: string, node: ReactNode) {
+    const offset = getSideOffset(side);
     return (
       <Group
         key={key}
-        clipX={0}
-        clipY={project.doubleSided && side === 2 ? cardHeight : 0}
-        clipWidth={project.template.width}
-        clipHeight={cardHeight}
+        clipX={offset.x}
+        clipY={offset.y}
+        clipWidth={sideWidth}
+        clipHeight={sideHeight}
       >
         {node}
       </Group>
@@ -422,19 +489,21 @@ export function CanvasEditor(props: CanvasEditorProps) {
       top: topAbs - stageWrapTop
     };
   }
-  const imageAnchorTop = toCanvasY(project.template.image.y, project.template.image.side) * stageScale;
+  const imageCanvasPos = toCanvasPosition(project.template.image.x, project.template.image.y, project.template.image.side);
+  const imageAnchorTop = imageCanvasPos.y * stageScale;
   const imageAnchorBottom = imageAnchorTop + project.template.image.height * stageScale;
   const imagePanelPos = getPanelPosition({
-    anchorX: project.template.image.x * stageScale,
+    anchorX: imageCanvasPos.x * stageScale,
     anchorTop: imageAnchorTop,
     anchorBottom: imageAnchorBottom,
     panelWidth: imagePanelWidth,
     panelHeight: imagePanelHeight
   });
-  const textAnchorTop = selectedText ? toCanvasY(selectedText.y, selectedText.side) * stageScale : 0;
+  const selectedTextPos = selectedText ? toCanvasPosition(selectedText.x, selectedText.y, selectedText.side) : null;
+  const textAnchorTop = selectedTextPos ? selectedTextPos.y * stageScale : 0;
   const textAnchorBottom = selectedText ? textAnchorTop + selectedText.height * stageScale : 0;
   const textPanelPos = getPanelPosition({
-    anchorX: selectedText ? selectedText.x * stageScale : 0,
+    anchorX: selectedTextPos ? selectedTextPos.x * stageScale : 0,
     anchorTop: textAnchorTop,
     anchorBottom: textAnchorBottom,
     panelWidth: textPanelWidth,
@@ -445,23 +514,35 @@ export function CanvasEditor(props: CanvasEditorProps) {
     <section className="panel editor-panel">
       <div className="editor-layout">
         <div>
-          <div className="editor-controls">
-            <label>
-              Card Background
-              <input
-                type="color"
-                value={project.template.backgroundColor}
-                onChange={(event) => onPatchTemplate({ backgroundColor: event.target.value })}
-              />
-            </label>
-            <button
-              type="button"
-              className={`double-sided-toggle ${project.doubleSided ? 'active' : ''}`}
-              aria-pressed={project.doubleSided}
-              onClick={() => onToggleDoubleSided(!project.doubleSided)}
-            >
-              Double-sided cards
-            </button>
+          <div className="stage-toolbar" style={{ width: scaledStageWidth }}>
+            <div className="editor-controls">
+              <label>
+                Card Background
+                <input
+                  type="color"
+                  value={project.template.backgroundColor}
+                  onChange={(event) => onPatchTemplate({ backgroundColor: event.target.value })}
+                />
+              </label>
+              <div className="double-sided-switch" role="group" aria-label="Card layout mode">
+                <button
+                  type="button"
+                  className={`double-sided-option ${project.doubleSided ? '' : 'is-active'}`}
+                  aria-pressed={!project.doubleSided}
+                  onClick={() => onToggleDoubleSided(false)}
+                >
+                  Single-sided
+                </button>
+                <button
+                  type="button"
+                  className={`double-sided-option ${project.doubleSided ? 'is-active' : ''}`}
+                  aria-pressed={project.doubleSided}
+                  onClick={() => onToggleDoubleSided(true)}
+                >
+                  Double-sided
+                </button>
+              </div>
+            </div>
           </div>
 
           <div className="stage-shell" ref={stageShellRef}>
@@ -488,8 +569,8 @@ export function CanvasEditor(props: CanvasEditorProps) {
                 name="canvas-bg"
                 x={0.5}
                 y={0.5}
-                width={Math.max(project.template.width - 1, 0)}
-                height={Math.max(stageHeight - 1, 0)}
+                width={Math.max(stageContentWidth - 1, 0)}
+                height={Math.max(stageContentHeight - 1, 0)}
                 fill="#f8fafc"
                 stroke="#d1d5db"
                 strokeWidth={1}
@@ -497,8 +578,8 @@ export function CanvasEditor(props: CanvasEditorProps) {
               <Rect
                 x={0.5}
                 y={0.5}
-                width={Math.max(project.template.width - 1, 0)}
-                height={Math.max(cardHeight - 1, 0)}
+                width={Math.max(sideWidth - 1, 0)}
+                height={Math.max(sideHeight - 1, 0)}
                 fill={project.template.backgroundColor}
                 stroke="#94a3b8"
                 strokeWidth={1}
@@ -506,10 +587,10 @@ export function CanvasEditor(props: CanvasEditorProps) {
               />
               {project.doubleSided && (
                 <Rect
-                  x={0.5}
-                  y={cardHeight + 0.5}
-                  width={Math.max(project.template.width - 1, 0)}
-                  height={Math.max(cardHeight - 1, 0)}
+                  x={isHorizontalSplit ? sideWidth + 0.5 : 0.5}
+                  y={isHorizontalSplit ? 0.5 : sideHeight + 0.5}
+                  width={Math.max(sideWidth - 1, 0)}
+                  height={Math.max(sideHeight - 1, 0)}
                   fill={project.template.backgroundColor}
                   stroke="#94a3b8"
                   strokeWidth={1}
@@ -525,8 +606,8 @@ export function CanvasEditor(props: CanvasEditorProps) {
                     <KonvaImage
                       ref={imageRef}
                       image={previewImage}
-                      x={project.template.image.x + imageContainSize.offsetX}
-                      y={toCanvasY(project.template.image.y, project.template.image.side) + imageContainSize.offsetY}
+                      x={imageCanvasPos.x + imageContainSize.offsetX}
+                      y={imageCanvasPos.y + imageContainSize.offsetY}
                       width={imageContainSize.width}
                       height={imageContainSize.height}
                       listening={false}
@@ -534,8 +615,8 @@ export function CanvasEditor(props: CanvasEditorProps) {
                   )}
                   <Rect
                     ref={imageControlRef}
-                    x={project.template.image.x}
-                    y={toCanvasY(project.template.image.y, project.template.image.side)}
+                    x={imageCanvasPos.x}
+                    y={imageCanvasPos.y}
                     width={project.template.image.width}
                     height={project.template.image.height}
                     stroke={selectedElement === 'image' ? '#2563eb' : imageIsEmpty ? '#94a3b8' : undefined}
@@ -548,12 +629,17 @@ export function CanvasEditor(props: CanvasEditorProps) {
                     onDragMove={(event) => {
                       syncDraggedImagePreview(event.target.x(), event.target.y());
                       updateSelectionBadge(event.target.x(), event.target.y(), 'Image');
-                      const sideResult = fromCanvasY(event.target.y(), project.template.image.height);
+                      const sideResult = fromCanvasPosition(
+                        event.target.x(),
+                        event.target.y(),
+                        project.template.image.width,
+                        project.template.image.height
+                      );
                       if (sideResult.side !== project.template.image.side) {
                         onPatchTemplate({
                           image: {
                             ...project.template.image,
-                            x: event.target.x(),
+                            x: sideResult.x,
                             y: sideResult.y,
                             side: sideResult.side
                           }
@@ -562,11 +648,16 @@ export function CanvasEditor(props: CanvasEditorProps) {
                     }}
                     onDragEnd={(event) => {
                       syncDraggedImagePreview(event.target.x(), event.target.y());
-                      const sideResult = fromCanvasY(event.target.y(), project.template.image.height);
+                      const sideResult = fromCanvasPosition(
+                        event.target.x(),
+                        event.target.y(),
+                        project.template.image.width,
+                        project.template.image.height
+                      );
                       onPatchTemplate({
                         image: {
                           ...project.template.image,
-                          x: event.target.x(),
+                          x: sideResult.x,
                           y: sideResult.y,
                           side: sideResult.side
                         }
@@ -578,10 +669,10 @@ export function CanvasEditor(props: CanvasEditorProps) {
                       const scaleY = node.scaleY();
                       const nextWidth = Math.max(20, node.width() * scaleX);
                       const nextHeight = Math.max(20, node.height() * scaleY);
-                      const sideResult = fromCanvasY(node.y(), nextHeight);
+                      const sideResult = fromCanvasPosition(node.x(), node.y(), nextWidth, nextHeight);
                       onPatchTemplate({
                         image: {
-                          x: node.x(),
+                          x: sideResult.x,
                           y: sideResult.y,
                           side: sideResult.side,
                           width: nextWidth,
@@ -599,6 +690,7 @@ export function CanvasEditor(props: CanvasEditorProps) {
                 const textValue = selectedRow ? fitTextValue(selectedRow, textElement.role) : '';
                 const textIsEmpty = !textValue.trim();
                 const isEditing = editingTextId === textElement.id;
+                const textCanvasPos = toCanvasPosition(textElement.x, textElement.y, textElement.side);
                 return [
                   wrapWithSideClip(
                     textElement.side,
@@ -607,8 +699,8 @@ export function CanvasEditor(props: CanvasEditorProps) {
                       key={`${textElement.id}-text`}
                       ref={index === 0 ? text1Ref : text2Ref}
                       text={textValue}
-                      x={textElement.x}
-                      y={toCanvasY(textElement.y, textElement.side)}
+                      x={textCanvasPos.x}
+                      y={textCanvasPos.y}
                       width={textElement.width}
                       height={textElement.height}
                       fontSize={textElement.fontSize}
@@ -628,19 +720,19 @@ export function CanvasEditor(props: CanvasEditorProps) {
                       onDblTap={() => startEditingText(textElement.id)}
                       onDragMove={(event) => {
                         updateSelectionBadge(event.target.x(), event.target.y(), textElement.role === 'word' ? 'Word' : 'Subtitle');
-                        const sideResult = fromCanvasY(event.target.y(), textElement.height);
+                        const sideResult = fromCanvasPosition(event.target.x(), event.target.y(), textElement.width, textElement.height);
                         if (sideResult.side !== textElement.side) {
                           onPatchTextElement(textElement.id, {
-                            x: event.target.x(),
+                            x: sideResult.x,
                             y: sideResult.y,
                             side: sideResult.side
                           });
                         }
                       }}
                       onDragEnd={(event) => {
-                        const sideResult = fromCanvasY(event.target.y(), textElement.height);
+                        const sideResult = fromCanvasPosition(event.target.x(), event.target.y(), textElement.width, textElement.height);
                         onPatchTextElement(textElement.id, {
-                          x: event.target.x(),
+                          x: sideResult.x,
                           y: sideResult.y,
                           side: sideResult.side
                         });
@@ -651,9 +743,9 @@ export function CanvasEditor(props: CanvasEditorProps) {
                         const scaleY = node.scaleY();
                         const nextWidth = Math.max(40, node.width() * scaleX);
                         const nextHeight = Math.max(30, node.height() * scaleY);
-                        const sideResult = fromCanvasY(node.y(), nextHeight);
+                        const sideResult = fromCanvasPosition(node.x(), node.y(), nextWidth, nextHeight);
                         onPatchTextElement(textElement.id, {
-                          x: node.x(),
+                          x: sideResult.x,
                           y: sideResult.y,
                           side: sideResult.side,
                           width: nextWidth,
@@ -673,8 +765,8 @@ export function CanvasEditor(props: CanvasEditorProps) {
                       <Rect
                         ref={textElement.id === 'text1' ? text1PlaceholderRef : text2PlaceholderRef}
                         key={`${textElement.id}-empty`}
-                        x={textElement.x}
-                        y={toCanvasY(textElement.y, textElement.side)}
+                        x={textCanvasPos.x}
+                        y={textCanvasPos.y}
                         width={textElement.width}
                         height={textElement.height}
                         stroke={selectedElement === textElement.id ? '#2563eb' : '#94a3b8'}
@@ -688,19 +780,19 @@ export function CanvasEditor(props: CanvasEditorProps) {
                         onDblTap={() => startEditingText(textElement.id)}
                         onDragMove={(event) => {
                           updateSelectionBadge(event.target.x(), event.target.y(), textElement.role === 'word' ? 'Word' : 'Subtitle');
-                          const sideResult = fromCanvasY(event.target.y(), textElement.height);
+                          const sideResult = fromCanvasPosition(event.target.x(), event.target.y(), textElement.width, textElement.height);
                           if (sideResult.side !== textElement.side) {
                             onPatchTextElement(textElement.id, {
-                              x: event.target.x(),
+                              x: sideResult.x,
                               y: sideResult.y,
                               side: sideResult.side
                             });
                           }
                         }}
                         onDragEnd={(event) => {
-                          const sideResult = fromCanvasY(event.target.y(), textElement.height);
+                          const sideResult = fromCanvasPosition(event.target.x(), event.target.y(), textElement.width, textElement.height);
                           onPatchTextElement(textElement.id, {
-                            x: event.target.x(),
+                            x: sideResult.x,
                             y: sideResult.y,
                             side: sideResult.side
                           });
@@ -711,9 +803,9 @@ export function CanvasEditor(props: CanvasEditorProps) {
                           const scaleY = node.scaleY();
                           const nextWidth = Math.max(40, node.width() * scaleX);
                           const nextHeight = Math.max(30, node.height() * scaleY);
-                          const sideResult = fromCanvasY(node.y(), nextHeight);
+                          const sideResult = fromCanvasPosition(node.x(), node.y(), nextWidth, nextHeight);
                           onPatchTextElement(textElement.id, {
-                            x: node.x(),
+                            x: sideResult.x,
                             y: sideResult.y,
                             side: sideResult.side,
                             width: nextWidth,
@@ -735,6 +827,14 @@ export function CanvasEditor(props: CanvasEditorProps) {
                 </Layer>
               </Stage>
               {editingTextElement && (
+                (() => {
+                  const editingPos = toCanvasPosition(editingTextElement.x, editingTextElement.y, editingTextElement.side);
+                  const editOffset = getSideOffset(editingTextElement.side);
+                  const clipTop = editOffset.y * stageScale;
+                  const clipLeft = editOffset.x * stageScale;
+                  const clipBottom = scaledStageHeight - (editOffset.y + sideHeight) * stageScale;
+                  const clipRight = scaledStageWidth - (editOffset.x + sideWidth) * stageScale;
+                  return (
                 <textarea
                   ref={textEditorRef}
                   className="canvas-text-editor"
@@ -753,14 +853,9 @@ export function CanvasEditor(props: CanvasEditorProps) {
                     }
                   }}
                   style={{
-                    clipPath: `inset(${
-                      (project.doubleSided && editingTextElement.side === 2 ? cardHeight : 0) * stageScale
-                    }px 0px ${
-                      scaledStageHeight -
-                      (project.doubleSided && editingTextElement.side === 2 ? stageHeight : cardHeight) * stageScale
-                    }px 0px)`,
-                    left: editingTextElement.x * stageScale,
-                    top: toCanvasY(editingTextElement.y, editingTextElement.side) * stageScale,
+                    clipPath: `inset(${clipTop}px ${clipRight}px ${clipBottom}px ${clipLeft}px)`,
+                    left: editingPos.x * stageScale,
+                    top: editingPos.y * stageScale,
                     width: editingTextElement.width * stageScale,
                     height: editingTextElement.height * stageScale,
                     paddingTop: editingTextareaPadding.top * stageScale,
@@ -772,13 +867,15 @@ export function CanvasEditor(props: CanvasEditorProps) {
                     lineHeight: String(editingTextElement.lineHeight)
                   }}
                 />
+                  );
+                })()
               )}
               {isImageDropTargetActive && (
                 <div
                   className="canvas-drop-overlay"
                   style={{
-                    left: project.template.image.x * stageScale,
-                    top: toCanvasY(project.template.image.y, project.template.image.side) * stageScale,
+                    left: imageCanvasPos.x * stageScale,
+                    top: imageCanvasPos.y * stageScale,
                     width: project.template.image.width * stageScale,
                     height: project.template.image.height * stageScale
                   }}
@@ -795,8 +892,8 @@ export function CanvasEditor(props: CanvasEditorProps) {
                 <div
                   className="canvas-image-loading"
                   style={{
-                    left: project.template.image.x * stageScale,
-                    top: toCanvasY(project.template.image.y, project.template.image.side) * stageScale,
+                    left: imageCanvasPos.x * stageScale,
+                    top: imageCanvasPos.y * stageScale,
                     width: project.template.image.width * stageScale,
                     height: project.template.image.height * stageScale
                   }}

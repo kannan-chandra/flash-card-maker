@@ -1,8 +1,14 @@
 :root {
   --app-gutter: 20px;
-  font-family: 'Trebuchet MS', Verdana, sans-serif;
-  color: #111827;
-  background: radial-gradient(circle at top left, #eff6ff, #f8fafc 55%);
+  --app-text-color: #171717;
+  --app-text-muted-color: #404040;
+  --page-bg-gradient-from-position: 0%;
+  --page-bg-gradient-to-position: 100%;
+  --page-bg-gradient-from: #fcd34d var(--page-bg-gradient-from-position);
+  --page-bg-gradient-to: #fbbf24 var(--page-bg-gradient-to-position);
+  --page-bg-gradient-stops: var(--page-bg-gradient-from), var(--page-bg-gradient-to);
+  font-family: 'Inter', 'Trebuchet MS', Verdana, sans-serif;
+  color: var(--app-text-color);
 }
 
 * {
@@ -18,6 +24,8 @@ body,
 body {
   margin: 0;
   overflow: hidden;
+  background-image: linear-gradient(135deg, var(--page-bg-gradient-stops));
+  color: inherit;
 }
 
 .app {
@@ -90,6 +98,33 @@ main {
   gap: 8px;
 }
 
+.header-action-link {
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  padding: 4px 12px;
+  white-space: nowrap;
+  text-decoration-color: #10b981;
+  text-underline-offset: 2px;
+}
+
+.header-action-link:hover {
+  text-decoration: underline;
+}
+
+.header-action-cta {
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: rgba(15, 23, 42, 0.1);
+  padding: 0 12px;
+  min-height: 40px;
+  white-space: nowrap;
+}
+
+.header-action-cta:hover {
+  border-color: #10b981;
+}
+
 .menu-backdrop {
   position: fixed;
   inset: 0;
@@ -132,6 +167,7 @@ main {
 .editor-panel {
   grid-column: 2;
   grid-row: 1;
+  min-width: 0;
   background: transparent;
   border: 0;
   border-radius: 0;
@@ -142,6 +178,7 @@ main {
 .data-panel {
   grid-column: 1;
   grid-row: 1;
+  min-width: 0;
   background: transparent;
   border: 0;
   border-radius: 0;
@@ -159,8 +196,15 @@ main {
 .editor-controls {
   display: flex;
   flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-end;
   gap: 10px;
-  margin-bottom: 10px;
+  width: 100%;
+}
+
+.stage-toolbar {
+  max-width: 100%;
+  margin: 0 auto 10px;
 }
 
 .editor-layout {
@@ -175,6 +219,7 @@ main {
 .editor-layout > div {
   display: flex;
   flex-direction: column;
+  min-width: 0;
   min-height: 0;
 }
 
@@ -440,7 +485,7 @@ input[type='color'] {
   margin: 0;
   font-size: 13px;
   font-weight: 600;
-  color: #334155;
+  color: var(--app-text-muted-color);
   text-align: center;
   padding: 0 10px;
 }
@@ -559,6 +604,7 @@ button {
   border-radius: 7px;
   border: 1px solid #9ca3af;
   background: #f3f4f6;
+  color: inherit;
   cursor: pointer;
 }
 
@@ -660,7 +706,7 @@ td input:not([type]) {
 
 .sheet-hint-row td {
   padding: 8px 10px;
-  color: #475569;
+  color: var(--app-text-muted-color);
   font-size: 12px;
 }
 
@@ -695,7 +741,7 @@ td input:not([type]) {
   border-radius: 6px;
   padding: 4px;
   margin-bottom: 4px;
-  color: #475569;
+  color: var(--app-text-muted-color);
   font-size: 12px;
   text-align: center;
 }
@@ -734,19 +780,34 @@ td input:not([type]) {
   padding-bottom: 2px;
 }
 
-.double-sided-toggle {
-  min-height: 36px;
-  min-width: 180px;
-  font-weight: 700;
-  border-width: 2px;
-  background: #e5e7eb;
-  border-color: #9ca3af;
-  color: #334155;
+.double-sided-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border: 1px solid #e5e7eb;
+  border-radius: 999px;
+  background: #ffffff;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
 }
 
-.double-sided-toggle.active {
-  background: #1d4ed8;
-  border-color: #1e40af;
+.double-sided-option {
+  min-height: 38px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  font-weight: 600;
+  padding: 8px 20px;
+  white-space: nowrap;
+}
+
+.double-sided-option:hover:not(.is-active) {
+  background: #e5e7eb;
+}
+
+.double-sided-option.is-active {
+  background: #0d9488;
   color: #ffffff;
 }
 
@@ -782,7 +843,7 @@ td input:not([type]) {
 
 .hint {
   margin-top: 8px;
-  color: #334155;
+  color: var(--app-text-muted-color);
 }
 
 .loading {
@@ -792,6 +853,7 @@ td input:not([type]) {
 @media (max-width: 1180px) {
   main {
     grid-template-columns: 1fr;
+    grid-template-rows: minmax(0, 2fr) minmax(0, 1fr);
   }
 
   header {
@@ -812,7 +874,14 @@ td input:not([type]) {
 
   .editor-panel {
     grid-column: auto;
-    grid-row: auto;
+    grid-row: 1;
+    min-height: 0;
+  }
+
+  .data-panel {
+    grid-column: auto;
+    grid-row: 2;
+    min-height: 0;
   }
 
   .editor-layout {

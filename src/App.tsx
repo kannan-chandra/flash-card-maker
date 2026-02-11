@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import tamilFontUrl from '@fontsource/noto-sans-tamil/files/noto-sans-tamil-tamil-400-normal.woff?url';
+import '@fontsource/inter/400.css';
+import '@fontsource/inter/500.css';
+import '@fontsource/inter/600.css';
 import '@fontsource/noto-sans-tamil/400.css';
 import type { RowValidation } from './types';
 import { CanvasEditor } from './components/CanvasEditor';
@@ -352,10 +355,10 @@ export default function App() {
         </button>
         <h1>Flash Card Maker</h1>
         <div className="header-actions">
-          <button type="button" onClick={() => setImportModalOpen(true)}>
+          <button type="button" className="header-action-link" onClick={() => setImportModalOpen(true)}>
             Import
           </button>
-          <button type="button" className="primary" onClick={() => setExportModalOpen(true)}>
+          <button type="button" className="header-action-cta" onClick={() => setExportModalOpen(true)}>
             Export
           </button>
         </div>
