@@ -325,6 +325,17 @@ export function CanvasEditor(props: CanvasEditorProps) {
     }
   }
 
+  function syncDraggedImagePreview(dragX: number, dragY: number) {
+    if (!imageRef.current) {
+      return;
+    }
+    imageRef.current.position({
+      x: dragX + imageContainSize.offsetX,
+      y: dragY + imageContainSize.offsetY
+    });
+    imageRef.current.getLayer()?.batchDraw();
+  }
+
   function updateSelectionBadge(x: number, y: number, label: string) {
     const rectNode = selectionBadgeRectRef.current;
     const textNode = selectionBadgeTextRef.current;
@@ -535,6 +546,7 @@ export function CanvasEditor(props: CanvasEditorProps) {
                     onClick={() => onSelectElement('image')}
                     onTap={() => onSelectElement('image')}
                     onDragMove={(event) => {
+                      syncDraggedImagePreview(event.target.x(), event.target.y());
                       updateSelectionBadge(event.target.x(), event.target.y(), 'Image');
                       const sideResult = fromCanvasY(event.target.y(), project.template.image.height);
                       if (sideResult.side !== project.template.image.side) {
@@ -549,6 +561,7 @@ export function CanvasEditor(props: CanvasEditorProps) {
                       }
                     }}
                     onDragEnd={(event) => {
+                      syncDraggedImagePreview(event.target.x(), event.target.y());
                       const sideResult = fromCanvasY(event.target.y(), project.template.image.height);
                       onPatchTemplate({
                         image: {
