@@ -347,9 +347,6 @@ export function CanvasEditor(props: CanvasEditorProps) {
 
   return (
     <section className="panel editor-panel">
-      <h2>Master Card Layout</h2>
-      <p>Drag and resize elements. Changes affect all generated cards.</p>
-
       <div className="editor-layout">
         <div>
           <div className="editor-controls">
