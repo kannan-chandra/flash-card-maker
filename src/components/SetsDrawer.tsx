@@ -1,5 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import type { FlashcardSet } from '../types';
+import { Drawer } from './ui/Drawer';
+import { Modal } from './ui/Modal';
+import { OverlayBackdrop } from './ui/OverlayBackdrop';
 
 interface SetsDrawerProps {
   setsMenuOpen: boolean;
@@ -49,7 +52,7 @@ export function SetsDrawer(props: SetsDrawerProps) {
 
   return (
     <>
-      <aside className={`panel sets-drawer ${setsMenuOpen ? 'open' : ''}`} aria-hidden={!setsMenuOpen}>
+      <Drawer className="panel sets-drawer" isOpen={setsMenuOpen}>
         <div className="sets-drawer-header">
           <h2>Flash Card Sets</h2>
           <button type="button" className="sets-drawer-close" onClick={onClose} aria-label="Close sets menu">
@@ -81,12 +84,12 @@ export function SetsDrawer(props: SetsDrawerProps) {
             <span>Create Flashcard Set</span>
           </button>
         </div>
-      </aside>
+      </Drawer>
 
       {createModalOpen && (
         <>
-          <button type="button" className="menu-backdrop set-create-backdrop" onClick={closeCreateModal} aria-label="Close create set modal" />
-          <div className="set-create-modal" role="dialog" aria-modal="true" aria-label="Create flash card set">
+          <OverlayBackdrop className="menu-backdrop set-create-backdrop" onClick={closeCreateModal} ariaLabel="Close create set modal" />
+          <Modal className="set-create-modal" ariaLabel="Create flash card set">
             <h3>Create Flashcard Set</h3>
             <label className="set-create-modal-label">
               Name
@@ -117,7 +120,7 @@ export function SetsDrawer(props: SetsDrawerProps) {
                 Cancel
               </button>
             </div>
-          </div>
+          </Modal>
         </>
       )}
     </>

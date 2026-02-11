@@ -8,6 +8,8 @@ import type { RowValidation } from './types';
 import { CanvasEditor } from './components/CanvasEditor';
 import { SelectedCardDetails } from './components/SelectedCardDetails';
 import { SetsDrawer } from './components/SetsDrawer';
+import { Modal } from './components/ui/Modal';
+import { OverlayBackdrop } from './components/ui/OverlayBackdrop';
 import { WordListPanel } from './components/WordListPanel';
 import { DEFAULT_TEMPLATE } from './constants/project';
 import { useImage } from './hooks/useImage';
@@ -363,7 +365,7 @@ export default function App() {
         <p>Design one master card layout. Every row in your list uses the same layout.</p>
       </header>
 
-      {setsMenuOpen && <button type="button" className="menu-backdrop" onClick={() => setSetsMenuOpen(false)} aria-label="Close sets menu" />}
+      {setsMenuOpen && <OverlayBackdrop onClick={() => setSetsMenuOpen(false)} ariaLabel="Close sets menu" />}
       <SetsDrawer
         setsMenuOpen={setsMenuOpen}
         sets={sets}
@@ -375,8 +377,8 @@ export default function App() {
       />
       {importModalOpen && (
         <>
-          <button type="button" className="menu-backdrop csv-backdrop" onClick={() => setImportModalOpen(false)} aria-label="Close CSV import" />
-          <div className="csv-modal" role="dialog" aria-modal="true" aria-label="CSV import">
+          <OverlayBackdrop className="menu-backdrop csv-backdrop" onClick={() => setImportModalOpen(false)} ariaLabel="Close CSV import" />
+          <Modal className="csv-modal" ariaLabel="CSV import">
             <h3>Import CSV</h3>
             <p>Columns: `word`, `subtitle`, `imageUrl`. Header row is optional.</p>
             <textarea
@@ -402,13 +404,13 @@ export default function App() {
                 Cancel
               </button>
             </div>
-          </div>
+          </Modal>
         </>
       )}
       {exportModalOpen && (
         <>
-          <button type="button" className="menu-backdrop csv-backdrop" onClick={() => setExportModalOpen(false)} aria-label="Close export" />
-          <div className="csv-modal" role="dialog" aria-modal="true" aria-label="Export PDF">
+          <OverlayBackdrop className="menu-backdrop csv-backdrop" onClick={() => setExportModalOpen(false)} ariaLabel="Close export" />
+          <Modal className="csv-modal" ariaLabel="Export PDF">
             <h3>Export PDF</h3>
             <label>
               Cards per page
@@ -447,7 +449,7 @@ export default function App() {
             )}
             {pdfStatus && <p className="status">{pdfStatus}</p>}
             <p className="hint">If a web image fails due to CORS/restrictions, save it to your computer and upload it from the image modal.</p>
-          </div>
+          </Modal>
         </>
       )}
 
