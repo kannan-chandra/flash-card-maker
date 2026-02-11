@@ -160,8 +160,9 @@
 }
 
 .set-delete-icon {
-  font-size: 14px;
-  line-height: 1;
+  width: 14px;
+  height: 14px;
+  display: block;
 }
 
 .set-create-backdrop {
