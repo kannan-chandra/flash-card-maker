@@ -526,14 +526,6 @@ export function CanvasEditor(props: CanvasEditorProps) {
         <div>
           <div className="stage-toolbar" style={{ width: scaledStageWidth }}>
             <div className="editor-controls">
-              <label>
-                Card Background
-                <input
-                  type="color"
-                  value={project.template.backgroundColor}
-                  onChange={(event) => onPatchTemplate({ backgroundColor: event.target.value })}
-                />
-              </label>
               <div className="double-sided-switch" role="group" aria-label="Card layout mode">
                 <button
                   type="button"
