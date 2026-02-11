@@ -1,18 +1,28 @@
 :root {
   --space-1: 4px;
+  --space-1-5: 6px;
   --space-2: 8px;
   --space-3: 10px;
   --space-4: 12px;
+  --space-5: 14px;
+  --space-6: 16px;
+  --space-7: 20px;
+  --space-8: 40px;
 
   --radius-sm: 4px;
+  --radius-input: 6px;
   --radius-md: 8px;
   --radius-lg: 12px;
   --radius-pill: 999px;
+  --radius-control: 7px;
 
   --z-overlay: 20;
   --z-drawer: 30;
   --z-modal-backdrop: 40;
   --z-modal: 50;
+  --z-sticky: 1;
+  --z-canvas-editor: 10;
+  --z-canvas-loader: 22;
 
   --color-white: #ffffff;
   --color-black: #000000;
@@ -22,6 +32,7 @@
 
   --color-slate-800: #1f2937;
   --color-slate-700: #334155;
+  --color-slate-500: #64748b;
   --color-slate-400: #94a3b8;
 
   --color-surface: #ffffff;
@@ -38,6 +49,7 @@
 
   --color-accent: #2563eb;
   --color-accent-strong: #1d4ed8;
+  --color-accent-alt: #0ea5e9;
   --color-focus: #93c5fd;
   --color-link-hover: #1e40af;
   --color-success: #10b981;
@@ -55,24 +67,22 @@
   --color-drawer-bg: #262626;
   --color-drawer-border: #3f3f46;
   --color-drawer-border-strong: #52525b;
-  --color-drawer-text: #d4d4d4;
+  --color-drawer-text: var(--color-text-inverse);
 
-  --color-page-gradient-from-position: 0%;
-  --color-page-gradient-to-position: 100%;
-  --color-page-gradient-from: #fcd34d var(--color-page-gradient-from-position);
-  --color-page-gradient-to: #fbbf24 var(--color-page-gradient-to-position);
-  --color-page-gradient-stops: var(--color-page-gradient-from), var(--color-page-gradient-to);
-
-  --page-bg-gradient-from-position: var(--color-page-gradient-from-position);
-  --page-bg-gradient-to-position: var(--color-page-gradient-to-position);
-  --page-bg-gradient-from: var(--color-page-gradient-from);
-  --page-bg-gradient-to: var(--color-page-gradient-to);
-  --page-bg-gradient-stops: var(--color-page-gradient-stops);
+  --gradient-page-from-position: 0%;
+  --gradient-page-to-position: 100%;
+  --gradient-page-from: #fcd34d var(--gradient-page-from-position);
+  --gradient-page-to: #fbbf24 var(--gradient-page-to-position);
+  --gradient-page-stops: var(--gradient-page-from), var(--gradient-page-to);
 
   --shadow-soft: 0 10px 24px rgba(15, 23, 42, 0.12);
   --shadow-floating: 0 10px 24px rgba(15, 23, 42, 0.2);
   --shadow-modal: 0 24px 60px rgba(15, 23, 42, 0.2);
+  --shadow-focus-ring: 0 0 0 2px rgba(37, 99, 235, 0.2);
   --overlay-backdrop: rgba(15, 23, 42, 0.35);
+  --overlay-surface-translucent: rgba(255, 255, 255, 0.7);
+  --overlay-muted-border: rgba(148, 163, 184, 0.5);
+  --surface-header-cta: rgba(15, 23, 42, 0.1);
 
   --app-gutter: 20px;
   --app-text-color: var(--color-text-primary);

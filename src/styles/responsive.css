@@ -44,12 +44,12 @@
   }
 
   .double-sided-switch {
-    padding: 4px 6px;
-    gap: 6px;
+    padding: var(--space-1) var(--space-1-5);
+    gap: var(--space-1-5);
   }
 
   .double-sided-option {
     min-height: 34px;
-    padding: 6px 12px;
+    padding: var(--space-1-5) var(--space-4);
   }
 }

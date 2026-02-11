@@ -14,7 +14,7 @@
   color: var(--color-drawer-text);
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--space-3);
 }
 
 .sets-drawer.open {
@@ -82,7 +82,7 @@
 .set-item {
   border: 1px solid var(--color-border-muted);
   border-radius: var(--radius-md);
-  padding: 8px;
+  padding: var(--space-2);
   display: flex;
   justify-content: space-between;
   gap: var(--space-2);
@@ -120,7 +120,7 @@
 .sets-drawer .set-create-item {
   justify-content: center;
   align-items: center;
-  gap: 10px;
+  gap: var(--space-3);
   border-style: dotted;
   border-color: var(--color-drawer-text);
   background: transparent;
@@ -157,7 +157,7 @@
 
 .set-create-modal-label {
   display: grid;
-  gap: 6px;
+  gap: var(--space-1-5);
 }
 
 .set-create-modal-actions {
@@ -166,4 +166,3 @@
   justify-content: flex-end;
   gap: var(--space-2);
 }
-
