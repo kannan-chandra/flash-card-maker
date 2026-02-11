@@ -296,7 +296,11 @@ export function CanvasEditor(props: CanvasEditorProps) {
     if (!canvasDebugEnabled) {
       return;
     }
+    if (stageViewportWidth <= 0 || stageViewportHeight <= 0) {
+      return;
+    }
     const snapshot = {
+      timestamp: new Date().toISOString(),
       breakpoint: {
         singleColumnBreakpoint,
         compactSplitBreakpoint
@@ -335,6 +339,23 @@ export function CanvasEditor(props: CanvasEditorProps) {
         scaledStageWidth,
         scaledStageHeight
       }
+    };
+    const debugWindow = window as Window & {
+      __canvasDebugLog?: unknown[];
+      __getCanvasDebugLogText?: () => string;
+      __clearCanvasDebugLog?: () => void;
+      __copyCanvasDebugLog?: () => Promise<void>;
+    };
+    const current = debugWindow.__canvasDebugLog ?? [];
+    const next = [...current, snapshot];
+    debugWindow.__canvasDebugLog = next.slice(-400);
+    debugWindow.__getCanvasDebugLogText = () => JSON.stringify(debugWindow.__canvasDebugLog ?? [], null, 2);
+    debugWindow.__clearCanvasDebugLog = () => {
+      debugWindow.__canvasDebugLog = [];
+    };
+    debugWindow.__copyCanvasDebugLog = async () => {
+      const text = JSON.stringify(debugWindow.__canvasDebugLog ?? [], null, 2);
+      await navigator.clipboard.writeText(text);
     };
     console.log('CANVAS_DEBUG', snapshot);
   }, [
