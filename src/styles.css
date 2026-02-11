@@ -296,6 +296,7 @@ input[type='color'] {
 .stage-wrap {
   position: relative;
   max-width: 100%;
+  margin: 0 auto;
 }
 
 .stage-canvas {

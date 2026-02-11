@@ -114,9 +114,12 @@ export function CanvasEditor(props: CanvasEditorProps) {
 
   const stageScale = useMemo(() => {
     const widthScale = stageViewportWidth > 0 ? stageViewportWidth / project.template.width : 1;
-    const heightScale = stageViewportHeight > 0 ? stageViewportHeight / stageHeight : 1;
-    return Math.min(1, widthScale, heightScale);
-  }, [project.template.width, stageHeight, stageViewportHeight, stageViewportWidth]);
+    // Keep card apparent size consistent across single/double mode by always
+    // deriving scale from the double-sided vertical requirement (two cards).
+    const doubleSidedReferenceHeight = cardHeight * 2;
+    const heightScale = stageViewportHeight > 0 ? stageViewportHeight / doubleSidedReferenceHeight : 1;
+    return Math.max(0.01, Math.min(widthScale, heightScale));
+  }, [cardHeight, project.template.width, stageViewportHeight, stageViewportWidth]);
   const scaledStageWidth = project.template.width * stageScale;
   const scaledStageHeight = stageHeight * stageScale;
 
