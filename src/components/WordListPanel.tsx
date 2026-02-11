@@ -520,11 +520,10 @@ export function WordListPanel(props: WordListPanelProps) {
               </td>
             </tr>
             {!rows.length ? (
-              <tr className="sheet-hint-row">
-                <td colSpan={2}>
-                  Press Enter to add a row. Empty rows are discarded when you leave them.
-                </td>
-              </tr>
+            <tr className="sheet-hint-row">
+              <td colSpan={2}>
+              </td>
+            </tr>
             ) : null}
           </tbody>
         </table>
