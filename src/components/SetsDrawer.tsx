@@ -63,6 +63,7 @@ export function SetsDrawer(props: SetsDrawerProps) {
           {sets.map((setItem) => (
             <div key={setItem.id} className={`set-item ${setItem.id === activeSetId ? 'active' : ''}`}>
               <button
+                type="button"
                 className="set-select"
                 onClick={() => {
                   onSelectSet(setItem.id);
@@ -72,8 +73,8 @@ export function SetsDrawer(props: SetsDrawerProps) {
                 <strong>{setItem.name}</strong>
                 <span>{setItem.rows.length} rows</span>
               </button>
-              <button className="danger" onClick={() => onDeleteSet(setItem.id)}>
-                Delete
+              <button type="button" className="set-delete-button" aria-label="Delete set" onClick={() => onDeleteSet(setItem.id)}>
+                <span className="set-delete-icon" aria-hidden="true" />
               </button>
             </div>
           ))}

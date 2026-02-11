@@ -83,8 +83,9 @@
   border: 1px solid var(--color-border-muted);
   border-radius: var(--radius-md);
   padding: var(--space-2);
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
   gap: var(--space-2);
 }
 
@@ -94,16 +95,19 @@
 }
 
 .set-select {
-  flex: 1;
+  width: 100%;
   text-align: left;
   display: flex;
   flex-direction: column;
   gap: 2px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
 }
 
 .sets-drawer .set-item,
-.sets-drawer .set-select,
-.sets-drawer .set-item .danger {
+.sets-drawer .set-select {
   background: var(--color-surface);
   color: var(--color-text-primary);
 }
@@ -131,6 +135,52 @@
   font-size: 18px;
   line-height: 1;
   font-weight: 600;
+}
+
+.set-delete-button {
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: var(--color-danger-border);
+  color: var(--color-surface);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.set-delete-button:hover {
+  background: var(--color-warn);
+}
+
+.set-delete-icon {
+  position: relative;
+  width: 13px;
+  height: 13px;
+}
+
+.set-delete-icon::before {
+  content: '';
+  position: absolute;
+  left: 2px;
+  top: 4px;
+  width: 9px;
+  height: 7px;
+  border: 1.5px solid currentColor;
+  border-top: 0;
+  border-radius: 0 0 2px 2px;
+}
+
+.set-delete-icon::after {
+  content: '';
+  position: absolute;
+  left: 1px;
+  top: 2px;
+  width: 11px;
+  height: 1.5px;
+  background: currentColor;
+  border-radius: 1px;
 }
 
 .set-create-backdrop {
