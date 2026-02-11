@@ -112,6 +112,10 @@ export function CanvasEditor(props: CanvasEditorProps) {
   const stageShellRef = useRef<HTMLDivElement>(null);
   const [stageViewportWidth, setStageViewportWidth] = useState<number>(0);
   const [stageViewportHeight, setStageViewportHeight] = useState<number>(0);
+  const [shellClientHeight, setShellClientHeight] = useState<number>(0);
+  const [viewportLimitedHeight, setViewportLimitedHeight] = useState<number>(0);
+  const [browserViewportHeight, setBrowserViewportHeight] = useState<number>(0);
+  const [stageShellRectTop, setStageShellRectTop] = useState<number>(0);
   const [viewportWidth, setViewportWidth] = useState<number>(0);
   const [isNarrowLayout, setIsNarrowLayout] = useState<boolean>(false);
   const [stageShellLeft, setStageShellLeft] = useState<number>(0);
@@ -191,6 +195,12 @@ export function CanvasEditor(props: CanvasEditorProps) {
   }, [referenceHeight, referenceWidth, stageContentHeight, stageViewportHeight, stageViewportWidth]);
   const scaledStageWidth = stageContentWidth * stageScale;
   const scaledStageHeight = stageContentHeight * stageScale;
+  const widthScale = stageViewportWidth > 0 ? stageViewportWidth / referenceWidth : 1;
+  const heightScale = stageViewportHeight > 0 ? stageViewportHeight / referenceHeight : 1;
+  const renderedHeightScale = stageViewportHeight > 0 ? stageViewportHeight / stageContentHeight : 1;
+  const canvasDebugEnabled =
+    typeof window !== 'undefined' &&
+    (new URLSearchParams(window.location.search).get('debugCanvas') === '1' || window.localStorage.getItem('debugCanvas') === '1');
 
   const editingTextElement = useMemo(
     () => project.template.textElements.find((item) => item.id === editingTextId),
@@ -250,11 +260,15 @@ export function CanvasEditor(props: CanvasEditorProps) {
       const rect = shell.getBoundingClientRect();
       setStageShellLeft(rect.left);
       setStageShellTop(rect.top);
+      setStageShellRectTop(rect.top);
       const rootStyle = window.getComputedStyle(document.documentElement);
       const gutterPx = Number.parseFloat(rootStyle.getPropertyValue('--app-gutter')) || 20;
       const viewportHeight = window.visualViewport?.height ?? window.innerHeight;
+      setBrowserViewportHeight(viewportHeight);
       const viewportLimitedHeight = Math.max(0, viewportHeight - rect.top - gutterPx);
+      setViewportLimitedHeight(viewportLimitedHeight);
       const shellHeight = Math.max(0, shell.clientHeight);
+      setShellClientHeight(shellHeight);
       const availableHeight = isMobileLayout && shellHeight > 0 ? shellHeight : viewportLimitedHeight;
       setStageViewportHeight(availableHeight);
     };
@@ -277,6 +291,81 @@ export function CanvasEditor(props: CanvasEditorProps) {
       observer?.disconnect();
     };
   }, []);
+
+  useEffect(() => {
+    if (!canvasDebugEnabled) {
+      return;
+    }
+    const snapshot = {
+      breakpoint: {
+        singleColumnBreakpoint,
+        compactSplitBreakpoint
+      },
+      viewport: {
+        width: viewportWidth,
+        height: browserViewportHeight
+      },
+      layout: {
+        isNarrowLayout,
+        isCompactLayout,
+        doubleSided: project.doubleSided,
+        doubleSidedUsesHorizontalSplit,
+        isHorizontalSplit
+      },
+      measured: {
+        stageViewportWidth,
+        stageViewportHeight,
+        shellClientHeight,
+        viewportLimitedHeight,
+        stageShellRectTop
+      },
+      footprint: {
+        sideWidth,
+        sideHeight,
+        stageContentWidth,
+        stageContentHeight,
+        referenceWidth,
+        referenceHeight
+      },
+      scale: {
+        widthScale,
+        heightScale,
+        renderedHeightScale,
+        chosen: stageScale,
+        scaledStageWidth,
+        scaledStageHeight
+      }
+    };
+    console.log('CANVAS_DEBUG', snapshot);
+  }, [
+    browserViewportHeight,
+    canvasDebugEnabled,
+    compactSplitBreakpoint,
+    doubleSidedUsesHorizontalSplit,
+    heightScale,
+    isCompactLayout,
+    isHorizontalSplit,
+    isNarrowLayout,
+    project.doubleSided,
+    referenceHeight,
+    referenceWidth,
+    renderedHeightScale,
+    scaledStageHeight,
+    scaledStageWidth,
+    shellClientHeight,
+    sideHeight,
+    sideWidth,
+    singleColumnBreakpoint,
+    stageContentHeight,
+    stageContentWidth,
+    stageScale,
+    stageShellRectTop,
+    stageViewportHeight,
+    stageViewportWidth,
+    viewportLimitedHeight,
+    viewportWidth,
+    widthScale
+  ]);
 
   useEffect(() => {
     if (!transformerRef.current) {
