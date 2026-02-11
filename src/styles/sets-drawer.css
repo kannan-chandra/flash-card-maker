@@ -108,6 +108,11 @@
 
 .sets-drawer .set-item,
 .sets-drawer .set-select {
+  background: transparent;
+  color: var(--color-text-primary);
+}
+
+.sets-drawer .set-item {
   background: var(--color-surface);
   color: var(--color-text-primary);
 }
@@ -164,11 +169,10 @@
   content: '';
   position: absolute;
   left: 2px;
-  top: 4px;
+  top: 5px;
   width: 9px;
-  height: 7px;
+  height: 6px;
   border: 1.5px solid currentColor;
-  border-top: 0;
   border-radius: 0 0 2px 2px;
 }
 
@@ -176,11 +180,14 @@
   content: '';
   position: absolute;
   left: 1px;
-  top: 2px;
+  top: 3px;
   width: 11px;
   height: 1.5px;
   background: currentColor;
   border-radius: 1px;
+  box-shadow:
+    3px 4px 0 0 currentColor,
+    6px 4px 0 0 currentColor;
 }
 
 .set-create-backdrop {
