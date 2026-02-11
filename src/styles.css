@@ -203,18 +203,6 @@ main {
   color: #d4d4d4;
 }
 
-.sets-drawer input {
-  background: #333333;
-  border-color: #52525b;
-  color: #d4d4d4;
-}
-
-.sets-drawer button {
-  background: #333333;
-  border-color: #52525b;
-  color: #d4d4d4;
-}
-
 .panel {
   background: #ffffff;
   border: 1px solid #d1d5db;
@@ -657,14 +645,24 @@ input[type='color'] {
   gap: 2px;
 }
 
+.sets-drawer .set-create input,
+.sets-drawer .set-create button,
+.sets-drawer .set-item,
+.sets-drawer .set-select,
+.sets-drawer .set-item .danger {
+  background: #ffffff;
+  color: #171717;
+}
+
+.sets-drawer .set-create input,
+.sets-drawer .set-create button,
 .sets-drawer .set-item {
-  border-color: #52525b;
-  background: #2e2e2e;
+  border-color: #cbd5e1;
 }
 
 .sets-drawer .set-item.active {
-  border-color: #a3a3a3;
-  background: #383838;
+  border-color: #2563eb;
+  background: #eff6ff;
 }
 
 button {
