@@ -111,13 +111,8 @@ export function CanvasEditor(props: CanvasEditorProps) {
   const [stageViewportHeight, setStageViewportHeight] = useState<number>(0);
   const [isImageDropTargetActive, setIsImageDropTargetActive] = useState(false);
   const dragEnterDepthRef = useRef(0);
-  const [dragSelectionInfo, setDragSelectionInfo] = useState<{
-    element: 'image' | 'text1' | 'text2';
-    x: number;
-    y: number;
-    width: number;
-    label: string;
-  } | null>(null);
+  const selectionBadgeRectRef = useRef<Konva.Rect>(null);
+  const selectionBadgeTextRef = useRef<Konva.Text>(null);
 
   const stageScale = useMemo(() => {
     const widthScale = stageViewportWidth > 0 ? stageViewportWidth / project.template.width : 1;
@@ -227,8 +222,15 @@ export function CanvasEditor(props: CanvasEditorProps) {
   }, [selectedElement, project, imageIsEmpty, selectedRow, editingTextId]);
 
   useEffect(() => {
-    setDragSelectionInfo(null);
-  }, [selectedElement]);
+    const selection = getSelectionInfo();
+    if (!selection) {
+      selectionBadgeRectRef.current?.hide();
+      selectionBadgeTextRef.current?.hide();
+      selectionBadgeRectRef.current?.getLayer()?.batchDraw();
+      return;
+    }
+    updateSelectionBadge(selection.x, selection.y, selection.label);
+  }, [selectedElement, project.template.image, project.template.textElements]);
 
   function getRowTextValue(role: TextElement['role']): string {
     if (!selectedRow) {
@@ -317,15 +319,25 @@ export function CanvasEditor(props: CanvasEditorProps) {
     }
   }
 
-  function getSelectionInfo() {
-    if (dragSelectionInfo && selectedElement === dragSelectionInfo.element) {
-      return {
-        x: dragSelectionInfo.x,
-        y: dragSelectionInfo.y,
-        width: dragSelectionInfo.width,
-        label: dragSelectionInfo.label
-      };
+  function updateSelectionBadge(x: number, y: number, label: string) {
+    const rectNode = selectionBadgeRectRef.current;
+    const textNode = selectionBadgeTextRef.current;
+    if (!rectNode || !textNode) {
+      return;
     }
+    const labelWidth = Math.max(70, label.length * 9 + 18);
+    rectNode.position({ x, y: Math.max(4, y - 24) });
+    rectNode.size({ width: labelWidth, height: 20 });
+    rectNode.show();
+
+    textNode.position({ x: x + 8, y: Math.max(7, y - 21) });
+    textNode.text(label);
+    textNode.show();
+
+    rectNode.getLayer()?.batchDraw();
+  }
+
+  function getSelectionInfo() {
     if (selectedElement === 'image') {
       return {
         x: project.template.image.x,
@@ -482,13 +494,7 @@ export function CanvasEditor(props: CanvasEditorProps) {
                     onClick={() => onSelectElement('image')}
                     onTap={() => onSelectElement('image')}
                     onDragMove={(event) => {
-                      setDragSelectionInfo({
-                        element: 'image',
-                        x: event.target.x(),
-                        y: event.target.y(),
-                        width: project.template.image.width,
-                        label: 'Image'
-                      });
+                      updateSelectionBadge(event.target.x(), event.target.y(), 'Image');
                       const sideResult = fromCanvasY(event.target.y(), project.template.image.height);
                       if (sideResult.side !== project.template.image.side) {
                         onPatchTemplate({
@@ -502,7 +508,6 @@ export function CanvasEditor(props: CanvasEditorProps) {
                       }
                     }}
                     onDragEnd={(event) => {
-                      setDragSelectionInfo(null);
                       const sideResult = fromCanvasY(event.target.y(), project.template.image.height);
                       onPatchTemplate({
                         image: {
@@ -568,13 +573,7 @@ export function CanvasEditor(props: CanvasEditorProps) {
                       onDblClick={() => startEditingText(textElement.id)}
                       onDblTap={() => startEditingText(textElement.id)}
                       onDragMove={(event) => {
-                        setDragSelectionInfo({
-                          element: textElement.id,
-                          x: event.target.x(),
-                          y: event.target.y(),
-                          width: textElement.width,
-                          label: textElement.role === 'word' ? 'Word' : 'Subtitle'
-                        });
+                        updateSelectionBadge(event.target.x(), event.target.y(), textElement.role === 'word' ? 'Word' : 'Subtitle');
                         const sideResult = fromCanvasY(event.target.y(), textElement.height);
                         if (sideResult.side !== textElement.side) {
                           onPatchTextElement(textElement.id, {
@@ -585,7 +584,6 @@ export function CanvasEditor(props: CanvasEditorProps) {
                         }
                       }}
                       onDragEnd={(event) => {
-                        setDragSelectionInfo(null);
                         const sideResult = fromCanvasY(event.target.y(), textElement.height);
                         onPatchTextElement(textElement.id, {
                           x: event.target.x(),
@@ -635,13 +633,7 @@ export function CanvasEditor(props: CanvasEditorProps) {
                         onDblClick={() => startEditingText(textElement.id)}
                         onDblTap={() => startEditingText(textElement.id)}
                         onDragMove={(event) => {
-                          setDragSelectionInfo({
-                            element: textElement.id,
-                            x: event.target.x(),
-                            y: event.target.y(),
-                            width: textElement.width,
-                            label: textElement.role === 'word' ? 'Word' : 'Subtitle'
-                          });
+                          updateSelectionBadge(event.target.x(), event.target.y(), textElement.role === 'word' ? 'Word' : 'Subtitle');
                           const sideResult = fromCanvasY(event.target.y(), textElement.height);
                           if (sideResult.side !== textElement.side) {
                             onPatchTextElement(textElement.id, {
@@ -652,7 +644,6 @@ export function CanvasEditor(props: CanvasEditorProps) {
                           }
                         }}
                         onDragEnd={(event) => {
-                          setDragSelectionInfo(null);
                           const sideResult = fromCanvasY(event.target.y(), textElement.height);
                           onPatchTextElement(textElement.id, {
                             x: event.target.x(),
@@ -683,35 +674,8 @@ export function CanvasEditor(props: CanvasEditorProps) {
                 ];
               })}
 
-              {(() => {
-                const selection = getSelectionInfo();
-                if (!selection) {
-                  return null;
-                }
-                const labelWidth = Math.max(70, selection.label.length * 9 + 18);
-                return (
-                  <>
-                    <Rect
-                      x={selection.x}
-                      y={Math.max(4, selection.y - 24)}
-                      width={labelWidth}
-                      height={20}
-                      fill="#2563eb"
-                      cornerRadius={4}
-                      listening={false}
-                    />
-                    <Text
-                      x={selection.x + 8}
-                      y={Math.max(7, selection.y - 21)}
-                      text={selection.label}
-                      fill="#ffffff"
-                      fontSize={12}
-                      fontStyle="bold"
-                      listening={false}
-                    />
-                  </>
-                );
-              })()}
+              <Rect ref={selectionBadgeRectRef} fill="#2563eb" cornerRadius={4} listening={false} visible={false} />
+              <Text ref={selectionBadgeTextRef} fill="#ffffff" fontSize={12} fontStyle="bold" listening={false} visible={false} />
 
               <Transformer ref={transformerRef} rotateEnabled={false} flipEnabled={false} keepRatio={false} />
                 </Layer>
