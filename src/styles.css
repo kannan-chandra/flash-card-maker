@@ -787,6 +787,40 @@ td input:not([type]) {
   z-index: 40;
 }
 
+.set-create-backdrop {
+  z-index: 40;
+}
+
+.set-create-modal {
+  position: fixed;
+  z-index: 50;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(380px, calc(100vw - 28px));
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  padding: 12px;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.2);
+}
+
+.set-create-modal h3 {
+  margin: 0 0 10px;
+}
+
+.set-create-modal-label {
+  display: grid;
+  gap: 6px;
+}
+
+.set-create-modal-actions {
+  margin-top: 12px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
 .csv-modal {
   position: fixed;
   z-index: 50;

@@ -122,8 +122,8 @@ export default function App() {
     setEmojiBulkPromptRowId(null);
   }
 
-  function onCreateSet() {
-    createSet('');
+  function onCreateSet(name: string) {
+    createSet(name);
     setSetsMenuOpen(false);
   }
 
