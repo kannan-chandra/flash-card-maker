@@ -15,5 +15,6 @@ test('creating a set from the drawer modal activates the new set', async ({ page
   await expect(createDialog).toHaveCount(0);
 
   await page.getByRole('button', { name: 'Toggle flash card sets menu' }).click();
+  await expect(page.getByRole('button', { name: newSetName })).toBeVisible();
   await expect(page.locator('.set-item.active .set-select strong')).toHaveText(newSetName);
 });

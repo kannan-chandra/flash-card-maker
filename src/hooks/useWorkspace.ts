@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { makeNewSet, normalizeSet } from '../constants/project';
 import { loadWorkspace, saveWorkspace } from '../storage';
 import type { CardTemplate, FlashcardRow, FlashcardSet, TextElement } from '../types';
@@ -23,14 +23,17 @@ export function useWorkspace(): UseWorkspaceResult {
   const [sets, setSets] = useState<FlashcardSet[]>([]);
   const [activeSetId, setActiveSetId] = useState<string>('');
   const [loading, setLoading] = useState(true);
-  const pendingCreatedSetIdRef = useRef<string | null>(null);
 
   const project = useMemo(() => {
     return sets.find((setItem) => setItem.id === activeSetId) ?? sets[0] ?? null;
   }, [sets, activeSetId]);
 
   useEffect(() => {
+    let cancelled = false;
     loadWorkspace().then((saved) => {
+      if (cancelled) {
+        return;
+      }
       if (saved?.sets.length) {
         const normalizedSets = saved.sets.map(normalizeSet);
         setSets(normalizedSets);
@@ -42,6 +45,9 @@ export function useWorkspace(): UseWorkspaceResult {
       }
       setLoading(false);
     });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -55,18 +61,6 @@ export function useWorkspace(): UseWorkspaceResult {
       updatedAt: Date.now()
     });
   }, [sets, activeSetId, loading]);
-
-  useEffect(() => {
-    const pendingCreatedSetId = pendingCreatedSetIdRef.current;
-    if (!pendingCreatedSetId) {
-      return;
-    }
-    if (!sets.some((item) => item.id === pendingCreatedSetId)) {
-      return;
-    }
-    setActiveSetId(pendingCreatedSetId);
-    pendingCreatedSetIdRef.current = null;
-  }, [sets]);
 
   const updateActiveSet = useCallback(
     (updater: (current: FlashcardSet) => FlashcardSet) => {
@@ -82,13 +76,14 @@ export function useWorkspace(): UseWorkspaceResult {
     [activeSetId]
   );
 
-  const createSet = useCallback((name: string) => {
-    setSets((currentSets) => {
-      const nextSet = makeNewSet(name, currentSets.length + 1);
-      pendingCreatedSetIdRef.current = nextSet.id;
-      return [...currentSets, nextSet];
-    });
-  }, []);
+  const createSet = useCallback(
+    (name: string) => {
+      const nextSet = makeNewSet(name, sets.length + 1);
+      setSets((currentSets) => [...currentSets, nextSet]);
+      setActiveSetId(nextSet.id);
+    },
+    [sets.length]
+  );
 
   const deleteSet = useCallback(
     (setId: string) => {
