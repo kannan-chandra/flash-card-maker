@@ -98,6 +98,8 @@ const keywordToEmojis = new Map<string, Set<string>>();
 const keywordToEmojiRank = new Map<string, Map<string, number>>();
 const emojiToKeywords = new Map<string, string[]>();
 const allEmojiKeywordList = new Map<string, string[]>();
+const allKeywordToEmojis = new Map<string, Set<string>>();
+const allKeywordToEmojiRank = new Map<string, Map<string, number>>();
 const allEmojiLabel = new Map<string, string>();
 const allEmojiOrder = new Map<string, number>();
 const allEmojiFaceGroup = new Map<string, boolean>();
@@ -123,6 +125,19 @@ function addKeywordEmoji(keyword: string, emoji: string, rank: number) {
   keywordToEmojiRank.set(keyword, rankByEmoji);
 }
 
+function addAllKeywordEmoji(keyword: string, emoji: string, rank: number) {
+  const set = allKeywordToEmojis.get(keyword) ?? new Set<string>();
+  set.add(emoji);
+  allKeywordToEmojis.set(keyword, set);
+
+  const rankByEmoji = allKeywordToEmojiRank.get(keyword) ?? new Map<string, number>();
+  const existingRank = rankByEmoji.get(emoji);
+  if (existingRank === undefined || rank < existingRank) {
+    rankByEmoji.set(emoji, rank);
+  }
+  allKeywordToEmojiRank.set(keyword, rankByEmoji);
+}
+
 function addEmojiKeyword(emoji: string, keyword: string): number {
   const list = emojiToKeywords.get(emoji) ?? [];
   const existingIndex = list.indexOf(keyword);
@@ -141,6 +156,14 @@ function keywordRankBonus(keyword: string, emoji: string): number {
     return 0;
   }
   // Earlier keywords are treated as more semantically central.
+  return Math.max(0, 18 - rank * 2);
+}
+
+function allKeywordRankBonus(keyword: string, emoji: string): number {
+  const rank = allKeywordToEmojiRank.get(keyword)?.get(emoji);
+  if (rank === undefined) {
+    return 0;
+  }
   return Math.max(0, 18 - rank * 2);
 }
 
@@ -188,7 +211,15 @@ for (const item of records) {
     for (const taKeyword of getTamilKeywords(item.emoji)) {
       splitKeywords(taKeyword).forEach((keyword) => keywordSet.add(keyword));
     }
-    allEmojiKeywordList.set(item.emoji, [...keywordSet]);
+    const ordered = [...keywordSet];
+    allEmojiKeywordList.set(item.emoji, ordered);
+    ordered.forEach((keyword, rank) => {
+      addAllKeywordEmoji(keyword, item.emoji!, rank);
+      const singular = singularize(keyword);
+      if (singular && singular !== keyword) {
+        addAllKeywordEmoji(singular, item.emoji!, rank);
+      }
+    });
   }
 
   const inNounGroup = item.group !== undefined && NOUN_GROUPS.has(item.group);
@@ -318,40 +349,26 @@ export function searchAllEmojis(query: string, limit = 120): Array<{ emoji: stri
   const bump = (emoji: string, points: number) => {
     scoreByEmoji.set(emoji, (scoreByEmoji.get(emoji) ?? 0) + points);
   };
-
-  for (const emoji of entries) {
-    const label = normalizeWord(allEmojiLabel.get(emoji) ?? '');
-    const keywords = allEmojiKeywordList.get(emoji) ?? [];
-    const keywordSet = new Set(keywords);
-    const keywordBlob = keywords.join(' ');
-
-    if (label === normalized) {
-      bump(emoji, 120);
-    } else if (label.startsWith(normalized)) {
-      bump(emoji, 90);
-    } else if (label.includes(normalized)) {
-      bump(emoji, 45);
+  const bumpByKeyword = (keyword: string, basePoints: number) => {
+    for (const emoji of allKeywordToEmojis.get(keyword) ?? []) {
+      bump(emoji, basePoints + allKeywordRankBonus(keyword, emoji));
     }
+  };
 
-    if (keywordSet.has(normalized)) {
-      bump(emoji, 100);
-    }
+  for (const emoji of allKeywordToEmojis.get(normalized) ?? []) {
+    bump(emoji, 100 + allKeywordRankBonus(normalized, emoji));
+  }
 
-    for (const part of parts) {
-      const singular = singularize(part);
-      if (keywordSet.has(part)) {
-        bump(emoji, 60);
-      }
-      if (singular !== part && keywordSet.has(singular)) {
-        bump(emoji, 50);
-      }
-      for (const keyword of keywords) {
-        if (keyword.startsWith(part)) {
-          bump(emoji, 30);
-        }
-      }
-      if (label.includes(part) || keywordBlob.includes(part)) {
-        bump(emoji, 15);
+  for (const part of parts) {
+    const singular = singularize(part);
+    bumpByKeyword(part, 60);
+    bumpByKeyword(singular, 50);
+  }
+
+  for (const [keyword, emojis] of allKeywordToEmojis.entries()) {
+    if (normalized.includes(keyword)) {
+      for (const emoji of emojis) {
+        bump(emoji, 20 + allKeywordRankBonus(keyword, emoji));
       }
     }
   }
