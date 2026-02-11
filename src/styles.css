@@ -134,6 +134,7 @@ main {
   border: 0;
   border-radius: 0;
   padding: 0;
+  min-height: 0;
 }
 
 .data-panel {
@@ -165,6 +166,14 @@ main {
   grid-template-columns: minmax(0, 1fr);
   gap: 12px;
   align-items: start;
+  min-height: 0;
+  height: 100%;
+}
+
+.editor-layout > div {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
 .card-detail-panel {
@@ -317,6 +326,9 @@ input[type='color'] {
 
 .stage-shell {
   width: 100%;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .stage {

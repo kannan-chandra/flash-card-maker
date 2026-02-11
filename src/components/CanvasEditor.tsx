@@ -108,10 +108,15 @@ export function CanvasEditor(props: CanvasEditorProps) {
   const textEditorRef = useRef<HTMLTextAreaElement>(null);
   const stageShellRef = useRef<HTMLDivElement>(null);
   const [stageViewportWidth, setStageViewportWidth] = useState<number>(0);
+  const [stageViewportHeight, setStageViewportHeight] = useState<number>(0);
   const [isImageDropTargetActive, setIsImageDropTargetActive] = useState(false);
   const dragEnterDepthRef = useRef(0);
 
-  const stageScale = stageViewportWidth > 0 ? Math.min(1, stageViewportWidth / project.template.width) : 1;
+  const stageScale = useMemo(() => {
+    const widthScale = stageViewportWidth > 0 ? stageViewportWidth / project.template.width : 1;
+    const heightScale = stageViewportHeight > 0 ? stageViewportHeight / stageHeight : 1;
+    return Math.min(1, widthScale, heightScale);
+  }, [project.template.width, stageHeight, stageViewportHeight, stageViewportWidth]);
   const scaledStageWidth = project.template.width * stageScale;
   const scaledStageHeight = stageHeight * stageScale;
 
@@ -166,6 +171,7 @@ export function CanvasEditor(props: CanvasEditorProps) {
 
     const syncWidth = () => {
       setStageViewportWidth(shell.clientWidth);
+      setStageViewportHeight(shell.clientHeight);
     };
 
     syncWidth();
