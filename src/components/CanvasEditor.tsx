@@ -125,7 +125,7 @@ export function CanvasEditor(props: CanvasEditorProps) {
 
   const isCompactLayout = viewportWidth > 0 && viewportWidth <= compactSplitBreakpoint;
   const doubleSidedUsesHorizontalSplit = isNarrowLayout && !isCompactLayout;
-  const isHorizontalDoubleSidedReference = doubleSidedUsesHorizontalSplit;
+  const isHorizontalDoubleSidedReference = isNarrowLayout;
   const isHorizontalSplit = project.doubleSided && doubleSidedUsesHorizontalSplit;
   const useCompactToggleLabels = viewportWidth > 0 && viewportWidth <= compactToggleBreakpoint;
   const sideWidth = project.template.width;
@@ -184,8 +184,11 @@ export function CanvasEditor(props: CanvasEditorProps) {
     // scaling against a double-sided reference footprint for the current layout.
     const widthScale = stageViewportWidth > 0 ? stageViewportWidth / referenceWidth : 1;
     const heightScale = stageViewportHeight > 0 ? stageViewportHeight / referenceHeight : 1;
-    return Math.max(0.01, Math.min(widthScale, heightScale));
-  }, [referenceHeight, referenceWidth, stageViewportHeight, stageViewportWidth]);
+    // Also cap by the real rendered stage height so mobile stacked mode
+    // cannot overlap the word list when the 2/3 area is the limiter.
+    const renderedHeightScale = stageViewportHeight > 0 ? stageViewportHeight / stageContentHeight : 1;
+    return Math.max(0.01, Math.min(widthScale, heightScale, renderedHeightScale));
+  }, [referenceHeight, referenceWidth, stageContentHeight, stageViewportHeight, stageViewportWidth]);
   const scaledStageWidth = stageContentWidth * stageScale;
   const scaledStageHeight = stageContentHeight * stageScale;
 
