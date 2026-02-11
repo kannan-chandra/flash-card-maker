@@ -74,7 +74,9 @@ export function SetsDrawer(props: SetsDrawerProps) {
                 <span>{setItem.rows.length} rows</span>
               </button>
               <button type="button" className="set-delete-button" aria-label="Delete set" onClick={() => onDeleteSet(setItem.id)}>
-                <span className="set-delete-icon" aria-hidden="true" />
+                <span className="set-delete-icon" aria-hidden="true">
+                  🗑
+                </span>
               </button>
             </div>
           ))}
