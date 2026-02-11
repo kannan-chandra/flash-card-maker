@@ -92,6 +92,8 @@ function getContainSize(containerWidth: number, containerHeight: number, sourceW
 
 export function CanvasEditor(props: CanvasEditorProps) {
   const singleColumnBreakpoint = 1180;
+  const compactSplitBreakpoint = 720;
+  const compactToggleBreakpoint = 500;
   const { project, selection, canvas, actions, children } = props;
   const { selectedRow, selectedElement, previewImage, imageIsEmpty, imageIsLoading } = selection;
   const { cardHeight } = canvas;
@@ -110,6 +112,7 @@ export function CanvasEditor(props: CanvasEditorProps) {
   const stageShellRef = useRef<HTMLDivElement>(null);
   const [stageViewportWidth, setStageViewportWidth] = useState<number>(0);
   const [stageViewportHeight, setStageViewportHeight] = useState<number>(0);
+  const [viewportWidth, setViewportWidth] = useState<number>(0);
   const [isNarrowLayout, setIsNarrowLayout] = useState<boolean>(false);
   const [stageShellLeft, setStageShellLeft] = useState<number>(0);
   const [stageShellTop, setStageShellTop] = useState<number>(0);
@@ -120,13 +123,16 @@ export function CanvasEditor(props: CanvasEditorProps) {
   const selectionBadgeRectRef = useRef<Konva.Rect>(null);
   const selectionBadgeTextRef = useRef<Konva.Text>(null);
 
-  const isHorizontalSplit = project.doubleSided && isNarrowLayout;
+  const isCompactLayout = viewportWidth > 0 && viewportWidth <= compactSplitBreakpoint;
+  const isHorizontalDoubleSidedReference = isNarrowLayout && !isCompactLayout;
+  const isHorizontalSplit = project.doubleSided && isHorizontalDoubleSidedReference;
+  const useCompactToggleLabels = viewportWidth > 0 && viewportWidth <= compactToggleBreakpoint;
   const sideWidth = project.template.width;
   const sideHeight = cardHeight;
   const stageContentWidth = project.doubleSided && isHorizontalSplit ? sideWidth * 2 : sideWidth;
   const stageContentHeight = project.doubleSided ? (isHorizontalSplit ? sideHeight : sideHeight * 2) : sideHeight;
-  const referenceWidth = isNarrowLayout ? sideWidth * 2 : sideWidth;
-  const referenceHeight = isNarrowLayout ? sideHeight : sideHeight * 2;
+  const referenceWidth = isHorizontalDoubleSidedReference ? sideWidth * 2 : sideWidth;
+  const referenceHeight = isHorizontalDoubleSidedReference ? sideHeight : sideHeight * 2;
 
   function getSideOffset(side: 1 | 2) {
     if (!project.doubleSided) {
@@ -234,6 +240,7 @@ export function CanvasEditor(props: CanvasEditorProps) {
     const syncWidth = () => {
       setStageViewportWidth(shell.clientWidth);
       const viewportWidth = window.visualViewport?.width ?? window.innerWidth;
+      setViewportWidth(viewportWidth);
       setIsNarrowLayout(viewportWidth <= singleColumnBreakpoint);
       const rect = shell.getBoundingClientRect();
       setStageShellLeft(rect.left);
@@ -529,17 +536,19 @@ export function CanvasEditor(props: CanvasEditorProps) {
                   type="button"
                   className={`double-sided-option ${project.doubleSided ? '' : 'is-active'}`}
                   aria-pressed={!project.doubleSided}
+                  aria-label="Single-sided"
                   onClick={() => onToggleDoubleSided(false)}
                 >
-                  Single-sided
+                  {useCompactToggleLabels ? 'Single' : 'Single-sided'}
                 </button>
                 <button
                   type="button"
                   className={`double-sided-option ${project.doubleSided ? 'is-active' : ''}`}
                   aria-pressed={project.doubleSided}
+                  aria-label="Double-sided"
                   onClick={() => onToggleDoubleSided(true)}
                 >
-                  Double-sided
+                  {useCompactToggleLabels ? 'Double' : 'Double-sided'}
                 </button>
               </div>
             </div>

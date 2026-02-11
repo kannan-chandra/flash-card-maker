@@ -889,3 +889,19 @@ td input:not([type]) {
   }
 
 }
+
+@media (max-width: 500px) {
+  .editor-controls {
+    gap: 8px;
+  }
+
+  .double-sided-switch {
+    padding: 4px 6px;
+    gap: 6px;
+  }
+
+  .double-sided-option {
+    min-height: 34px;
+    padding: 6px 12px;
+  }
+}
