@@ -15,6 +15,7 @@ interface SelectedCardDetailsProps {
     selectedRowHasImage: boolean;
     imageUrlDraft: string;
     selectedRowEmojiMatches: EmojiMatch[];
+    showUseEmojiForAll: boolean;
   };
   actions: {
     onImageUrlDraftChange: (value: string) => void;
@@ -22,13 +23,15 @@ interface SelectedCardDetailsProps {
     onSelectedRowImageUpload: (file: File) => void;
     onApplyEmoji: (rowId: string, emoji: string) => void;
     onRemoveSelectedRowImage: () => void;
+    onUseEmojiForAllWords: () => void;
   };
 }
 
 export function SelectedCardDetails(props: SelectedCardDetailsProps) {
   const { data, actions } = props;
-  const { selectedRow, selectedRowHasImage, imageUrlDraft, selectedRowEmojiMatches } = data;
-  const { onImageUrlDraftChange, onApplySelectedImageUrl, onSelectedRowImageUpload, onApplyEmoji, onRemoveSelectedRowImage } = actions;
+  const { selectedRow, selectedRowHasImage, imageUrlDraft, selectedRowEmojiMatches, showUseEmojiForAll } = data;
+  const { onImageUrlDraftChange, onApplySelectedImageUrl, onSelectedRowImageUpload, onApplyEmoji, onRemoveSelectedRowImage, onUseEmojiForAllWords } =
+    actions;
   const [showUrlInput, setShowUrlInput] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const urlInputRef = useRef<HTMLInputElement>(null);
@@ -90,6 +93,11 @@ export function SelectedCardDetails(props: SelectedCardDetailsProps) {
             <button type="button" className="danger" onClick={onRemoveSelectedRowImage}>
               Remove image
             </button>
+            {showUseEmojiForAll ? (
+              <button type="button" className="button-link" onClick={onUseEmojiForAllWords}>
+                Use emoji for all words
+              </button>
+            ) : null}
           </div>
         ) : (
           <div className="image-options">

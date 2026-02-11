@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import tamilFontUrl from '@fontsource/noto-sans-tamil/files/noto-sans-tamil-tamil-400-normal.woff?url';
 import '@fontsource/noto-sans-tamil/400.css';
 import type { RowValidation } from './types';
@@ -36,6 +36,8 @@ export default function App() {
     stage: ''
   });
   const [imageIssues, setImageIssues] = useState<Record<string, string>>({});
+  const [emojiBulkPromptRowId, setEmojiBulkPromptRowId] = useState<string | null>(null);
+  const emojiBulkPromptTimerRef = useRef<number | null>(null);
 
   const selectedRow = useMemo(() => {
     if (!project) {
@@ -89,6 +91,34 @@ export default function App() {
     setImageUrlDraft(selectedRow?.imageUrl ?? '');
   }, [selectedRow?.id, selectedRow?.imageUrl]);
 
+  useEffect(
+    () => () => {
+      if (emojiBulkPromptTimerRef.current !== null) {
+        window.clearTimeout(emojiBulkPromptTimerRef.current);
+      }
+    },
+    []
+  );
+
+  function showEmojiBulkPrompt(rowId: string) {
+    if (emojiBulkPromptTimerRef.current !== null) {
+      window.clearTimeout(emojiBulkPromptTimerRef.current);
+    }
+    setEmojiBulkPromptRowId(rowId);
+    emojiBulkPromptTimerRef.current = window.setTimeout(() => {
+      setEmojiBulkPromptRowId(null);
+      emojiBulkPromptTimerRef.current = null;
+    }, 5000);
+  }
+
+  function clearEmojiBulkPrompt() {
+    if (emojiBulkPromptTimerRef.current !== null) {
+      window.clearTimeout(emojiBulkPromptTimerRef.current);
+      emojiBulkPromptTimerRef.current = null;
+    }
+    setEmojiBulkPromptRowId(null);
+  }
+
   function onCreateSet() {
     createSet(newSetName);
     setNewSetName('');
@@ -126,6 +156,7 @@ export default function App() {
       ...current,
       rows: current.rows.map((row) => (row.id === rowId ? { ...row, ...setImageFromDataUrl(dataUrl) } : row))
     }));
+    clearEmojiBulkPrompt();
   }
 
   async function onSelectedRowImageUpload(file: File) {
@@ -138,6 +169,23 @@ export default function App() {
   function applyEmojiToRow(rowId: string, emoji: string) {
     const dataUrl = createEmojiImageDataUrl(emoji);
     updateRow(rowId, setImageFromDataUrl(dataUrl));
+    showEmojiBulkPrompt(rowId);
+  }
+
+  function applyTopEmojiToAllRows() {
+    updateActiveSet((current) => ({
+      ...current,
+      rows: current.rows.map((row) => {
+        const topWordEmoji = findTopEmojiMatches(row.word ?? '', 1)[0]?.emoji;
+        const topSubtitleEmoji = findTopEmojiMatches(row.subtitle ?? '', 1)[0]?.emoji;
+        const topEmoji = topWordEmoji ?? topSubtitleEmoji;
+        if (!topEmoji) {
+          return row;
+        }
+        return { ...row, ...setImageFromDataUrl(createEmojiImageDataUrl(topEmoji)) };
+      })
+    }));
+    clearEmojiBulkPrompt();
   }
 
   function onApplySelectedImageUrl(value?: string) {
@@ -149,6 +197,7 @@ export default function App() {
       return;
     }
     updateRow(selectedRow.id, setImageFromUrl(trimmed));
+    clearEmojiBulkPrompt();
   }
 
   function onRemoveSelectedRowImage() {
@@ -157,6 +206,7 @@ export default function App() {
     }
     updateRow(selectedRow.id, clearRowImage());
     setImageUrlDraft('');
+    clearEmojiBulkPrompt();
   }
 
   async function generatePdf() {
@@ -403,14 +453,16 @@ export default function App() {
               selectedRow,
               selectedRowHasImage,
               imageUrlDraft,
-              selectedRowEmojiMatches
+              selectedRowEmojiMatches,
+              showUseEmojiForAll: selectedRow?.id === emojiBulkPromptRowId
             }}
             actions={{
               onImageUrlDraftChange: setImageUrlDraft,
               onApplySelectedImageUrl,
               onSelectedRowImageUpload: (file) => void onSelectedRowImageUpload(file),
               onApplyEmoji: applyEmojiToRow,
-              onRemoveSelectedRowImage
+              onRemoveSelectedRowImage,
+              onUseEmojiForAllWords: applyTopEmojiToAllRows
             }}
           />
         </CanvasEditor>
