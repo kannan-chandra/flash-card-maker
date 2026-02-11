@@ -403,19 +403,19 @@ export function CanvasEditor(props: CanvasEditorProps) {
                 <Layer>
               <Rect
                 name="canvas-bg"
-                x={0}
-                y={0}
-                width={project.template.width}
-                height={stageHeight}
+                x={0.5}
+                y={0.5}
+                width={Math.max(project.template.width - 1, 0)}
+                height={Math.max(stageHeight - 1, 0)}
                 fill="#f8fafc"
                 stroke="#d1d5db"
                 strokeWidth={1}
               />
               <Rect
-                x={0}
-                y={0}
-                width={project.template.width}
-                height={cardHeight}
+                x={0.5}
+                y={0.5}
+                width={Math.max(project.template.width - 1, 0)}
+                height={Math.max(cardHeight - 1, 0)}
                 fill={project.template.backgroundColor}
                 stroke="#94a3b8"
                 strokeWidth={1}
@@ -423,10 +423,10 @@ export function CanvasEditor(props: CanvasEditorProps) {
               />
               {project.doubleSided && (
                 <Rect
-                  x={0}
-                  y={cardHeight}
-                  width={project.template.width}
-                  height={cardHeight}
+                  x={0.5}
+                  y={cardHeight + 0.5}
+                  width={Math.max(project.template.width - 1, 0)}
+                  height={Math.max(cardHeight - 1, 0)}
                   fill={project.template.backgroundColor}
                   stroke="#94a3b8"
                   strokeWidth={1}
