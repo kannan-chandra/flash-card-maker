@@ -640,6 +640,22 @@ td input:not([type]) {
   padding-bottom: 2px;
 }
 
+.double-sided-toggle {
+  min-height: 36px;
+  min-width: 180px;
+  font-weight: 700;
+  border-width: 2px;
+  background: #e5e7eb;
+  border-color: #9ca3af;
+  color: #334155;
+}
+
+.double-sided-toggle.active {
+  background: #1d4ed8;
+  border-color: #1e40af;
+  color: #ffffff;
+}
+
 .status {
   margin-top: 10px;
   font-weight: 600;

@@ -358,14 +358,14 @@ export function CanvasEditor(props: CanvasEditorProps) {
                 onChange={(event) => onPatchTemplate({ backgroundColor: event.target.value })}
               />
             </label>
-            <label className="checkbox-row control-checkbox">
-              <input
-                type="checkbox"
-                checked={project.doubleSided}
-                onChange={(event) => onToggleDoubleSided(event.target.checked)}
-              />
+            <button
+              type="button"
+              className={`double-sided-toggle ${project.doubleSided ? 'active' : ''}`}
+              aria-pressed={project.doubleSided}
+              onClick={() => onToggleDoubleSided(!project.doubleSided)}
+            >
               Double-sided cards
-            </label>
+            </button>
           </div>
 
           <div className="stage-shell" ref={stageShellRef}>
