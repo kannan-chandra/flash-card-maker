@@ -304,9 +304,6 @@ export default function App() {
           Export
         </button>
         <p>Design one master card layout. Every row in your list uses the same layout.</p>
-        <p className="local-only">
-          Stored locally in this browser only (IndexedDB). If browser data is cleared, your project is lost.
-        </p>
       </header>
 
       {setsMenuOpen && <button type="button" className="menu-backdrop" onClick={() => setSetsMenuOpen(false)} aria-label="Close sets menu" />}
