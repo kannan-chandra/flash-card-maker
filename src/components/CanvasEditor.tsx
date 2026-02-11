@@ -174,7 +174,11 @@ export function CanvasEditor(props: CanvasEditorProps) {
 
     const syncWidth = () => {
       setStageViewportWidth(shell.clientWidth);
-      setStageViewportHeight(shell.clientHeight);
+      const rect = shell.getBoundingClientRect();
+      const rootStyle = window.getComputedStyle(document.documentElement);
+      const gutterPx = Number.parseFloat(rootStyle.getPropertyValue('--app-gutter')) || 20;
+      const availableHeight = Math.max(0, window.innerHeight - rect.top - gutterPx);
+      setStageViewportHeight(availableHeight);
     };
 
     syncWidth();
