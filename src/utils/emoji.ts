@@ -141,7 +141,7 @@ function keywordRankBonus(keyword: string, emoji: string): number {
 for (const item of records) {
   const inNounGroup = item.group !== undefined && NOUN_GROUPS.has(item.group);
   const inAllowedPersonSubgroup = item.subgroup !== undefined && PERSON_SUBGROUP_ORDERS.has(item.subgroup);
-  if (item.type !== 1 || !item.emoji || (!inNounGroup && !inAllowedPersonSubgroup)) {
+  if ((item.type !== 1 && item.type !== 0) || !item.emoji || (!inNounGroup && !inAllowedPersonSubgroup)) {
     continue;
   }
 
