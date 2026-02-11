@@ -109,11 +109,14 @@ export function CanvasEditor(props: CanvasEditorProps) {
   const [editingTextId, setEditingTextId] = useState<'text1' | 'text2' | null>(null);
   const [editingValue, setEditingValue] = useState('');
   const textEditorRef = useRef<HTMLTextAreaElement>(null);
+  const editorPanelRef = useRef<HTMLElement>(null);
+  const stageToolbarRef = useRef<HTMLDivElement>(null);
   const stageShellRef = useRef<HTMLDivElement>(null);
   const [stageViewportWidth, setStageViewportWidth] = useState<number>(0);
   const [stageViewportHeight, setStageViewportHeight] = useState<number>(0);
   const [shellClientHeight, setShellClientHeight] = useState<number>(0);
   const [viewportLimitedHeight, setViewportLimitedHeight] = useState<number>(0);
+  const [allocatedShellHeight, setAllocatedShellHeight] = useState<number>(0);
   const [browserViewportHeight, setBrowserViewportHeight] = useState<number>(0);
   const [stageShellRectTop, setStageShellRectTop] = useState<number>(0);
   const [viewportWidth, setViewportWidth] = useState<number>(0);
@@ -269,7 +272,12 @@ export function CanvasEditor(props: CanvasEditorProps) {
       setViewportLimitedHeight(viewportLimitedHeight);
       const shellHeight = Math.max(0, shell.clientHeight);
       setShellClientHeight(shellHeight);
-      const availableHeight = isMobileLayout && shellHeight > 0 ? shellHeight : viewportLimitedHeight;
+      const editorRect = editorPanelRef.current?.getBoundingClientRect();
+      const allocatedHeightFromPanel = editorRect ? Math.max(0, editorRect.bottom - rect.top) : 0;
+      setAllocatedShellHeight(allocatedHeightFromPanel);
+      const availableHeight = isMobileLayout
+        ? Math.max(0, Math.min(viewportLimitedHeight, allocatedHeightFromPanel || viewportLimitedHeight))
+        : viewportLimitedHeight;
       setStageViewportHeight(availableHeight);
     };
 
@@ -320,6 +328,7 @@ export function CanvasEditor(props: CanvasEditorProps) {
         stageViewportWidth,
         stageViewportHeight,
         shellClientHeight,
+        allocatedShellHeight,
         viewportLimitedHeight,
         stageShellRectTop
       },
@@ -373,6 +382,7 @@ export function CanvasEditor(props: CanvasEditorProps) {
     renderedHeightScale,
     scaledStageHeight,
     scaledStageWidth,
+    allocatedShellHeight,
     shellClientHeight,
     sideHeight,
     sideWidth,
@@ -635,10 +645,10 @@ export function CanvasEditor(props: CanvasEditorProps) {
   });
 
   return (
-    <section className="panel editor-panel">
+    <section ref={editorPanelRef} className="panel editor-panel">
       <div className="editor-layout">
         <div>
-          <div className="stage-toolbar" style={{ width: scaledStageWidth }}>
+          <div ref={stageToolbarRef} className="stage-toolbar" style={{ width: scaledStageWidth }}>
             <div className="editor-controls">
               <div className="double-sided-switch" role="group" aria-label="Card layout mode">
                 <button
