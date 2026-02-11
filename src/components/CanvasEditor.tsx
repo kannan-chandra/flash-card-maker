@@ -132,7 +132,7 @@ export function CanvasEditor(props: CanvasEditorProps) {
 
   const isCompactLayout = viewportWidth > 0 && viewportWidth <= compactSplitBreakpoint;
   const doubleSidedUsesHorizontalSplit = isNarrowLayout && !isCompactLayout;
-  const isHorizontalDoubleSidedReference = isNarrowLayout;
+  const isHorizontalDoubleSidedReference = doubleSidedUsesHorizontalSplit;
   const isHorizontalSplit = project.doubleSided && doubleSidedUsesHorizontalSplit;
   const useCompactToggleLabels = viewportWidth > 0 && viewportWidth <= compactToggleBreakpoint;
   const sideWidth = project.template.width;
