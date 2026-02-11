@@ -9,17 +9,25 @@
   box-sizing: border-box;
 }
 
+html,
+body,
+#root {
+  height: 100%;
+}
+
 body {
   margin: 0;
+  overflow: hidden;
 }
 
 .app {
   max-width: 1400px;
   margin: 0 auto;
   padding: var(--app-gutter);
-  min-height: 100vh;
+  height: 100vh;
   display: grid;
   grid-template-rows: auto 1fr;
+  overflow: hidden;
 }
 
 header {
@@ -52,6 +60,7 @@ main {
   grid-template-columns: minmax(320px, 1fr) minmax(620px, 1.45fr);
   gap: 16px;
   min-height: 0;
+  overflow: hidden;
 }
 
 .hamburger-btn {
