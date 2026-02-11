@@ -605,16 +605,6 @@ input[type='color'] {
   gap: 8px;
 }
 
-.set-create {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 10px;
-}
-
-.set-create input {
-  flex: 1;
-}
-
 .set-list {
   display: flex;
   flex-direction: column;
@@ -645,8 +635,6 @@ input[type='color'] {
   gap: 2px;
 }
 
-.sets-drawer .set-create input,
-.sets-drawer .set-create button,
 .sets-drawer .set-item,
 .sets-drawer .set-select,
 .sets-drawer .set-item .danger {
@@ -654,8 +642,6 @@ input[type='color'] {
   color: #171717;
 }
 
-.sets-drawer .set-create input,
-.sets-drawer .set-create button,
 .sets-drawer .set-item {
   border-color: #cbd5e1;
 }
@@ -663,6 +649,22 @@ input[type='color'] {
 .sets-drawer .set-item.active {
   border-color: #2563eb;
   background: #eff6ff;
+}
+
+.sets-drawer .set-create-item {
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  border-style: dotted;
+  border-color: #d4d4d4;
+  background: transparent;
+  color: #d4d4d4;
+}
+
+.sets-drawer .set-create-icon {
+  font-size: 18px;
+  line-height: 1;
+  font-weight: 600;
 }
 
 button {

@@ -2,10 +2,8 @@ import type { FlashcardSet } from '../types';
 
 interface SetsDrawerProps {
   setsMenuOpen: boolean;
-  newSetName: string;
   sets: FlashcardSet[];
   activeSetId: string;
-  onNewSetNameChange: (value: string) => void;
   onCreateSet: () => void;
   onSelectSet: (setId: string) => void;
   onDeleteSet: (setId: string) => void;
@@ -15,10 +13,8 @@ interface SetsDrawerProps {
 export function SetsDrawer(props: SetsDrawerProps) {
   const {
     setsMenuOpen,
-    newSetName,
     sets,
     activeSetId,
-    onNewSetNameChange,
     onCreateSet,
     onSelectSet,
     onDeleteSet,
@@ -32,15 +28,6 @@ export function SetsDrawer(props: SetsDrawerProps) {
         <button type="button" className="sets-drawer-close" onClick={onClose} aria-label="Close sets menu">
           <span aria-hidden="true" />
         </button>
-      </div>
-      <div className="set-create">
-        <input
-          value={newSetName}
-          onChange={(event) => onNewSetNameChange(event.target.value)}
-          placeholder="New set name"
-          aria-label="New set name"
-        />
-        <button onClick={onCreateSet}>Create Set</button>
       </div>
       <div className="set-list">
         {sets.map((setItem) => (
@@ -60,6 +47,12 @@ export function SetsDrawer(props: SetsDrawerProps) {
             </button>
           </div>
         ))}
+        <button type="button" className="set-item set-create-item" onClick={onCreateSet}>
+          <span className="set-create-icon" aria-hidden="true">
+            +
+          </span>
+          <span>Create Flashcard Set</span>
+        </button>
       </div>
     </aside>
   );

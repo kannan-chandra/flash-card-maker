@@ -26,7 +26,6 @@ function makeRowId(): string {
 export default function App() {
   const { sets, project, loading, setActiveSetId, createSet, deleteSet, updateActiveSet, patchTemplate, patchTextElement, appendRows, updateRow } =
     useWorkspace();
-  const [newSetName, setNewSetName] = useState('');
   const [setsMenuOpen, setSetsMenuOpen] = useState(false);
   const [exportModalOpen, setExportModalOpen] = useState(false);
   const [importModalOpen, setImportModalOpen] = useState(false);
@@ -124,8 +123,7 @@ export default function App() {
   }
 
   function onCreateSet() {
-    createSet(newSetName);
-    setNewSetName('');
+    createSet('');
     setSetsMenuOpen(false);
   }
 
@@ -368,10 +366,8 @@ export default function App() {
       {setsMenuOpen && <button type="button" className="menu-backdrop" onClick={() => setSetsMenuOpen(false)} aria-label="Close sets menu" />}
       <SetsDrawer
         setsMenuOpen={setsMenuOpen}
-        newSetName={newSetName}
         sets={sets}
         activeSetId={project.id}
-        onNewSetNameChange={setNewSetName}
         onCreateSet={onCreateSet}
         onSelectSet={setActiveSetId}
         onDeleteSet={onDeleteSet}
