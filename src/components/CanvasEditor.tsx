@@ -258,8 +258,8 @@ export function CanvasEditor(props: CanvasEditorProps) {
       setStageViewportWidth(shell.clientWidth);
       const viewportWidth = window.visualViewport?.width ?? window.innerWidth;
       setViewportWidth(viewportWidth);
-      setIsNarrowLayout(viewportWidth <= singleColumnBreakpoint);
-      const isMobileLayout = viewportWidth <= compactSplitBreakpoint;
+      const isNarrowWidth = viewportWidth <= singleColumnBreakpoint;
+      setIsNarrowLayout(isNarrowWidth);
       const rect = shell.getBoundingClientRect();
       setStageShellLeft(rect.left);
       setStageShellTop(rect.top);
@@ -275,7 +275,7 @@ export function CanvasEditor(props: CanvasEditorProps) {
       const editorRect = editorPanelRef.current?.getBoundingClientRect();
       const allocatedHeightFromPanel = editorRect ? Math.max(0, editorRect.bottom - rect.top) : 0;
       setAllocatedShellHeight(allocatedHeightFromPanel);
-      const availableHeight = isMobileLayout
+      const availableHeight = isNarrowWidth
         ? Math.max(0, Math.min(viewportLimitedHeight, allocatedHeightFromPanel || viewportLimitedHeight))
         : viewportLimitedHeight;
       setStageViewportHeight(availableHeight);
