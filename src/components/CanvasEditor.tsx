@@ -242,13 +242,16 @@ export function CanvasEditor(props: CanvasEditorProps) {
       const viewportWidth = window.visualViewport?.width ?? window.innerWidth;
       setViewportWidth(viewportWidth);
       setIsNarrowLayout(viewportWidth <= singleColumnBreakpoint);
+      const isMobileLayout = viewportWidth <= compactSplitBreakpoint;
       const rect = shell.getBoundingClientRect();
       setStageShellLeft(rect.left);
       setStageShellTop(rect.top);
       const rootStyle = window.getComputedStyle(document.documentElement);
       const gutterPx = Number.parseFloat(rootStyle.getPropertyValue('--app-gutter')) || 20;
       const viewportHeight = window.visualViewport?.height ?? window.innerHeight;
-      const availableHeight = Math.max(0, viewportHeight - rect.top - gutterPx);
+      const viewportLimitedHeight = Math.max(0, viewportHeight - rect.top - gutterPx);
+      const shellHeight = Math.max(0, shell.clientHeight);
+      const availableHeight = isMobileLayout && shellHeight > 0 ? shellHeight : viewportLimitedHeight;
       setStageViewportHeight(availableHeight);
     };
 
