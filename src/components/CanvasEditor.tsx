@@ -111,6 +111,8 @@ export function CanvasEditor(props: CanvasEditorProps) {
   const [stageViewportHeight, setStageViewportHeight] = useState<number>(0);
   const [stageShellLeft, setStageShellLeft] = useState<number>(0);
   const [stageShellTop, setStageShellTop] = useState<number>(0);
+  const [imagePanelHeight, setImagePanelHeight] = useState<number>(220);
+  const [textPanelHeight, setTextPanelHeight] = useState<number>(170);
   const [isImageDropTargetActive, setIsImageDropTargetActive] = useState(false);
   const dragEnterDepthRef = useRef(0);
   const selectionBadgeRectRef = useRef<Konva.Rect>(null);
@@ -396,11 +398,12 @@ export function CanvasEditor(props: CanvasEditorProps) {
     panelHeight: number;
   }) {
     const gutter = 12;
+    const anchorGap = 4;
     const desiredLeftAbs = stageWrapLeft + args.anchorX;
     const maxLeftAbs = Math.max(gutter, window.innerWidth - args.panelWidth - gutter);
     const clampedLeftAbs = Math.min(Math.max(desiredLeftAbs, gutter), maxLeftAbs);
-    const belowTopAbs = stageWrapTop + args.anchorBottom + 8;
-    const aboveTopAbs = stageWrapTop + args.anchorTop - args.panelHeight - 8;
+    const belowTopAbs = stageWrapTop + args.anchorBottom + anchorGap;
+    const aboveTopAbs = stageWrapTop + args.anchorTop - args.panelHeight - anchorGap;
     const fitsBelow = belowTopAbs + args.panelHeight <= window.innerHeight - gutter;
     const topAbs = fitsBelow ? belowTopAbs : Math.max(gutter, aboveTopAbs);
     return {
@@ -415,7 +418,7 @@ export function CanvasEditor(props: CanvasEditorProps) {
     anchorTop: imageAnchorTop,
     anchorBottom: imageAnchorBottom,
     panelWidth: imagePanelWidth,
-    panelHeight: 280
+    panelHeight: imagePanelHeight
   });
   const textAnchorTop = selectedText ? toCanvasY(selectedText.y, selectedText.side) * stageScale : 0;
   const textAnchorBottom = selectedText ? textAnchorTop + selectedText.height * stageScale : 0;
@@ -424,7 +427,7 @@ export function CanvasEditor(props: CanvasEditorProps) {
     anchorTop: textAnchorTop,
     anchorBottom: textAnchorBottom,
     panelWidth: textPanelWidth,
-    panelHeight: 170
+    panelHeight: textPanelHeight
   });
 
   return (
@@ -790,12 +793,24 @@ export function CanvasEditor(props: CanvasEditorProps) {
               )}
               </div>
               {showImagePanel && (
-                <FloatingInspectorPanel className="floating-image-panel" left={imagePanelPos.left} top={imagePanelPos.top} width={imagePanelWidth}>
+                <FloatingInspectorPanel
+                  className="floating-image-panel"
+                  left={imagePanelPos.left}
+                  top={imagePanelPos.top}
+                  width={imagePanelWidth}
+                  onHeightChange={setImagePanelHeight}
+                >
                   {children}
                 </FloatingInspectorPanel>
               )}
               {showTextPanel && selectedText && (
-                <FloatingInspectorPanel className="floating-text-panel" left={textPanelPos.left} top={textPanelPos.top} width={textPanelWidth}>
+                <FloatingInspectorPanel
+                  className="floating-text-panel"
+                  left={textPanelPos.left}
+                  top={textPanelPos.top}
+                  width={textPanelWidth}
+                  onHeightChange={setTextPanelHeight}
+                >
                   <div className="text-control-panel">
                     <label>
                       Font
