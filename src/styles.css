@@ -196,7 +196,7 @@ main {
 .editor-controls {
   display: flex;
   flex-wrap: wrap;
-  justify-content: space-between;
+  justify-content: center;
   align-items: flex-end;
   gap: 10px;
   width: 100%;
