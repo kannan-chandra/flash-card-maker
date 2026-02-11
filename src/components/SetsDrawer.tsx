@@ -29,8 +29,8 @@ export function SetsDrawer(props: SetsDrawerProps) {
     <aside className={`panel sets-drawer ${setsMenuOpen ? 'open' : ''}`} aria-hidden={!setsMenuOpen}>
       <div className="sets-drawer-header">
         <h2>Flash Card Sets</h2>
-        <button type="button" onClick={onClose}>
-          Close
+        <button type="button" className="sets-drawer-close" onClick={onClose} aria-label="Close sets menu">
+          <span aria-hidden="true" />
         </button>
       </div>
       <p>Browse and switch between locally stored sets.</p>
