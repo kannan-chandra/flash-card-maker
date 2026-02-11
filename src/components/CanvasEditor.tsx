@@ -126,7 +126,7 @@ export function CanvasEditor(props: CanvasEditorProps) {
   const isCompactLayout = viewportWidth > 0 && viewportWidth <= compactSplitBreakpoint;
   const isHorizontalDoubleSidedReference = isNarrowLayout && !isCompactLayout;
   const isHorizontalSplit = project.doubleSided && isHorizontalDoubleSidedReference;
-  const useCompactToggleLabels = viewportWidth > 0 && viewportWidth <= compactToggleBreakpoint;
+  const useCompactToggleLabels = (viewportWidth > 0 && viewportWidth <= compactToggleBreakpoint) || stageViewportWidth < 420;
   const sideWidth = project.template.width;
   const sideHeight = cardHeight;
   const stageContentWidth = project.doubleSided && isHorizontalSplit ? sideWidth * 2 : sideWidth;
@@ -526,7 +526,7 @@ export function CanvasEditor(props: CanvasEditorProps) {
         <div>
           <div className="stage-toolbar" style={{ width: scaledStageWidth }}>
             <div className="editor-controls">
-              <label>
+              <label className="card-bg-control">
                 Card Background
                 <input
                   type="color"
