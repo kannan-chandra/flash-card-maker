@@ -134,7 +134,7 @@ main {
   z-index: 20;
 }
 
-.sets-drawer {
+.panel.sets-drawer {
   position: fixed;
   top: 0;
   left: 0;
