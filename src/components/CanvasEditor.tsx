@@ -111,6 +111,13 @@ export function CanvasEditor(props: CanvasEditorProps) {
   const [stageViewportHeight, setStageViewportHeight] = useState<number>(0);
   const [isImageDropTargetActive, setIsImageDropTargetActive] = useState(false);
   const dragEnterDepthRef = useRef(0);
+  const [dragSelectionInfo, setDragSelectionInfo] = useState<{
+    element: 'image' | 'text1' | 'text2';
+    x: number;
+    y: number;
+    width: number;
+    label: string;
+  } | null>(null);
 
   const stageScale = useMemo(() => {
     const widthScale = stageViewportWidth > 0 ? stageViewportWidth / project.template.width : 1;
@@ -219,6 +226,10 @@ export function CanvasEditor(props: CanvasEditorProps) {
     transformerRef.current.getLayer()?.batchDraw();
   }, [selectedElement, project, imageIsEmpty, selectedRow, editingTextId]);
 
+  useEffect(() => {
+    setDragSelectionInfo(null);
+  }, [selectedElement]);
+
   function getRowTextValue(role: TextElement['role']): string {
     if (!selectedRow) {
       return '';
@@ -307,6 +318,14 @@ export function CanvasEditor(props: CanvasEditorProps) {
   }
 
   function getSelectionInfo() {
+    if (dragSelectionInfo && selectedElement === dragSelectionInfo.element) {
+      return {
+        x: dragSelectionInfo.x,
+        y: dragSelectionInfo.y,
+        width: dragSelectionInfo.width,
+        label: dragSelectionInfo.label
+      };
+    }
     if (selectedElement === 'image') {
       return {
         x: project.template.image.x,
@@ -463,6 +482,13 @@ export function CanvasEditor(props: CanvasEditorProps) {
                     onClick={() => onSelectElement('image')}
                     onTap={() => onSelectElement('image')}
                     onDragMove={(event) => {
+                      setDragSelectionInfo({
+                        element: 'image',
+                        x: event.target.x(),
+                        y: event.target.y(),
+                        width: project.template.image.width,
+                        label: 'Image'
+                      });
                       const sideResult = fromCanvasY(event.target.y(), project.template.image.height);
                       if (sideResult.side !== project.template.image.side) {
                         onPatchTemplate({
@@ -476,6 +502,7 @@ export function CanvasEditor(props: CanvasEditorProps) {
                       }
                     }}
                     onDragEnd={(event) => {
+                      setDragSelectionInfo(null);
                       const sideResult = fromCanvasY(event.target.y(), project.template.image.height);
                       onPatchTemplate({
                         image: {
@@ -541,6 +568,13 @@ export function CanvasEditor(props: CanvasEditorProps) {
                       onDblClick={() => startEditingText(textElement.id)}
                       onDblTap={() => startEditingText(textElement.id)}
                       onDragMove={(event) => {
+                        setDragSelectionInfo({
+                          element: textElement.id,
+                          x: event.target.x(),
+                          y: event.target.y(),
+                          width: textElement.width,
+                          label: textElement.role === 'word' ? 'Word' : 'Subtitle'
+                        });
                         const sideResult = fromCanvasY(event.target.y(), textElement.height);
                         if (sideResult.side !== textElement.side) {
                           onPatchTextElement(textElement.id, {
@@ -551,6 +585,7 @@ export function CanvasEditor(props: CanvasEditorProps) {
                         }
                       }}
                       onDragEnd={(event) => {
+                        setDragSelectionInfo(null);
                         const sideResult = fromCanvasY(event.target.y(), textElement.height);
                         onPatchTextElement(textElement.id, {
                           x: event.target.x(),
@@ -600,6 +635,13 @@ export function CanvasEditor(props: CanvasEditorProps) {
                         onDblClick={() => startEditingText(textElement.id)}
                         onDblTap={() => startEditingText(textElement.id)}
                         onDragMove={(event) => {
+                          setDragSelectionInfo({
+                            element: textElement.id,
+                            x: event.target.x(),
+                            y: event.target.y(),
+                            width: textElement.width,
+                            label: textElement.role === 'word' ? 'Word' : 'Subtitle'
+                          });
                           const sideResult = fromCanvasY(event.target.y(), textElement.height);
                           if (sideResult.side !== textElement.side) {
                             onPatchTextElement(textElement.id, {
@@ -610,6 +652,7 @@ export function CanvasEditor(props: CanvasEditorProps) {
                           }
                         }}
                         onDragEnd={(event) => {
+                          setDragSelectionInfo(null);
                           const sideResult = fromCanvasY(event.target.y(), textElement.height);
                           onPatchTextElement(textElement.id, {
                             x: event.target.x(),
