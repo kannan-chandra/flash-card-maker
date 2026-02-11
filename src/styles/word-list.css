@@ -2,9 +2,9 @@
   flex: 1;
   min-height: 0;
   overflow: auto;
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
-  background: #ffffff;
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
 }
 
 table {
@@ -14,7 +14,7 @@ table {
 
 th,
 td {
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid var(--color-border-subtle);
   padding: 6px;
   font-size: 13px;
   vertical-align: middle;
@@ -29,7 +29,7 @@ td input:not([type]) {
   position: sticky;
   top: 0;
   z-index: 1;
-  background: #f8fafc;
+  background: var(--color-surface-alt);
   text-align: left;
   padding: 9px 10px;
 }
@@ -46,9 +46,9 @@ td input:not([type]) {
 }
 
 .list-table td input:focus {
-  outline: 2px solid #93c5fd;
+  outline: 2px solid var(--color-focus);
   outline-offset: -2px;
-  background: #eff6ff;
+  background: var(--color-surface-accent);
 }
 
 .subtitle-cell {
@@ -62,7 +62,7 @@ td input:not([type]) {
 
 .row-warning {
   margin-right: 8px;
-  color: #b91c1c;
+  color: var(--color-warn);
   font-weight: 700;
 }
 
@@ -73,12 +73,12 @@ td input:not([type]) {
 }
 
 .draft-row td {
-  background: #fcfcff;
+  background: var(--color-surface-draft);
 }
 .list-table:not(:focus-within) tr.selected {
-  background: #eff6ff;
+  background: var(--color-surface-accent);
 }
 
 .list-table tbody tr:focus-within {
-  background: #eff6ff;
+  background: var(--color-surface-accent);
 }
