@@ -22,6 +22,7 @@ const NOUN_GROUPS = new Set<number>([
 const PERSON_SUBGROUP_KEYS = new Set<string>(['person-role', 'person-activity', 'person-sport', 'person-resting']);
 
 interface EmojiMessages {
+  groups: Array<{ key: string; order: number }>;
   subgroups: Array<{ key: string; order: number }>;
 }
 
@@ -36,6 +37,7 @@ const tamilByEmoji = tamilAnnotations.annotations.annotations;
 const PERSON_SUBGROUP_ORDERS = new Set<number>(
   messages.subgroups.filter((entry) => PERSON_SUBGROUP_KEYS.has(entry.key)).map((entry) => entry.order)
 );
+const FACE_GROUP_ORDERS = new Set<number>(messages.groups.filter((entry) => entry.key === 'smileys-emotion').map((entry) => entry.order));
 
 // Keep a few person nouns explicitly in addition to activity/occupation subgroups.
 const NOUN_PERSON_OVERRIDES: Array<{ emoji: string; keywords: string[] }> = [
@@ -98,6 +100,7 @@ const emojiToKeywords = new Map<string, string[]>();
 const allEmojiKeywordList = new Map<string, string[]>();
 const allEmojiLabel = new Map<string, string>();
 const allEmojiOrder = new Map<string, number>();
+const allEmojiFaceGroup = new Map<string, boolean>();
 
 function getTamilKeywords(emoji: string): string[] {
   const exact = tamilByEmoji[emoji];
@@ -141,6 +144,29 @@ function keywordRankBonus(keyword: string, emoji: string): number {
   return Math.max(0, 18 - rank * 2);
 }
 
+function isRegionalIndicatorEmoji(emoji: string): boolean {
+  const codePoints = [...emoji].map((char) => char.codePointAt(0) ?? 0);
+  if (!codePoints.length) {
+    return false;
+  }
+  const regional = codePoints.filter((cp) => cp >= 0x1f1e6 && cp <= 0x1f1ff);
+  return regional.length >= 2 && regional.length === codePoints.length;
+}
+
+function compareEmojiDefaultOrder(a: string, b: string): number {
+  const aRegional = isRegionalIndicatorEmoji(a);
+  const bRegional = isRegionalIndicatorEmoji(b);
+  if (aRegional !== bRegional) {
+    return aRegional ? 1 : -1;
+  }
+  const aFace = allEmojiFaceGroup.get(a) === true;
+  const bFace = allEmojiFaceGroup.get(b) === true;
+  if (aFace !== bFace) {
+    return aFace ? -1 : 1;
+  }
+  return (allEmojiOrder.get(a) ?? 0) - (allEmojiOrder.get(b) ?? 0);
+}
+
 for (const item of records) {
   if (item.emoji) {
     if (!allEmojiOrder.has(item.emoji)) {
@@ -148,6 +174,9 @@ for (const item of records) {
     }
     if (item.label && !allEmojiLabel.has(item.emoji)) {
       allEmojiLabel.set(item.emoji, item.label);
+    }
+    if (!allEmojiFaceGroup.has(item.emoji)) {
+      allEmojiFaceGroup.set(item.emoji, item.group !== undefined && FACE_GROUP_ORDERS.has(item.group));
     }
     const keywordSet = new Set<string>(allEmojiKeywordList.get(item.emoji) ?? []);
     if (item.label) {
@@ -277,7 +306,7 @@ export function searchAllEmojis(query: string, limit = 120): Array<{ emoji: stri
   const entries = [...allEmojiOrder.keys()];
 
   if (!normalized) {
-    return entries.slice(0, maxResults).map((emoji) => ({
+    return entries.sort(compareEmojiDefaultOrder).slice(0, maxResults).map((emoji) => ({
       emoji,
       label: allEmojiLabel.get(emoji) ?? '',
       keywords: (allEmojiKeywordList.get(emoji) ?? []).slice(0, 8)
@@ -332,7 +361,7 @@ export function searchAllEmojis(query: string, limit = 120): Array<{ emoji: stri
       if (b[1] !== a[1]) {
         return b[1] - a[1];
       }
-      return (allEmojiOrder.get(a[0]) ?? 0) - (allEmojiOrder.get(b[0]) ?? 0);
+      return compareEmojiDefaultOrder(a[0], b[0]);
     })
     .slice(0, maxResults)
     .map(([emoji]) => ({

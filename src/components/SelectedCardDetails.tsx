@@ -202,26 +202,28 @@ export function SelectedCardDetails(props: SelectedCardDetailsProps) {
                         X
                       </button>
                     </div>
-                    <div className="emoji-grid">
-                      {emojiSearchResults.map((match) => (
-                        <button
-                          type="button"
-                          key={match.emoji}
-                          className="emoji-choice"
-                          aria-label={`Use emoji ${match.emoji}`}
-                          title={`${match.label}${match.keywords.length ? ` (${match.keywords.join(', ')})` : ''}`}
-                          onClick={() => onApplyEmoji(selectedRow.id, match.emoji)}
-                        >
-                          {match.emoji}
-                        </button>
-                      ))}
+                    <div className="emoji-search-results">
+                      <div className="emoji-grid">
+                        {emojiSearchResults.map((match) => (
+                          <button
+                            type="button"
+                            key={match.emoji}
+                            className="emoji-choice"
+                            aria-label={`Use emoji ${match.emoji}`}
+                            title={`${match.label}${match.keywords.length ? ` (${match.keywords.join(', ')})` : ''}`}
+                            onClick={() => onApplyEmoji(selectedRow.id, match.emoji)}
+                          >
+                            {match.emoji}
+                          </button>
+                        ))}
+                      </div>
                     </div>
                     {emojiSearchResults.length === 0 ? <p className="hint">No matching emoji found.</p> : null}
                   </div>
                 ) : (
                   <div className="emoji-options">
                     <p>Emoji choices</p>
-                    {selectedRowEmojiMatches.length > 0 ? (
+                    <div className="emoji-picker-row">
                       <div className="emoji-grid">
                         {selectedRowEmojiMatches.slice(0, 4).map((match) => (
                           <button
@@ -235,17 +237,16 @@ export function SelectedCardDetails(props: SelectedCardDetailsProps) {
                             {match.emoji}
                           </button>
                         ))}
-                        <button type="button" className="emoji-choice emoji-search-trigger" aria-label="Search all emoji" onClick={() => setShowEmojiSearch(true)}>
-                          🔍
-                        </button>
                       </div>
-                    ) : (
+                      <button type="button" className="emoji-search-icon-button" aria-label="Search all emoji" onClick={() => setShowEmojiSearch(true)}>
+                        <span className="search-glyph" aria-hidden />
+                      </button>
+                    </div>
+                    {selectedRowEmojiMatches.length === 0 ? (
                       <div className="emoji-grid">
-                        <button type="button" className="emoji-choice emoji-search-trigger" aria-label="Search all emoji" onClick={() => setShowEmojiSearch(true)}>
-                          🔍
-                        </button>
+                        <p className="hint">No quick matches for this word.</p>
                       </div>
-                    )}
+                    ) : null}
                   </div>
                 )}
               </>

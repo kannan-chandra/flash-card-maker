@@ -271,6 +271,12 @@ main {
   margin-bottom: 8px;
 }
 
+.emoji-search-results {
+  max-height: 234px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
 .emoji-grid {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
@@ -283,8 +289,48 @@ main {
   padding: 8px 4px;
 }
 
-.emoji-search-trigger {
-  font-size: 20px;
+.emoji-picker-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.emoji-search-icon-button {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.emoji-search-icon-button:hover .search-glyph,
+.emoji-search-icon-button:focus-visible .search-glyph {
+  border-color: #1e40af;
+}
+
+.search-glyph {
+  width: 14px;
+  height: 14px;
+  border: 2px solid #334155;
+  border-radius: 50%;
+  position: relative;
+}
+
+.search-glyph::after {
+  content: '';
+  position: absolute;
+  width: 7px;
+  height: 2px;
+  background: #334155;
+  border-radius: 2px;
+  right: -6px;
+  bottom: -2px;
+  transform: rotate(45deg);
 }
 
 label {
