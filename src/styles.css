@@ -306,7 +306,6 @@ input[type='color'] {
 .floating-inspector-panel {
   position: absolute;
   z-index: 30;
-  max-width: calc(100% - 8px);
 }
 
 .floating-inspector-panel .card-detail-panel,
@@ -329,7 +328,7 @@ input[type='color'] {
   width: 100%;
   flex: 1;
   min-height: 0;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .stage {
