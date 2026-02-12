@@ -71,8 +71,8 @@
 
   --gradient-page-from-position: 0%;
   --gradient-page-to-position: 100%;
-  --gradient-page-from: #fcd34d var(--gradient-page-from-position);
-  --gradient-page-to: #fbbf24 var(--gradient-page-to-position);
+  --gradient-page-from: #c6d6d1 var(--gradient-page-from-position);
+  --gradient-page-to: #9fb5ae var(--gradient-page-to-position);
   --gradient-page-stops: var(--gradient-page-from), var(--gradient-page-to);
 
   --shadow-soft: 0 10px 24px rgba(15, 23, 42, 0.12);
