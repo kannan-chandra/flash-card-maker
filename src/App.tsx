@@ -362,7 +362,7 @@ export default function App() {
             Export
           </button>
         </div>
-        <p>Design one master card layout. Every row in your list uses the same layout.</p>
+        <p>Add a list of words and generate flashcards instantly.</p>
       </header>
 
       {setsMenuOpen && <OverlayBackdrop onClick={() => setSetsMenuOpen(false)} ariaLabel="Close sets menu" />}
