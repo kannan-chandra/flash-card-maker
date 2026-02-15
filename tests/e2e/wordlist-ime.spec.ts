@@ -86,6 +86,23 @@ test('enter inserts a row and focuses its word field', async ({ page }) => {
   await expect(insertedRowWord).toHaveValue('');
 });
 
+test('enter on a middle row inserts directly below and focuses the inserted row word field', async ({ page }) => {
+  await page.goto('/');
+  await importCsv(page, 'word,subtitle\none,\ntwo,\nthree,');
+
+  const rows = page.locator('tbody tr').filter({ has: page.getByLabel('Word', { exact: true }) });
+  await expect(rows).toHaveCount(3);
+
+  const middleRowWord = rows.nth(1).getByLabel('Word');
+  await middleRowWord.focus();
+  await middleRowWord.press('Enter');
+
+  await expect(rows).toHaveCount(4);
+  const insertedRowWord = rows.nth(2).getByLabel('Word');
+  await expect(insertedRowWord).toBeFocused();
+  await expect(insertedRowWord).toHaveValue('');
+});
+
 test('ime enter waits for composition end and does not leak text to inserted row', async ({ page }) => {
   await page.goto('/');
   await importCsv(page, 'word,subtitle\nsample,');

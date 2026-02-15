@@ -31,6 +31,7 @@ export function WordListPanel(props: WordListPanelProps) {
   const subtitleRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const draftWordRef = useRef<HTMLInputElement | null>(null);
   const draftSubtitleRef = useRef<HTMLInputElement | null>(null);
+  const pendingFocusRef = useRef<{ rowId: string; column: 'word' | 'subtitle'; arrowDirection?: 'up' | 'down' } | null>(null);
   const selectDebounceTimerRef = useRef<number | null>(null);
   const suppressNextEnterKeydownRef = useRef(false);
   const suppressNextEnterResetTimerRef = useRef<number | null>(null);
@@ -57,6 +58,16 @@ export function WordListPanel(props: WordListPanelProps) {
     },
     []
   );
+
+  useEffect(() => {
+    const pending = pendingFocusRef.current;
+    if (!pending) {
+      return;
+    }
+    if (focusInput(pending.rowId, pending.column, { arrowDirection: pending.arrowDirection })) {
+      pendingFocusRef.current = null;
+    }
+  }, [rows]);
 
   function scheduleSelectionCommit(rowId: string | undefined) {
     if (selectDebounceTimerRef.current) {
@@ -180,16 +191,15 @@ export function WordListPanel(props: WordListPanelProps) {
       return false;
     }
     scheduleSelectionCommit(insertedRowId);
-    const focusInsertedRow = (attempt: number) => {
-      const focused = focusInput(insertedRowId, 'word', { arrowDirection: 'down' });
-      if (!focused && attempt < 2) {
-        requestAnimationFrame(() => {
-          focusInsertedRow(attempt + 1);
-        });
-      }
-    };
+    pendingFocusRef.current = { rowId: insertedRowId, column: 'word', arrowDirection: 'down' };
     requestAnimationFrame(() => {
-      focusInsertedRow(0);
+      const pending = pendingFocusRef.current;
+      if (!pending) {
+        return;
+      }
+      if (focusInput(pending.rowId, pending.column, { arrowDirection: pending.arrowDirection })) {
+        pendingFocusRef.current = null;
+      }
     });
     return true;
   }
