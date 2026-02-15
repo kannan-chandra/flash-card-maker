@@ -119,6 +119,16 @@
   margin: 0;
   font-size: 12px;
   color: #1e40af;
+  text-align: center;
+}
+
+.export-modal-note-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.export-modal-note-row .export-modal-note {
+  grid-column: 2;
 }
 
 .export-modal-segmented button:focus-visible {
