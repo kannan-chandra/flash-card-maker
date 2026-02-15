@@ -20,6 +20,37 @@
   width: 100%;
 }
 
+.onboarding-modal {
+  width: min(620px, calc(100vw - 24px));
+  display: grid;
+  gap: 10px;
+}
+
+.onboarding-modal h3 {
+  margin: 0;
+}
+
+.onboarding-modal ol {
+  margin: 0;
+  padding-left: 20px;
+  display: grid;
+  gap: 6px;
+}
+
+.onboarding-modal p {
+  margin: 0;
+  padding: 10px;
+  border: 1px solid #dbeafe;
+  border-radius: 10px;
+  background: rgba(239, 246, 255, 0.55);
+  color: var(--color-text-muted);
+}
+
+.onboarding-modal-actions {
+  margin: 0;
+  justify-content: flex-end;
+}
+
 .export-modal {
   width: min(560px, calc(100vw - 24px));
   display: grid;

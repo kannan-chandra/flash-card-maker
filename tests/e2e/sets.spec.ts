@@ -1,9 +1,21 @@
 import { expect, test } from '@playwright/test';
 
+async function dismissFirstLaunchGuide(page: import('@playwright/test').Page) {
+  const guide = page.getByRole('dialog', { name: 'First launch guide' });
+  for (let attempt = 0; attempt < 10; attempt += 1) {
+    if ((await guide.count()) > 0) {
+      await guide.getByRole('button', { name: 'Got it' }).click();
+      return;
+    }
+    await page.waitForTimeout(100);
+  }
+}
+
 test('creating a set from the drawer modal activates the new set', async ({ page }) => {
   const newSetName = `Playwright Set ${Date.now()}`;
 
   await page.goto('/');
+  await dismissFirstLaunchGuide(page);
 
   await page.getByRole('button', { name: 'Toggle flash card sets menu' }).click();
   await page.getByRole('button', { name: 'Create Flashcard Set' }).click();
@@ -23,6 +35,7 @@ test('renaming a set from the drawer updates the visible set name', async ({ pag
   const renamedSetName = `Renamed Set ${Date.now()}`;
 
   await page.goto('/');
+  await dismissFirstLaunchGuide(page);
 
   await page.getByRole('button', { name: 'Toggle flash card sets menu' }).click();
   await page.getByRole('button', { name: 'Rename set' }).first().click();

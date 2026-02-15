@@ -1,5 +1,16 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
 
+async function dismissFirstLaunchGuide(page: Page) {
+  const guide = page.getByRole('dialog', { name: 'First launch guide' });
+  for (let attempt = 0; attempt < 10; attempt += 1) {
+    if ((await guide.count()) > 0) {
+      await guide.getByRole('button', { name: 'Got it' }).click();
+      return;
+    }
+    await page.waitForTimeout(100);
+  }
+}
+
 async function importCsv(page: Page, value: string) {
   await page.getByRole('button', { name: 'Import', exact: true }).click();
   const dialog = page.getByRole('dialog', { name: 'CSV import' });
@@ -40,6 +51,7 @@ async function composeEnterThenCommitWithExtraEnter(input: Locator, value: strin
 
 test('tab navigation waits for IME composition commit and does not leak text to subtitle', async ({ page }) => {
   await page.goto('/');
+  await dismissFirstLaunchGuide(page);
   await importCsv(page, 'word,subtitle\nsample,');
 
   const row = page.locator('tbody tr').first();
@@ -71,6 +83,7 @@ test('tab navigation waits for IME composition commit and does not leak text to 
 
 test('enter inserts a row and focuses its word field', async ({ page }) => {
   await page.goto('/');
+  await dismissFirstLaunchGuide(page);
   await importCsv(page, 'word,subtitle\nsample,');
 
   const rows = page.locator('tbody tr').filter({ has: page.getByLabel('Word', { exact: true }) });
@@ -88,6 +101,7 @@ test('enter inserts a row and focuses its word field', async ({ page }) => {
 
 test('enter on a middle row inserts directly below and focuses the inserted row word field', async ({ page }) => {
   await page.goto('/');
+  await dismissFirstLaunchGuide(page);
   await importCsv(page, 'word,subtitle\none,\ntwo,\nthree,');
 
   const rows = page.locator('tbody tr').filter({ has: page.getByLabel('Word', { exact: true }) });
@@ -105,6 +119,7 @@ test('enter on a middle row inserts directly below and focuses the inserted row 
 
 test('ime enter waits for composition end and does not leak text to inserted row', async ({ page }) => {
   await page.goto('/');
+  await dismissFirstLaunchGuide(page);
   await importCsv(page, 'word,subtitle\nsample,');
 
   const rows = page.locator('tbody tr').filter({ has: page.getByLabel('Word', { exact: true }) });
@@ -125,6 +140,7 @@ test('ime enter waits for composition end and does not leak text to inserted row
 
 test('ime enter does not double-insert when composition end is followed by a plain enter keydown', async ({ page }) => {
   await page.goto('/');
+  await dismissFirstLaunchGuide(page);
   await importCsv(page, 'word,subtitle\nsample,');
 
   const rows = page.locator('tbody tr').filter({ has: page.getByLabel('Word', { exact: true }) });
@@ -140,6 +156,7 @@ test('ime enter does not double-insert when composition end is followed by a pla
 
 test('tab then enter from first row moves focus to inserted row word', async ({ page }) => {
   await page.goto('/');
+  await dismissFirstLaunchGuide(page);
   await importCsv(page, 'word,subtitle\nalpha,one\nbeta,two\ngamma,three');
 
   const rows = page.locator('tbody tr').filter({ has: page.getByLabel('Word', { exact: true }) });

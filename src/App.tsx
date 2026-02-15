@@ -26,6 +26,8 @@ function makeRowId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
+const ONBOARDING_DISMISSED_KEY = 'flashcard-maker/onboarding-dismissed/v1';
+
 export default function App() {
   const { sets, project, loading, setActiveSetId, createSet, renameSet, deleteSet, updateActiveSet, patchTemplate, patchTextElement, appendRows, updateRow } =
     useWorkspace();
@@ -43,6 +45,7 @@ export default function App() {
   });
   const [imageIssues, setImageIssues] = useState<Record<string, string>>({});
   const [emojiBulkPromptRowId, setEmojiBulkPromptRowId] = useState<string | null>(null);
+  const [showOnboarding, setShowOnboarding] = useState(false);
   const emojiBulkPromptTimerRef = useRef<number | null>(null);
 
   const selectedRow = useMemo(() => {
@@ -106,6 +109,11 @@ export default function App() {
     []
   );
 
+  useEffect(() => {
+    const dismissed = window.localStorage.getItem(ONBOARDING_DISMISSED_KEY) === '1';
+    setShowOnboarding(!dismissed);
+  }, []);
+
   function showEmojiBulkPrompt(rowId: string) {
     if (emojiBulkPromptTimerRef.current !== null) {
       window.clearTimeout(emojiBulkPromptTimerRef.current);
@@ -123,6 +131,11 @@ export default function App() {
       emojiBulkPromptTimerRef.current = null;
     }
     setEmojiBulkPromptRowId(null);
+  }
+
+  function dismissOnboarding() {
+    window.localStorage.setItem(ONBOARDING_DISMISSED_KEY, '1');
+    setShowOnboarding(false);
   }
 
   function onCreateSet(name: string) {
@@ -383,6 +396,28 @@ export default function App() {
         onDeleteSet={onDeleteSet}
         onClose={() => setSetsMenuOpen(false)}
       />
+      {showOnboarding && (
+        <>
+          <OverlayBackdrop className="menu-backdrop csv-backdrop" onClick={dismissOnboarding} ariaLabel="Close first launch guide" />
+          <Modal className="csv-modal onboarding-modal" ariaLabel="First launch guide">
+            <h3>Welcome to Flash Card Maker</h3>
+            <ol>
+              <li>Add a list of words quickly. It is like a table, and you can hit Enter after each word.</li>
+              <li>Design your card layout. You can do single-sided or double-sided cards.</li>
+              <li>Export to PDF.</li>
+            </ol>
+            <p>
+              Cards are stored only locally on this computer in your browser. If you clear browser data, you will lose your flash cards. Export PDF if you are on a
+              public computer.
+            </p>
+            <div className="row-buttons onboarding-modal-actions">
+              <button type="button" className="primary" onClick={dismissOnboarding}>
+                Got it
+              </button>
+            </div>
+          </Modal>
+        </>
+      )}
       {importModalOpen && (
         <>
           <OverlayBackdrop className="menu-backdrop csv-backdrop" onClick={() => setImportModalOpen(false)} ariaLabel="Close CSV import" />

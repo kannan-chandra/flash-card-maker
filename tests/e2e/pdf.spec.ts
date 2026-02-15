@@ -7,6 +7,17 @@ const ONE_BY_ONE_PNG = Buffer.from(
   'base64'
 );
 
+async function dismissFirstLaunchGuide(page: Page) {
+  const guide = page.getByRole('dialog', { name: 'First launch guide' });
+  for (let attempt = 0; attempt < 10; attempt += 1) {
+    if ((await guide.count()) > 0) {
+      await guide.getByRole('button', { name: 'Got it' }).click();
+      return;
+    }
+    await page.waitForTimeout(100);
+  }
+}
+
 async function importCsv(page: Page, value: string) {
   await page.getByRole('button', { name: 'Import', exact: true }).click();
   const dialog = page.getByRole('dialog', { name: 'CSV import' });
@@ -91,6 +102,7 @@ test('generates downloadable PDF for Tamil text without runtime errors', async (
   page.on('pageerror', (error) => pageErrors.push(error.message));
 
   await page.goto('/');
+  await dismissFirstLaunchGuide(page);
 
   await importCsv(page, 'word,subtitle\nசிங்கம்,விலங்கு');
   await openImageInspector(page);
@@ -121,6 +133,7 @@ test('generates downloadable PDF for Tamil text without runtime errors', async (
 
 test('generates PDF successfully when rows have no images', async ({ page }) => {
   await page.goto('/');
+  await dismissFirstLaunchGuide(page);
 
   await importCsv(page, 'word,subtitle\nDog,Animal');
   await openExportModal(page);
@@ -138,6 +151,7 @@ test('generates PDF successfully when rows have no images', async ({ page }) => 
 
 test('generates PDF in easy cut mode with no gap between cards', async ({ page }) => {
   await page.goto('/');
+  await dismissFirstLaunchGuide(page);
 
   await importCsv(page, 'word,subtitle\nOne,First\nTwo,Second\nThree,Third\nFour,Fourth');
   await openExportModal(page);
@@ -156,6 +170,7 @@ test('generates PDF in easy cut mode with no gap between cards', async ({ page }
 
 test('flags long unbroken words as overflow', async ({ page }) => {
   await page.goto('/');
+  await dismissFirstLaunchGuide(page);
 
   await importCsv(page, 'word,subtitle\nBabyBabyBabyBabyBabyBabyBabyBabyBaby,Demo');
 
@@ -164,6 +179,7 @@ test('flags long unbroken words as overflow', async ({ page }) => {
 
 test('can set emoji image for selected row and then remove image', async ({ page }) => {
   await page.goto('/');
+  await dismissFirstLaunchGuide(page);
 
   await importCsv(page, 'word,subtitle\nbaby,one\nlion,two');
   await openImageInspector(page);
@@ -178,6 +194,7 @@ test('can set emoji image for selected row and then remove image', async ({ page
 
 test('offers emoji button for noun objects and vehicles', async ({ page }) => {
   await page.goto('/');
+  await dismissFirstLaunchGuide(page);
 
   await importCsv(page, 'word,subtitle\nhammer,tool\nbus,vehicle');
   await openImageInspector(page);
@@ -189,6 +206,7 @@ test('offers emoji button for noun objects and vehicles', async ({ page }) => {
 
 test('offers emoji button for Tamil keyword matches', async ({ page }) => {
   await page.goto('/');
+  await dismissFirstLaunchGuide(page);
 
   await importCsv(page, 'word,subtitle\nநாய்,செல்லப்பிராணி');
   await openImageInspector(page);
@@ -200,6 +218,7 @@ test('offers emoji button for Tamil keyword matches', async ({ page }) => {
 
 test('uses subtitle emoji keywords when word has no match', async ({ page }) => {
   await page.goto('/');
+  await dismissFirstLaunchGuide(page);
 
   await importCsv(page, 'word,subtitle\nperro,நாய்');
   await openImageInspector(page);
@@ -211,6 +230,7 @@ test('uses subtitle emoji keywords when word has no match', async ({ page }) => 
 
 test('generates downloadable PDF in double-sided mode', async ({ page }) => {
   await page.goto('/');
+  await dismissFirstLaunchGuide(page);
 
   await importCsv(page, 'word,subtitle\nDog,Animal');
   await openImageInspector(page);
@@ -243,6 +263,7 @@ test('dragging on canvas does not produce NaN coordinate warnings', async ({ pag
   });
 
   await page.goto('/');
+  await dismissFirstLaunchGuide(page);
 
   const stage = page.locator('canvas').first();
   const box = await stage.boundingBox();
@@ -264,6 +285,7 @@ test('pdf text layout remains visually aligned at large font sizes', async ({ pa
   await page.setViewportSize({ width: 1600, height: 1200 });
 
   await page.goto('/');
+  await dismissFirstLaunchGuide(page);
   await importCsv(page, 'word,subtitle\nLOM,LOM');
 
   await dragOnStage(page, { x: 500, y: 165 }, { x: 500, y: 165 });
