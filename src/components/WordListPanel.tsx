@@ -47,6 +47,31 @@ export function WordListPanel(props: WordListPanelProps) {
     [validations]
   );
 
+  function debugLog(message: string, payload: Record<string, unknown>) {
+    console.log(`[wordlist-debug] ${message}`, payload);
+  }
+
+  function getCursorInfo(input: HTMLInputElement | null) {
+    if (!input) {
+      return { selectionStart: null, selectionEnd: null, valueLength: null };
+    }
+    return {
+      selectionStart: input.selectionStart,
+      selectionEnd: input.selectionEnd,
+      valueLength: input.value.length
+    };
+  }
+
+  function describeElement(element: Element | null) {
+    if (!(element instanceof HTMLInputElement)) {
+      return { rowId: null, column: null };
+    }
+    return {
+      rowId: element.getAttribute('data-row-id'),
+      column: element.getAttribute('data-column')
+    };
+  }
+
   useEffect(
     () => () => {
       if (selectDebounceTimerRef.current) {
@@ -146,8 +171,16 @@ export function WordListPanel(props: WordListPanelProps) {
       input = column === 'word' ? wordRefs.current[rowId] : subtitleRefs.current[rowId];
     }
     if (!input) {
+      debugLog('focusInput missing target', { rowId, column, arrowDirection: options?.arrowDirection ?? null });
       return false;
     }
+    debugLog('focusInput before focus', {
+      rowId,
+      column,
+      arrowDirection: options?.arrowDirection ?? null,
+      ...getCursorInfo(input),
+      activeElement: describeElement(document.activeElement)
+    });
     input.focus({ preventScroll: true });
     const length = input.value.length;
     if (document.activeElement === input) {
@@ -156,6 +189,13 @@ export function WordListPanel(props: WordListPanelProps) {
     if (options?.arrowDirection) {
       scrollByOneRowIfNeeded(input, options.arrowDirection);
     }
+    debugLog('focusInput after focus', {
+      rowId,
+      column,
+      arrowDirection: options?.arrowDirection ?? null,
+      ...getCursorInfo(input),
+      activeElement: describeElement(document.activeElement)
+    });
     return true;
   }
 
@@ -343,6 +383,7 @@ export function WordListPanel(props: WordListPanelProps) {
 
   function onCompositionStart() {
     isComposingRef.current = true;
+    debugLog('compositionstart', { activeElement: describeElement(document.activeElement) });
   }
 
   function armSuppressNextEnterKeydown() {
@@ -387,6 +428,10 @@ export function WordListPanel(props: WordListPanelProps) {
 
   function onCompositionEnd() {
     isComposingRef.current = false;
+    debugLog('compositionend', {
+      pendingAction: pendingKeyboardActionRef.current?.type ?? null,
+      activeElement: describeElement(document.activeElement)
+    });
     const pending = pendingKeyboardActionRef.current;
     if (!pending) {
       return;
@@ -489,15 +534,46 @@ export function WordListPanel(props: WordListPanelProps) {
                       data-row-id={row.id}
                       value={row.word}
                       onChange={(event) => onUpdateRow(row.id, { word: event.target.value })}
-                      onFocus={() => scheduleSelectionCommit(row.id)}
-                      onBlur={(event) => onRowBlur(row.id, event)}
+                      onFocus={(event) => {
+                        debugLog('focus', {
+                          rowId: row.id,
+                          column: 'word',
+                          ...getCursorInfo(event.currentTarget),
+                          activeElement: describeElement(document.activeElement)
+                        });
+                        scheduleSelectionCommit(row.id);
+                      }}
+                      onBlur={(event) => {
+                        debugLog('blur', {
+                          rowId: row.id,
+                          column: 'word',
+                          ...getCursorInfo(event.currentTarget),
+                          relatedTarget: describeElement(event.relatedTarget as Element | null)
+                        });
+                        onRowBlur(row.id, event);
+                      }}
                       onCompositionStart={onCompositionStart}
                       onCompositionEnd={onCompositionEnd}
                       onKeyDown={(event) => {
+                        debugLog('keydown', {
+                          rowId: row.id,
+                          column: 'word',
+                          key: event.key,
+                          code: event.code,
+                          shiftKey: event.shiftKey,
+                          ctrlKey: event.ctrlKey,
+                          altKey: event.altKey,
+                          metaKey: event.metaKey,
+                          nativeIsComposing: (event.nativeEvent as globalThis.KeyboardEvent).isComposing,
+                          keyCode: (event.nativeEvent as globalThis.KeyboardEvent).keyCode,
+                          internalComposing: isComposingRef.current,
+                          ...getCursorInfo(event.currentTarget)
+                        });
                         onTabNavigation(event, row.id, 'word');
                         onArrowNavigation(event, row.id, 'word');
                         onExistingRowEnter(event, row.id);
                       }}
+                      data-column="word"
                       aria-label="Word"
                     />
                   </td>
@@ -510,15 +586,46 @@ export function WordListPanel(props: WordListPanelProps) {
                         data-row-id={row.id}
                         value={row.subtitle}
                         onChange={(event) => onUpdateRow(row.id, { subtitle: event.target.value })}
-                        onFocus={() => scheduleSelectionCommit(row.id)}
-                        onBlur={(event) => onRowBlur(row.id, event)}
+                        onFocus={(event) => {
+                          debugLog('focus', {
+                            rowId: row.id,
+                            column: 'subtitle',
+                            ...getCursorInfo(event.currentTarget),
+                            activeElement: describeElement(document.activeElement)
+                          });
+                          scheduleSelectionCommit(row.id);
+                        }}
+                        onBlur={(event) => {
+                          debugLog('blur', {
+                            rowId: row.id,
+                            column: 'subtitle',
+                            ...getCursorInfo(event.currentTarget),
+                            relatedTarget: describeElement(event.relatedTarget as Element | null)
+                          });
+                          onRowBlur(row.id, event);
+                        }}
                         onCompositionStart={onCompositionStart}
                         onCompositionEnd={onCompositionEnd}
                         onKeyDown={(event) => {
+                          debugLog('keydown', {
+                            rowId: row.id,
+                            column: 'subtitle',
+                            key: event.key,
+                            code: event.code,
+                            shiftKey: event.shiftKey,
+                            ctrlKey: event.ctrlKey,
+                            altKey: event.altKey,
+                            metaKey: event.metaKey,
+                            nativeIsComposing: (event.nativeEvent as globalThis.KeyboardEvent).isComposing,
+                            keyCode: (event.nativeEvent as globalThis.KeyboardEvent).keyCode,
+                            internalComposing: isComposingRef.current,
+                            ...getCursorInfo(event.currentTarget)
+                          });
                           onTabNavigation(event, row.id, 'subtitle');
                           onArrowNavigation(event, row.id, 'subtitle');
                           onExistingRowEnter(event, row.id);
                         }}
+                        data-column="subtitle"
                         aria-label="Subtitle"
                       />
                       {hasIssue ? (
@@ -538,13 +645,44 @@ export function WordListPanel(props: WordListPanelProps) {
                   data-row-id="__draft__"
                   value={draftRow.word}
                   onChange={(event) => setDraftRow((current) => ({ ...current, word: event.target.value }))}
+                  onFocus={(event) => {
+                    debugLog('focus', {
+                      rowId: '__draft__',
+                      column: 'word',
+                      ...getCursorInfo(event.currentTarget),
+                      activeElement: describeElement(document.activeElement)
+                    });
+                  }}
+                  onBlur={(event) => {
+                    debugLog('blur', {
+                      rowId: '__draft__',
+                      column: 'word',
+                      ...getCursorInfo(event.currentTarget),
+                      relatedTarget: describeElement(event.relatedTarget as Element | null)
+                    });
+                  }}
                   onCompositionStart={onCompositionStart}
                   onCompositionEnd={onCompositionEnd}
                   onKeyDown={(event) => {
+                    debugLog('keydown', {
+                      rowId: '__draft__',
+                      column: 'word',
+                      key: event.key,
+                      code: event.code,
+                      shiftKey: event.shiftKey,
+                      ctrlKey: event.ctrlKey,
+                      altKey: event.altKey,
+                      metaKey: event.metaKey,
+                      nativeIsComposing: (event.nativeEvent as globalThis.KeyboardEvent).isComposing,
+                      keyCode: (event.nativeEvent as globalThis.KeyboardEvent).keyCode,
+                      internalComposing: isComposingRef.current,
+                      ...getCursorInfo(event.currentTarget)
+                    });
                     onTabNavigation(event, '__draft__', 'word');
                     onArrowNavigation(event, '__draft__', 'word');
                     onDraftEnter(event);
                   }}
+                  data-column="word"
                   aria-label="New word"
                   placeholder={!rows.length && !draftRow.word ? 'Click to add first word' : ''}
                 />
@@ -556,13 +694,44 @@ export function WordListPanel(props: WordListPanelProps) {
                     data-row-id="__draft__"
                     value={draftRow.subtitle}
                     onChange={(event) => setDraftRow((current) => ({ ...current, subtitle: event.target.value }))}
+                    onFocus={(event) => {
+                      debugLog('focus', {
+                        rowId: '__draft__',
+                        column: 'subtitle',
+                        ...getCursorInfo(event.currentTarget),
+                        activeElement: describeElement(document.activeElement)
+                      });
+                    }}
+                    onBlur={(event) => {
+                      debugLog('blur', {
+                        rowId: '__draft__',
+                        column: 'subtitle',
+                        ...getCursorInfo(event.currentTarget),
+                        relatedTarget: describeElement(event.relatedTarget as Element | null)
+                      });
+                    }}
                     onCompositionStart={onCompositionStart}
                     onCompositionEnd={onCompositionEnd}
                     onKeyDown={(event) => {
+                      debugLog('keydown', {
+                        rowId: '__draft__',
+                        column: 'subtitle',
+                        key: event.key,
+                        code: event.code,
+                        shiftKey: event.shiftKey,
+                        ctrlKey: event.ctrlKey,
+                        altKey: event.altKey,
+                        metaKey: event.metaKey,
+                        nativeIsComposing: (event.nativeEvent as globalThis.KeyboardEvent).isComposing,
+                        keyCode: (event.nativeEvent as globalThis.KeyboardEvent).keyCode,
+                        internalComposing: isComposingRef.current,
+                        ...getCursorInfo(event.currentTarget)
+                      });
                       onTabNavigation(event, '__draft__', 'subtitle');
                       onArrowNavigation(event, '__draft__', 'subtitle');
                       onDraftEnter(event);
                     }}
+                    data-column="subtitle"
                     aria-label="New subtitle"
                     placeholder={!rows.length && !draftRow.word && !draftRow.subtitle ? 'Subtitle (optional)' : ''}
                   />
