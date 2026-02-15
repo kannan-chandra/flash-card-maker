@@ -659,9 +659,15 @@ export function WordListPanel(props: WordListPanelProps) {
     }
 
     const target = getTabNavigationTarget(rowId, column, event.shiftKey);
-    if (target && runTabNavigation(rowId, column, event.shiftKey)) {
+    if (target) {
       startNavigationTxn('tab', { rowId, column }, target);
+    }
+    if (target && runTabNavigation(rowId, column, event.shiftKey)) {
       event.preventDefault();
+      return;
+    }
+    if (target) {
+      clearNavigationTxn('tab-navigation-failed');
     }
   }
 
