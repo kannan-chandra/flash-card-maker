@@ -19,10 +19,13 @@ export function ExportLayoutPreview(props: ExportLayoutPreviewProps) {
   const pagePadding = 14;
   const baseGap = 6;
   const gap = spacingMode === 'with-margin' ? baseGap : 0;
+  const cardAspectRatio = 3.5 / 2.5;
   const innerWidth = pageWidth - pagePadding * 2;
   const innerHeight = pageHeight - pagePadding * 2;
-  const cardWidth = (innerWidth - baseGap * (cols - 1)) / cols;
-  const cardHeight = (innerHeight - baseGap * (rows - 1)) / rows;
+  const maxCardWidth = (innerWidth - baseGap * (cols - 1)) / cols;
+  const maxCardHeight = (innerHeight - baseGap * (rows - 1)) / rows;
+  const cardWidth = Math.min(maxCardWidth, maxCardHeight * cardAspectRatio);
+  const cardHeight = cardWidth / cardAspectRatio;
   const gridWidth = cols * cardWidth + (cols - 1) * gap;
   const gridHeight = rows * cardHeight + (rows - 1) * gap;
   const startX = (pageWidth - gridWidth) / 2;
