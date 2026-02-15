@@ -33,7 +33,12 @@ export function WordListPanel(props: WordListPanelProps) {
   const draftSubtitleRef = useRef<HTMLInputElement | null>(null);
   const selectDebounceTimerRef = useRef<number | null>(null);
   const isComposingRef = useRef(false);
-  const pendingTabNavigationRef = useRef<{ rowId: string; column: 'word' | 'subtitle'; shiftKey: boolean } | null>(null);
+  const pendingKeyboardActionRef = useRef<
+    | { type: 'tab'; rowId: string; column: 'word' | 'subtitle'; shiftKey: boolean }
+    | { type: 'existing-row-enter'; rowId: string }
+    | { type: 'draft-enter' }
+    | null
+  >(null);
   const validationById = useMemo(
     () => Object.fromEntries(validations.map((item) => [item.rowId, item])),
     [validations]
@@ -117,7 +122,7 @@ export function WordListPanel(props: WordListPanelProps) {
     rowId: string,
     column: 'word' | 'subtitle',
     options?: { arrowDirection?: 'up' | 'down' }
-  ) {
+  ): boolean {
     let input: HTMLInputElement | null = null;
     if (rowId === '__draft__') {
       input = column === 'word' ? draftWordRef.current : draftSubtitleRef.current;
@@ -125,7 +130,7 @@ export function WordListPanel(props: WordListPanelProps) {
       input = column === 'word' ? wordRefs.current[rowId] : subtitleRefs.current[rowId];
     }
     if (!input) {
-      return;
+      return false;
     }
     input.focus({ preventScroll: true });
     const length = input.value.length;
@@ -135,6 +140,7 @@ export function WordListPanel(props: WordListPanelProps) {
     if (options?.arrowDirection) {
       scrollByOneRowIfNeeded(input, options.arrowDirection);
     }
+    return true;
   }
 
   function isRowEmpty(row: Pick<FlashcardRow, 'word' | 'subtitle'>): boolean {
@@ -159,14 +165,6 @@ export function WordListPanel(props: WordListPanelProps) {
     }
   }
 
-  function onExistingRowEnter(event: ReactKeyboardEvent<HTMLInputElement>, rowId: string) {
-    if (event.key !== 'Enter') {
-      return;
-    }
-    event.preventDefault();
-    insertRowAfterAndFocus(rowId);
-  }
-
   function insertRowAfterAndFocus(rowId: string): boolean {
     const rowIndex = rows.findIndex((item) => item.id === rowId);
     if (rowIndex < 0 || isRowEmpty(rows[rowIndex])) {
@@ -177,10 +175,30 @@ export function WordListPanel(props: WordListPanelProps) {
       return false;
     }
     scheduleSelectionCommit(insertedRowId);
+    const focusInsertedRow = (attempt: number) => {
+      const focused = focusInput(insertedRowId, 'word', { arrowDirection: 'down' });
+      if (!focused && attempt < 2) {
+        requestAnimationFrame(() => {
+          focusInsertedRow(attempt + 1);
+        });
+      }
+    };
     requestAnimationFrame(() => {
-      focusInput(insertedRowId, 'word', { arrowDirection: 'down' });
+      focusInsertedRow(0);
     });
     return true;
+  }
+
+  function submitDraftRowAndRefocus() {
+    if (isRowEmpty(draftRow)) {
+      return;
+    }
+    onAppendRow({
+      word: draftRow.word,
+      subtitle: draftRow.subtitle
+    });
+    setDraftRow({ word: '', subtitle: '' });
+    focusInput('__draft__', 'word', { arrowDirection: 'down' });
   }
 
   function atStart(input: HTMLInputElement): boolean {
@@ -312,15 +330,32 @@ export function WordListPanel(props: WordListPanelProps) {
     isComposingRef.current = true;
   }
 
+  function runKeyboardAction(action: NonNullable<typeof pendingKeyboardActionRef.current>) {
+    if (action.type === 'tab') {
+      runTabNavigation(action.rowId, action.column, action.shiftKey);
+      return;
+    }
+    if (action.type === 'existing-row-enter') {
+      insertRowAfterAndFocus(action.rowId);
+      return;
+    }
+    submitDraftRowAndRefocus();
+  }
+
+  function isComposingEvent(event: ReactKeyboardEvent<HTMLInputElement>): boolean {
+    const nativeEvent = event.nativeEvent as globalThis.KeyboardEvent;
+    return isComposingRef.current || nativeEvent.isComposing || nativeEvent.keyCode === 229;
+  }
+
   function onCompositionEnd() {
     isComposingRef.current = false;
-    const pending = pendingTabNavigationRef.current;
+    const pending = pendingKeyboardActionRef.current;
     if (!pending) {
       return;
     }
-    pendingTabNavigationRef.current = null;
+    pendingKeyboardActionRef.current = null;
     requestAnimationFrame(() => {
-      runTabNavigation(pending.rowId, pending.column, pending.shiftKey);
+      runKeyboardAction(pending);
     });
   }
 
@@ -329,11 +364,9 @@ export function WordListPanel(props: WordListPanelProps) {
       return;
     }
 
-    const nativeEvent = event.nativeEvent as globalThis.KeyboardEvent;
-    const composing = isComposingRef.current || nativeEvent.isComposing || nativeEvent.keyCode === 229;
-    if (composing) {
+    if (isComposingEvent(event)) {
       event.preventDefault();
-      pendingTabNavigationRef.current = { rowId, column, shiftKey: event.shiftKey };
+      pendingKeyboardActionRef.current = { type: 'tab', rowId, column, shiftKey: event.shiftKey };
       return;
     }
 
@@ -353,16 +386,26 @@ export function WordListPanel(props: WordListPanelProps) {
     if (event.key !== 'Enter') {
       return;
     }
-    event.preventDefault();
-    if (isRowEmpty(draftRow)) {
+    if (isComposingEvent(event)) {
+      event.preventDefault();
+      pendingKeyboardActionRef.current = { type: 'draft-enter' };
       return;
     }
-    onAppendRow({
-      word: draftRow.word,
-      subtitle: draftRow.subtitle
-    });
-    setDraftRow({ word: '', subtitle: '' });
-    focusInput('__draft__', 'word', { arrowDirection: 'down' });
+    event.preventDefault();
+    submitDraftRowAndRefocus();
+  }
+
+  function onExistingRowEnter(event: ReactKeyboardEvent<HTMLInputElement>, rowId: string) {
+    if (event.key !== 'Enter') {
+      return;
+    }
+    if (isComposingEvent(event)) {
+      event.preventDefault();
+      pendingKeyboardActionRef.current = { type: 'existing-row-enter', rowId };
+      return;
+    }
+    event.preventDefault();
+    insertRowAfterAndFocus(rowId);
   }
 
   return (
