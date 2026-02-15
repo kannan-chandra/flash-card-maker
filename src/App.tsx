@@ -441,7 +441,8 @@ export default function App() {
                     aria-pressed={project.preset === 8}
                     onClick={() => updateActiveSet((current) => ({ ...current, preset: 8 }))}
                   >
-                    8
+                    <span>8</span>
+                    <small>standard playing card size</small>
                   </button>
                   <button
                     type="button"

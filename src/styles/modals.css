@@ -107,12 +107,26 @@
   border-radius: 8px;
   background: rgba(219, 234, 254, 0.35);
   color: #1e3a8a;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  line-height: 1.1;
+}
+
+.export-modal-segmented button small {
+  font-size: 11px;
+  color: #1e40af;
 }
 
 .export-modal-segmented button.active {
   border-color: #1d4ed8;
   background: #1d4ed8;
   color: #ffffff;
+}
+
+.export-modal-segmented button.active small {
+  color: #dbeafe;
 }
 
 .export-modal-segmented button:focus-visible {
