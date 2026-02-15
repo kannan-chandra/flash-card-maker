@@ -9,6 +9,30 @@ function getPresetGrid(preset: CardPreset): { cols: number; rows: number } {
   return { cols: 3, rows: 4 };
 }
 
+interface PresetLayoutConfig {
+  margin: number;
+  gutter: number;
+  fixedCardSize?: { width: number; height: number };
+}
+
+function getPresetLayoutConfig(preset: CardPreset): PresetLayoutConfig {
+  if (preset === 8) {
+    // Match standard playing-card dimensions (landscape): 3.5in x 2.5in.
+    return {
+      margin: 24,
+      gutter: 8,
+      fixedCardSize: {
+        width: 72 * 3.5,
+        height: 72 * 2.5
+      }
+    };
+  }
+  return {
+    margin: 36,
+    gutter: 12
+  };
+}
+
 function dataUrlToBytes(dataUrl: string): Uint8Array {
   const base64 = dataUrl.split(',')[1] ?? '';
   return Uint8Array.from(atob(base64), (char) => char.charCodeAt(0));
@@ -199,21 +223,29 @@ export async function generatePdfBytes(options: GeneratePdfOptions): Promise<Pdf
   onProgress(5, 'Preparing layout...');
   const standardFontCache = new Map<StandardFonts, PDFFont>();
   const grid = getPresetGrid(project.preset);
+  const layout = getPresetLayoutConfig(project.preset);
   const pageWidth = 612;
   const pageHeight = 792;
-  const margin = 36;
-  const gutter = 12;
+  const margin = layout.margin;
+  const gutter = layout.gutter;
   const usableWidth = pageWidth - margin * 2 - gutter * (grid.cols - 1);
   const usableHeight = pageHeight - margin * 2 - gutter * (grid.rows - 1);
   const slotWidth = usableWidth / grid.cols;
   const slotHeight = usableHeight / grid.rows;
 
   const ratio = project.template.width / project.template.height;
-  let cardWidth = slotWidth;
-  let cardHeight = slotWidth / ratio;
-  if (cardHeight > slotHeight) {
-    cardHeight = slotHeight;
-    cardWidth = slotHeight * ratio;
+  let cardWidth = 0;
+  let cardHeight = 0;
+  if (layout.fixedCardSize) {
+    cardWidth = layout.fixedCardSize.width;
+    cardHeight = layout.fixedCardSize.height;
+  } else {
+    cardWidth = slotWidth;
+    cardHeight = slotWidth / ratio;
+    if (cardHeight > slotHeight) {
+      cardHeight = slotHeight;
+      cardWidth = slotHeight * ratio;
+    }
   }
 
   const cols = grid.cols;
