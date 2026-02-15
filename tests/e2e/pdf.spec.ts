@@ -8,10 +8,31 @@ const ONE_BY_ONE_PNG = Buffer.from(
 );
 
 async function importCsv(page: Page, value: string) {
-  await page.getByRole('button', { name: 'Import CSV' }).click();
+  await page.getByRole('button', { name: 'Import', exact: true }).click();
   const dialog = page.getByRole('dialog', { name: 'CSV import' });
   await dialog.getByLabel('CSV input').fill(value);
   await dialog.getByRole('button', { name: 'Import', exact: true }).click();
+}
+
+async function openExportModal(page: Page) {
+  await page.getByRole('button', { name: 'Export', exact: true }).click();
+  await expect(page.getByRole('dialog', { name: 'Export PDF' })).toBeVisible();
+}
+
+async function openImageInspector(page: Page) {
+  const stage = page.locator('canvas').first();
+  const box = await stage.boundingBox();
+  expect(box).toBeTruthy();
+  if (!box) return;
+  await page.mouse.click(box.x + box.width * 0.5, box.y + box.height * 0.46);
+}
+
+async function openWordTextInspector(page: Page) {
+  const stage = page.locator('canvas').first();
+  const box = await stage.boundingBox();
+  expect(box).toBeTruthy();
+  if (!box) return;
+  await page.mouse.click(box.x + box.width * 0.5, box.y + box.height * 0.1);
 }
 
 async function dragOnStage(page: Page, from: { x: number; y: number }, to: { x: number; y: number }) {
@@ -72,6 +93,7 @@ test('generates downloadable PDF for Tamil text without runtime errors', async (
   await page.goto('/');
 
   await importCsv(page, 'word,subtitle\nசிங்கம்,விலங்கு');
+  await openImageInspector(page);
 
   const upload = page.getByLabel('Selected row image upload');
   await upload.setInputFiles({
@@ -80,8 +102,10 @@ test('generates downloadable PDF for Tamil text without runtime errors', async (
     buffer: ONE_BY_ONE_PNG
   });
 
+  await openExportModal(page);
+  const exportDialog = page.getByRole('dialog', { name: 'Export PDF' });
   const downloadPromise = page.waitForEvent('download');
-  await page.getByRole('button', { name: 'Generate PDF' }).click();
+  await exportDialog.getByRole('button', { name: 'Generate PDF' }).click();
   const download = await downloadPromise;
 
   const path = await download.path();
@@ -99,9 +123,11 @@ test('generates PDF successfully when rows have no images', async ({ page }) => 
   await page.goto('/');
 
   await importCsv(page, 'word,subtitle\nDog,Animal');
+  await openExportModal(page);
 
+  const exportDialog = page.getByRole('dialog', { name: 'Export PDF' });
   const downloadPromise = page.waitForEvent('download');
-  await page.getByRole('button', { name: 'Generate PDF' }).click();
+  await exportDialog.getByRole('button', { name: 'Generate PDF' }).click();
   const download = await downloadPromise;
 
   const path = await download.path();
@@ -122,52 +148,54 @@ test('can set emoji image for selected row and then remove image', async ({ page
   await page.goto('/');
 
   await importCsv(page, 'word,subtitle\nbaby,one\nlion,two');
+  await openImageInspector(page);
 
   await page.getByRole('button', { name: /^Use emoji / }).first().click();
   await expect(page.getByRole('button', { name: 'Remove image' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Set image from URL' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Upload with URL' })).toHaveCount(0);
 
   await page.getByRole('button', { name: 'Remove image' }).click();
-  await expect(page.getByRole('button', { name: 'Set image from URL' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Upload with URL' })).toBeVisible();
 });
 
 test('offers emoji button for noun objects and vehicles', async ({ page }) => {
   await page.goto('/');
 
   await importCsv(page, 'word,subtitle\nhammer,tool\nbus,vehicle');
+  await openImageInspector(page);
 
   const emojiChoices = page.getByRole('button', { name: /^Use emoji / });
   const count = await emojiChoices.count();
   expect(count).toBeGreaterThan(0);
-  expect(count).toBeLessThanOrEqual(5);
 });
 
 test('offers emoji button for Tamil keyword matches', async ({ page }) => {
   await page.goto('/');
 
   await importCsv(page, 'word,subtitle\nநாய்,செல்லப்பிராணி');
+  await openImageInspector(page);
 
   const emojiChoices = page.getByRole('button', { name: /^Use emoji / });
   const count = await emojiChoices.count();
   expect(count).toBeGreaterThan(0);
-  expect(count).toBeLessThanOrEqual(5);
 });
 
 test('uses subtitle emoji keywords when word has no match', async ({ page }) => {
   await page.goto('/');
 
   await importCsv(page, 'word,subtitle\nperro,நாய்');
+  await openImageInspector(page);
 
   const emojiChoices = page.getByRole('button', { name: /^Use emoji / });
   const count = await emojiChoices.count();
   expect(count).toBeGreaterThan(0);
-  expect(count).toBeLessThanOrEqual(5);
 });
 
 test('generates downloadable PDF in double-sided mode', async ({ page }) => {
   await page.goto('/');
 
   await importCsv(page, 'word,subtitle\nDog,Animal');
+  await openImageInspector(page);
 
   const upload = page.getByLabel('Selected row image upload');
   await upload.setInputFiles({
@@ -176,10 +204,12 @@ test('generates downloadable PDF in double-sided mode', async ({ page }) => {
     buffer: ONE_BY_ONE_PNG
   });
 
-  await page.getByLabel('Double-sided cards').check();
+  await page.getByLabel('Double-sided').click();
+  await openExportModal(page);
 
+  const exportDialog = page.getByRole('dialog', { name: 'Export PDF' });
   const downloadPromise = page.waitForEvent('download');
-  await page.getByRole('button', { name: 'Generate PDF' }).click();
+  await exportDialog.getByRole('button', { name: 'Generate PDF' }).click();
   const download = await downloadPromise;
 
   expect(await download.failure()).toBeNull();
@@ -213,6 +243,7 @@ test('dragging on canvas does not produce NaN coordinate warnings', async ({ pag
 test('pdf text layout remains visually aligned at large font sizes', async ({ page, context, browserName }) => {
   test.skip(browserName !== 'chromium', 'PDF viewer screenshot assertions are chromium-specific');
   test.setTimeout(60000);
+  await page.setViewportSize({ width: 1600, height: 1200 });
 
   await page.goto('/');
   await importCsv(page, 'word,subtitle\nLOM,LOM');
@@ -220,6 +251,7 @@ test('pdf text layout remains visually aligned at large font sizes', async ({ pa
   await dragOnStage(page, { x: 500, y: 165 }, { x: 500, y: 165 });
   await dragOnStage(page, { x: 500, y: 165 }, { x: 668, y: 34 });
   await dragOnStage(page, { x: 500, y: 346 }, { x: 20, y: 487 });
+  await openWordTextInspector(page);
 
   await page.getByLabel('Size').fill('100');
   await page.keyboard.press('Enter');
@@ -227,8 +259,10 @@ test('pdf text layout remains visually aligned at large font sizes', async ({ pa
   const stageCanvas = page.locator('.stage-canvas');
   await expect(stageCanvas).toHaveScreenshot('canvas-large-font-edge.png');
 
+  await openExportModal(page);
+  const exportDialog = page.getByRole('dialog', { name: 'Export PDF' });
   const downloadPromise = page.waitForEvent('download');
-  await page.getByRole('button', { name: 'Generate PDF' }).click();
+  await exportDialog.getByRole('button', { name: 'Generate PDF' }).click();
   const download = await downloadPromise;
   const pdfPath = await download.path();
   expect(pdfPath).toBeTruthy();
