@@ -32,6 +32,7 @@ export function WordListPanel(props: WordListPanelProps) {
   const draftWordRef = useRef<HTMLInputElement | null>(null);
   const draftSubtitleRef = useRef<HTMLInputElement | null>(null);
   const pendingFocusRef = useRef<{ rowId: string; column: 'word' | 'subtitle'; arrowDirection?: 'up' | 'down' } | null>(null);
+  const recentInsertedRowFocusRef = useRef<{ rowId: string; expiresAt: number } | null>(null);
   const selectDebounceTimerRef = useRef<number | null>(null);
   const suppressNextEnterKeydownRef = useRef(false);
   const suppressNextEnterResetTimerRef = useRef<number | null>(null);
@@ -206,6 +207,18 @@ export function WordListPanel(props: WordListPanelProps) {
   function onRowBlur(rowId: string, event: FocusEvent<HTMLInputElement>) {
     const nextTarget = event.relatedTarget as HTMLElement | null;
     const nextRowId = nextTarget?.getAttribute('data-row-id');
+    const recentInserted = recentInsertedRowFocusRef.current;
+    if (!nextRowId && recentInserted?.rowId === rowId && Date.now() < recentInserted.expiresAt) {
+      debugLog('blur recovered inserted-row focus', {
+        rowId,
+        column: event.currentTarget.getAttribute('data-column'),
+        relatedTarget: describeElement(nextTarget)
+      });
+      requestAnimationFrame(() => {
+        focusInput(rowId, 'word');
+      });
+      return;
+    }
     if (nextRowId === rowId) {
       return;
     }
@@ -232,6 +245,10 @@ export function WordListPanel(props: WordListPanelProps) {
     }
     scheduleSelectionCommit(insertedRowId);
     pendingFocusRef.current = { rowId: insertedRowId, column: 'word', arrowDirection: 'down' };
+    recentInsertedRowFocusRef.current = {
+      rowId: insertedRowId,
+      expiresAt: Date.now() + 400
+    };
     requestAnimationFrame(() => {
       const pending = pendingFocusRef.current;
       if (!pending) {
