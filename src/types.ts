@@ -1,4 +1,4 @@
-export type CardPreset = 6 | 8 | 12;
+export type CardPreset = 6 | 8 | 15;
 export type PdfSpacingMode = 'with-margin' | 'easy-cut';
 
 export type FontFamily = 'Arial' | 'Verdana' | 'Times New Roman' | 'Georgia' | 'Courier New' | 'Noto Sans Tamil';

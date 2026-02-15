@@ -6,7 +6,7 @@ import { splitTextForPdf } from '../utils/layout';
 function getPresetGrid(preset: CardPreset): { cols: number; rows: number } {
   if (preset === 6) return { cols: 2, rows: 3 };
   if (preset === 8) return { cols: 2, rows: 4 };
-  return { cols: 3, rows: 4 };
+  return { cols: 3, rows: 5 };
 }
 
 interface PresetLayoutConfig {

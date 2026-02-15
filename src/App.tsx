@@ -425,10 +425,10 @@ export default function App() {
             <div className="export-modal-controls">
               <label>
                 Cards per page
-                <select value={project.preset} onChange={(event) => updateActiveSet((current) => ({ ...current, preset: Number(event.target.value) as 6 | 8 | 12 }))}>
+                <select value={project.preset} onChange={(event) => updateActiveSet((current) => ({ ...current, preset: Number(event.target.value) as 6 | 8 | 15 }))}>
                   <option value={6}>6 per page</option>
                   <option value={8}>8 per page</option>
-                  <option value={12}>12 per page</option>
+                  <option value={15}>15 per page</option>
                 </select>
               </label>
               <div className="export-modal-spacing">

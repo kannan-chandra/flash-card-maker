@@ -185,9 +185,11 @@ export function normalizeSet(setItem: FlashcardSet): FlashcardSet {
     setItem.doubleSidedTemplate ?? (setItem.doubleSided ? setItem.template : DOUBLE_SIDED_DEFAULT_TEMPLATE)
   );
   const doubleSided = setItem.doubleSided ?? false;
+  const normalizedPreset = setItem.preset === 6 || setItem.preset === 8 ? setItem.preset : 15;
   return {
     ...setItem,
     doubleSided,
+    preset: normalizedPreset,
     pdfSpacingMode: setItem.pdfSpacingMode === 'easy-cut' ? 'easy-cut' : 'with-margin',
     singleSidedTemplate,
     doubleSidedTemplate,

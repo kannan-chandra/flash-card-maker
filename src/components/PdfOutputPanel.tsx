@@ -28,7 +28,7 @@ export function PdfOutputPanel(props: PdfOutputPanelProps) {
         <select value={preset} onChange={(event) => onPresetChange(Number(event.target.value) as CardPreset)}>
           <option value={6}>6 per page</option>
           <option value={8}>8 per page</option>
-          <option value={12}>12 per page</option>
+          <option value={15}>15 per page</option>
         </select>
       </label>
 
