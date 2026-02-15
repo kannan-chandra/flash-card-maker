@@ -420,7 +420,6 @@ export default function App() {
           <Modal className="csv-modal export-modal" ariaLabel="Export PDF">
             <div className="export-modal-header">
               <h3>Export PDF</h3>
-              <p>Choose layout options, then generate your printable flashcard file.</p>
             </div>
             <div className="export-modal-controls">
               <div className="export-modal-spacing">
@@ -502,7 +501,6 @@ export default function App() {
               </div>
             )}
             {pdfStatus && <p className="status export-modal-status">{pdfStatus}</p>}
-            <p className="hint export-modal-hint">If a web image fails due to CORS/restrictions, save it to your computer and upload it from the image modal.</p>
           </Modal>
         </>
       )}
