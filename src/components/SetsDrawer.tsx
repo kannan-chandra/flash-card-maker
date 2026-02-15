@@ -109,7 +109,7 @@ export function SetsDrawer(props: SetsDrawerProps) {
                 }}
               >
                 <strong className="set-name">{setItem.name}</strong>
-                <span className="set-meta">{setItem.rows.length} rows</span>
+                <span className="set-meta">{setItem.rows.length} cards</span>
               </button>
               <div className="set-item-actions">
                 <button type="button" className="set-rename-button" aria-label="Rename set" onClick={() => openRenameModal(setItem)}>
