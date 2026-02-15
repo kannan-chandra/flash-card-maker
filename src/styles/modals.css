@@ -64,13 +64,17 @@
   font-size: 14px;
 }
 
-.export-modal-spacing-options {
+.export-modal-segmented {
   display: inline-grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 6px;
 }
 
-.export-modal-spacing-options button {
+.export-modal-segmented-three {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.export-modal-segmented button {
   min-height: 34px;
   border: 1px solid #bfdbfe;
   border-radius: 8px;
@@ -78,13 +82,13 @@
   color: #1e3a8a;
 }
 
-.export-modal-spacing-options button.active {
+.export-modal-segmented button.active {
   border-color: #1d4ed8;
   background: #1d4ed8;
   color: #ffffff;
 }
 
-.export-modal-spacing-options button:focus-visible {
+.export-modal-segmented button:focus-visible {
   outline: 2px solid #93c5fd;
   outline-offset: 1px;
 }

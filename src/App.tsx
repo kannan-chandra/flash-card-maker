@@ -423,17 +423,38 @@ export default function App() {
               <p>Choose layout options, then generate your printable flashcard file.</p>
             </div>
             <div className="export-modal-controls">
-              <label>
-                Cards per page
-                <select value={project.preset} onChange={(event) => updateActiveSet((current) => ({ ...current, preset: Number(event.target.value) as 6 | 8 | 15 }))}>
-                  <option value={6}>6 per page</option>
-                  <option value={8}>8 per page</option>
-                  <option value={15}>15 per page</option>
-                </select>
-              </label>
+              <div className="export-modal-spacing">
+                <span>Cards per page</span>
+                <div className="export-modal-segmented export-modal-segmented-three" role="group" aria-label="Cards per page">
+                  <button
+                    type="button"
+                    className={project.preset === 6 ? 'active' : ''}
+                    aria-pressed={project.preset === 6}
+                    onClick={() => updateActiveSet((current) => ({ ...current, preset: 6 }))}
+                  >
+                    6
+                  </button>
+                  <button
+                    type="button"
+                    className={project.preset === 8 ? 'active' : ''}
+                    aria-pressed={project.preset === 8}
+                    onClick={() => updateActiveSet((current) => ({ ...current, preset: 8 }))}
+                  >
+                    8
+                  </button>
+                  <button
+                    type="button"
+                    className={project.preset === 15 ? 'active' : ''}
+                    aria-pressed={project.preset === 15}
+                    onClick={() => updateActiveSet((current) => ({ ...current, preset: 15 }))}
+                  >
+                    15
+                  </button>
+                </div>
+              </div>
               <div className="export-modal-spacing">
                 <span>Card spacing</span>
-                <div className="export-modal-spacing-options" role="group" aria-label="PDF card spacing mode">
+                <div className="export-modal-segmented" role="group" aria-label="PDF card spacing mode">
                   <button
                     type="button"
                     className={project.pdfSpacingMode === 'with-margin' ? 'active' : ''}
