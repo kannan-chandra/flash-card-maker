@@ -164,18 +164,23 @@ export function WordListPanel(props: WordListPanelProps) {
       return;
     }
     event.preventDefault();
+    insertRowAfterAndFocus(rowId);
+  }
+
+  function insertRowAfterAndFocus(rowId: string): boolean {
     const rowIndex = rows.findIndex((item) => item.id === rowId);
     if (rowIndex < 0 || isRowEmpty(rows[rowIndex])) {
-      return;
+      return false;
     }
     const insertedRowId = onInsertRowAfter(rowId);
     if (!insertedRowId) {
-      return;
+      return false;
     }
     scheduleSelectionCommit(insertedRowId);
     requestAnimationFrame(() => {
       focusInput(insertedRowId, 'word', { arrowDirection: 'down' });
     });
+    return true;
   }
 
   function atStart(input: HTMLInputElement): boolean {
@@ -329,6 +334,13 @@ export function WordListPanel(props: WordListPanelProps) {
     if (composing) {
       event.preventDefault();
       pendingTabNavigationRef.current = { rowId, column, shiftKey: event.shiftKey };
+      return;
+    }
+
+    const isLastRowSubtitleTab = !event.shiftKey && column === 'subtitle' && rowId === rows[rows.length - 1]?.id;
+    if (isLastRowSubtitleTab) {
+      event.preventDefault();
+      insertRowAfterAndFocus(rowId);
       return;
     }
 
