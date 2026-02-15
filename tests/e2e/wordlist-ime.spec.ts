@@ -137,3 +137,22 @@ test('ime enter does not double-insert when composition end is followed by a pla
   await expect(insertedRowWord).toBeFocused();
   await expect(insertedRowWord).toHaveValue('');
 });
+
+test('tab then enter from first row moves focus to inserted row word', async ({ page }) => {
+  await page.goto('/');
+  await importCsv(page, 'word,subtitle\nalpha,one\nbeta,two\ngamma,three');
+
+  const rows = page.locator('tbody tr').filter({ has: page.getByLabel('Word', { exact: true }) });
+  await expect(rows).toHaveCount(3);
+
+  const firstWord = rows.first().getByLabel('Word');
+  await firstWord.click();
+  await page.keyboard.press('End');
+  await page.keyboard.press('Tab');
+  await page.keyboard.press('Enter');
+
+  await expect(rows).toHaveCount(4);
+  const insertedRowWord = rows.nth(1).getByLabel('Word');
+  await expect(insertedRowWord).toBeFocused();
+  await expect(insertedRowWord).toHaveValue('');
+});
