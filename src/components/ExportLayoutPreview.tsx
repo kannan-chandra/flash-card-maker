@@ -35,7 +35,6 @@ export function ExportLayoutPreview(props: ExportLayoutPreviewProps) {
               y={pagePadding + row * (cardHeight + gap)}
               width={cardWidth}
               height={cardHeight}
-              rx="3"
               className="export-card-outline"
             />
           ))
