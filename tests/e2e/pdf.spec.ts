@@ -95,6 +95,21 @@ test('generates downloadable PDF for Tamil text without runtime errors', async (
   expect(pageErrors).toEqual([]);
 });
 
+test('generates PDF successfully when rows have no images', async ({ page }) => {
+  await page.goto('/');
+
+  await importCsv(page, 'word,subtitle\nDog,Animal');
+
+  const downloadPromise = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Generate PDF' }).click();
+  const download = await downloadPromise;
+
+  const path = await download.path();
+  expect(path).toBeTruthy();
+  expect(await download.failure()).toBeNull();
+  await expect(page.getByText('PDF generated successfully.')).toBeVisible();
+});
+
 test('flags long unbroken words as overflow', async ({ page }) => {
   await page.goto('/');
 

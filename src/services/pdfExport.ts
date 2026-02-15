@@ -45,6 +45,10 @@ function getImageSourceKey(row: FlashcardRow): string | null {
   return null;
 }
 
+function isRemoteSourceKey(sourceKey: string): boolean {
+  return sourceKey.startsWith('remote:');
+}
+
 // In-memory cache for image bytes across PDF generations in this browser session.
 const imageBytesMemoryCache = new Map<string, Uint8Array>();
 const imageBytesInflight = new Map<string, Promise<Uint8Array>>();
@@ -265,6 +269,9 @@ export async function generatePdfBytes(options: GeneratePdfOptions): Promise<Pdf
             rowImageBytes.set(row.id, bytes);
           }
         } catch {
+          if (!isRemoteSourceKey(sourceKey)) {
+            continue;
+          }
           for (const row of rowsForSource) {
             nextIssues[row.id] = 'Unable to load image. Workaround: save the image and upload it from your computer.';
           }
@@ -323,7 +330,7 @@ export async function generatePdfBytes(options: GeneratePdfOptions): Promise<Pdf
           perf.imageEmbedMs += performance.now() - embedStart;
           const containRect = getContainRect(imageX, imageY, imageW, imageH, embeddedImage.width, embeddedImage.height);
           page.drawImage(embeddedImage, containRect);
-        } else if (!nextIssues[row.id]) {
+        } else if (sourceKey && isRemoteSourceKey(sourceKey) && !nextIssues[row.id]) {
           nextIssues[row.id] = 'Unable to load image. Workaround: save the image and upload it from your computer.';
         }
       }
