@@ -17,11 +17,16 @@ export function ExportLayoutPreview(props: ExportLayoutPreviewProps) {
   const pageWidth = 220;
   const pageHeight = 286;
   const pagePadding = 14;
-  const gap = spacingMode === 'with-margin' ? 6 : 0;
+  const baseGap = 6;
+  const gap = spacingMode === 'with-margin' ? baseGap : 0;
   const innerWidth = pageWidth - pagePadding * 2;
   const innerHeight = pageHeight - pagePadding * 2;
-  const cardWidth = (innerWidth - gap * (cols - 1)) / cols;
-  const cardHeight = (innerHeight - gap * (rows - 1)) / rows;
+  const cardWidth = (innerWidth - baseGap * (cols - 1)) / cols;
+  const cardHeight = (innerHeight - baseGap * (rows - 1)) / rows;
+  const gridWidth = cols * cardWidth + (cols - 1) * gap;
+  const gridHeight = rows * cardHeight + (rows - 1) * gap;
+  const startX = (pageWidth - gridWidth) / 2;
+  const startY = (pageHeight - gridHeight) / 2;
 
   return (
     <div className="export-modal-preview" aria-hidden>
@@ -31,8 +36,8 @@ export function ExportLayoutPreview(props: ExportLayoutPreviewProps) {
           Array.from({ length: cols }).map((__, col) => (
             <rect
               key={`${row}-${col}`}
-              x={pagePadding + col * (cardWidth + gap)}
-              y={pagePadding + row * (cardHeight + gap)}
+              x={startX + col * (cardWidth + gap)}
+              y={startY + row * (cardHeight + gap)}
               width={cardWidth}
               height={cardHeight}
               className="export-card-outline"
