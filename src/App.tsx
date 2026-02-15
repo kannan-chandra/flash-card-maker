@@ -402,12 +402,12 @@ export default function App() {
           <Modal className="csv-modal onboarding-modal" ariaLabel="First launch guide">
             <h3>Welcome to Flash Card Maker</h3>
             <ol>
-              <li>Add a list of words quickly. It is like a table, and you can hit Enter after each word.</li>
-              <li>Design your card layout. You can do single-sided or double-sided cards.</li>
-              <li>Export to PDF.</li>
+              <li>Make your word list quickly.</li>
+              <li>Edit your card layout, with single-sided or double-sided cards.</li>
+              <li>Export to PDF in multiple sizes.</li>
             </ol>
             <p>
-              Cards are stored only locally on this computer in your browser. If you clear browser data, you will lose your flash cards. Export PDF if you are on a
+              Cards are stored only locally on this computer in your browser. If you clear browser data, you will lose your flash cards. Remember to export to PDF if you are on a
               public computer.
             </p>
             <div className="row-buttons onboarding-modal-actions">
