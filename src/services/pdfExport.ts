@@ -250,6 +250,7 @@ export async function generatePdfBytes(options: GeneratePdfOptions): Promise<Pdf
   }
 
   const cols = grid.cols;
+  const rows = grid.rows;
   const perPage = grid.cols * grid.rows;
   const nextIssues: Record<string, string> = {};
   const rowImageSourceKey = new Map<string, string>();
@@ -314,12 +315,18 @@ export async function generatePdfBytes(options: GeneratePdfOptions): Promise<Pdf
   );
   perf.imagePrefetchMs = performance.now() - prefetchStart;
 
+  const useEasyCutLayout = project.pdfSpacingMode === 'easy-cut';
+  const stepX = useEasyCutLayout ? cardWidth : slotWidth + gutter;
+  const stepY = useEasyCutLayout ? cardHeight : slotHeight + gutter;
+  const originX = useEasyCutLayout ? (pageWidth - cols * cardWidth) / 2 : margin + (slotWidth - cardWidth) / 2;
+  const originYTop = useEasyCutLayout ? (pageHeight - rows * cardHeight) / 2 : margin + (slotHeight - cardHeight) / 2;
+
   function getCardPosition(rowInPage: number, colInPage: number): { cardX: number; cardY: number } {
-    const slotX = margin + colInPage * (slotWidth + gutter);
-    const slotYTop = margin + rowInPage * (slotHeight + gutter);
+    const slotX = originX + colInPage * stepX;
+    const slotYTop = originYTop + rowInPage * stepY;
     return {
-      cardX: slotX + (slotWidth - cardWidth) / 2,
-      cardY: pageHeight - slotYTop - cardHeight - (slotHeight - cardHeight) / 2
+      cardX: slotX,
+      cardY: pageHeight - slotYTop - cardHeight
     };
   }
 
