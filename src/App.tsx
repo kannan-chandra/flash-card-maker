@@ -441,8 +441,7 @@ export default function App() {
                     aria-pressed={project.preset === 8}
                     onClick={() => updateActiveSet((current) => ({ ...current, preset: 8 }))}
                   >
-                    <span>8</span>
-                    <small>standard playing card size</small>
+                    8
                   </button>
                   <button
                     type="button"
@@ -453,6 +452,7 @@ export default function App() {
                     15
                   </button>
                 </div>
+                <p className="export-modal-note">8 = standard playing card size</p>
               </div>
               <div className="export-modal-spacing">
                 <span>Card spacing</span>
