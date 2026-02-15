@@ -26,7 +26,7 @@ function makeRowId(): string {
 }
 
 export default function App() {
-  const { sets, project, loading, setActiveSetId, createSet, deleteSet, updateActiveSet, patchTemplate, patchTextElement, appendRows, updateRow } =
+  const { sets, project, loading, setActiveSetId, createSet, renameSet, deleteSet, updateActiveSet, patchTemplate, patchTextElement, appendRows, updateRow } =
     useWorkspace();
   const [setsMenuOpen, setSetsMenuOpen] = useState(false);
   const [exportModalOpen, setExportModalOpen] = useState(false);
@@ -134,6 +134,10 @@ export default function App() {
       return;
     }
     deleteSet(setId);
+  }
+
+  function onRenameSet(setId: string, name: string) {
+    renameSet(setId, name);
   }
 
   function onCsvImport(): boolean {
@@ -374,6 +378,7 @@ export default function App() {
         activeSetId={project.id}
         onCreateSet={onCreateSet}
         onSelectSet={setActiveSetId}
+        onRenameSet={onRenameSet}
         onDeleteSet={onDeleteSet}
         onClose={() => setSetsMenuOpen(false)}
       />

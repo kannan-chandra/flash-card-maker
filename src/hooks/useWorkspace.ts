@@ -10,6 +10,7 @@ interface UseWorkspaceResult {
   project: FlashcardSet | null;
   setActiveSetId: (setId: string) => void;
   createSet: (name: string) => void;
+  renameSet: (setId: string, name: string) => void;
   deleteSet: (setId: string) => void;
   updateActiveSet: (updater: (current: FlashcardSet) => FlashcardSet) => void;
   patchTemplate: (patch: Partial<CardTemplate>) => void;
@@ -103,6 +104,14 @@ export function useWorkspace(): UseWorkspaceResult {
     [activeSetId]
   );
 
+  const renameSet = useCallback((setId: string, name: string) => {
+    const nextName = name.trim();
+    if (!nextName) {
+      return;
+    }
+    setSets((currentSets) => currentSets.map((item) => (item.id === setId ? { ...item, name: nextName, updatedAt: Date.now() } : item)));
+  }, []);
+
   const patchTemplate = useCallback(
     (patch: Partial<CardTemplate>) => {
       updateActiveSet((current) => ({
@@ -190,6 +199,7 @@ export function useWorkspace(): UseWorkspaceResult {
     project,
     setActiveSetId,
     createSet,
+    renameSet,
     deleteSet,
     updateActiveSet,
     patchTemplate,
