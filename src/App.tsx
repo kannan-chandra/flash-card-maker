@@ -308,15 +308,17 @@ export default function App() {
   }
 
   function onInsertRowAfter(rowId: string): string | undefined {
-    let insertedId: string | undefined;
+    if (!project || !project.rows.some((row) => row.id === rowId)) {
+      return undefined;
+    }
+    const nextInsertedId = makeRowId();
     updateActiveSet((current) => {
       const rowIndex = current.rows.findIndex((row) => row.id === rowId);
       if (rowIndex < 0) {
         return current;
       }
-      insertedId = makeRowId();
       const nextRow = {
-        id: insertedId,
+        id: nextInsertedId,
         word: '',
         subtitle: '',
         imageUrl: ''
@@ -329,7 +331,7 @@ export default function App() {
         selectedRowId: current.selectedRowId
       };
     });
-    return insertedId;
+    return nextInsertedId;
   }
 
   if (loading) {
