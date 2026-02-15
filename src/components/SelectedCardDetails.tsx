@@ -36,6 +36,8 @@ export function SelectedCardDetails(props: SelectedCardDetailsProps) {
   const [showUrlInput, setShowUrlInput] = useState(false);
   const [showEmojiSearch, setShowEmojiSearch] = useState(false);
   const [emojiSearchQuery, setEmojiSearchQuery] = useState('');
+  const forceEmojiSearch = selectedRowEmojiMatches.length === 0;
+  const isEmojiSearchVisible = showEmojiSearch || forceEmojiSearch;
   const fileInputRef = useRef<HTMLInputElement>(null);
   const urlInputRef = useRef<HTMLInputElement>(null);
   const applyAttemptIdRef = useRef(0);
@@ -181,7 +183,7 @@ export function SelectedCardDetails(props: SelectedCardDetailsProps) {
                     }}
                   />
                 </div>
-                {showEmojiSearch ? (
+                {isEmojiSearchVisible ? (
                   <div className="emoji-search-mode">
                     <div className="emoji-search-header">
                       <input
@@ -191,16 +193,18 @@ export function SelectedCardDetails(props: SelectedCardDetailsProps) {
                         placeholder="Search emoji keywords..."
                         aria-label="Search emoji"
                       />
-                      <button
-                        type="button"
-                        aria-label="Close emoji search"
-                        onClick={() => {
-                          setShowEmojiSearch(false);
-                          setEmojiSearchQuery('');
-                        }}
-                      >
-                        X
-                      </button>
+                      {forceEmojiSearch ? null : (
+                        <button
+                          type="button"
+                          aria-label="Close emoji search"
+                          onClick={() => {
+                            setShowEmojiSearch(false);
+                            setEmojiSearchQuery('');
+                          }}
+                        >
+                          X
+                        </button>
+                      )}
                     </div>
                     <div className="emoji-search-results">
                       <div className="emoji-grid">
@@ -242,11 +246,6 @@ export function SelectedCardDetails(props: SelectedCardDetailsProps) {
                         <span className="search-glyph" aria-hidden />
                       </button>
                     </div>
-                    {selectedRowEmojiMatches.length === 0 ? (
-                      <div className="emoji-grid">
-                        <p className="hint">No quick matches for this word.</p>
-                      </div>
-                    ) : null}
                   </div>
                 )}
               </>
