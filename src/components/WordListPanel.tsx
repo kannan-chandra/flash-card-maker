@@ -32,6 +32,16 @@ export function WordListPanel(props: WordListPanelProps) {
   const draftWordRef = useRef<HTMLInputElement | null>(null);
   const draftSubtitleRef = useRef<HTMLInputElement | null>(null);
   const pendingFocusRef = useRef<{ rowId: string; column: 'word' | 'subtitle'; arrowDirection?: 'up' | 'down' } | null>(null);
+  const navigationTxnRef = useRef<{
+    kind: 'enter' | 'tab';
+    sourceRowId: string;
+    sourceColumn: 'word' | 'subtitle';
+    targetRowId: string;
+    targetColumn: 'word' | 'subtitle';
+    startedAt: number;
+    expiresAt: number;
+  } | null>(null);
+  const navigationTxnTimerRef = useRef<number | null>(null);
   const recentInsertedRowFocusRef = useRef<{ rowId: string; expiresAt: number } | null>(null);
   const lastHandledEnterRef = useRef<{ rowId: string; column: 'word' | 'subtitle'; at: number } | null>(null);
   const suppressTabAfterEnterRef = useRef<{ rowId: string; column: 'word' | 'subtitle'; expiresAt: number } | null>(null);
@@ -41,8 +51,8 @@ export function WordListPanel(props: WordListPanelProps) {
   const isComposingRef = useRef(false);
   const pendingKeyboardActionRef = useRef<
     | { type: 'tab'; rowId: string; column: 'word' | 'subtitle'; shiftKey: boolean }
-    | { type: 'existing-row-enter'; rowId: string }
-    | { type: 'draft-enter' }
+    | { type: 'existing-row-enter'; rowId: string; column: 'word' | 'subtitle' }
+    | { type: 'draft-enter'; column: 'word' | 'subtitle' }
     | null
   >(null);
   const validationById = useMemo(
@@ -75,6 +85,92 @@ export function WordListPanel(props: WordListPanelProps) {
     };
   }
 
+  function readColumn(value: string | null): 'word' | 'subtitle' | null {
+    return value === 'word' || value === 'subtitle' ? value : null;
+  }
+
+  function clearNavigationTxn(reason: string) {
+    const txn = navigationTxnRef.current;
+    if (!txn) {
+      return;
+    }
+    debugLog('txn cleared', {
+      reason,
+      kind: txn.kind,
+      source: { rowId: txn.sourceRowId, column: txn.sourceColumn },
+      target: { rowId: txn.targetRowId, column: txn.targetColumn }
+    });
+    navigationTxnRef.current = null;
+    if (navigationTxnTimerRef.current) {
+      window.clearTimeout(navigationTxnTimerRef.current);
+      navigationTxnTimerRef.current = null;
+    }
+  }
+
+  function startNavigationTxn(
+    kind: 'enter' | 'tab',
+    source: { rowId: string; column: 'word' | 'subtitle' },
+    target: { rowId: string; column: 'word' | 'subtitle' }
+  ) {
+    clearNavigationTxn('replaced');
+    navigationTxnRef.current = {
+      kind,
+      sourceRowId: source.rowId,
+      sourceColumn: source.column,
+      targetRowId: target.rowId,
+      targetColumn: target.column,
+      startedAt: performance.now(),
+      expiresAt: performance.now() + 450
+    };
+    debugLog('txn started', { kind, source, target });
+    navigationTxnTimerRef.current = window.setTimeout(() => {
+      clearNavigationTxn('timeout');
+    }, 500);
+  }
+
+  function activeNavigationTxn() {
+    const txn = navigationTxnRef.current;
+    if (!txn) {
+      return null;
+    }
+    if (performance.now() > txn.expiresAt) {
+      clearNavigationTxn('expired');
+      return null;
+    }
+    return txn;
+  }
+
+  function shouldBlockKeyForTxn(key: string, rowId: string, column: 'word' | 'subtitle'): boolean {
+    if (key !== 'Enter' && key !== 'Tab') {
+      return false;
+    }
+    const txn = activeNavigationTxn();
+    if (!txn) {
+      return false;
+    }
+    if (txn.sourceRowId !== rowId || txn.sourceColumn !== column) {
+      return false;
+    }
+    debugLog('key blocked by txn', {
+      key,
+      rowId,
+      column,
+      txnKind: txn.kind,
+      target: { rowId: txn.targetRowId, column: txn.targetColumn }
+    });
+    return true;
+  }
+
+  function completeNavigationTxnIfTarget(rowId: string, column: 'word' | 'subtitle') {
+    const txn = activeNavigationTxn();
+    if (!txn) {
+      return;
+    }
+    if (txn.targetRowId === rowId && txn.targetColumn === column) {
+      clearNavigationTxn('target-focused');
+    }
+  }
+
   useEffect(
     () => () => {
       if (selectDebounceTimerRef.current) {
@@ -82,6 +178,9 @@ export function WordListPanel(props: WordListPanelProps) {
       }
       if (suppressNextEnterResetTimerRef.current) {
         window.clearTimeout(suppressNextEnterResetTimerRef.current);
+      }
+      if (navigationTxnTimerRef.current) {
+        window.clearTimeout(navigationTxnTimerRef.current);
       }
     },
     []
@@ -209,6 +308,18 @@ export function WordListPanel(props: WordListPanelProps) {
   function onRowBlur(rowId: string, event: FocusEvent<HTMLInputElement>) {
     const nextTarget = event.relatedTarget as HTMLElement | null;
     const nextRowId = nextTarget?.getAttribute('data-row-id');
+    const blurredColumn = readColumn(event.currentTarget.getAttribute('data-column'));
+    const txn = activeNavigationTxn();
+    if (txn && txn.targetRowId === rowId && txn.targetColumn === blurredColumn && !nextRowId) {
+      debugLog('txn target blurred without related target', {
+        rowId,
+        column: blurredColumn
+      });
+      requestAnimationFrame(() => {
+        focusInput(txn.targetRowId, txn.targetColumn);
+      });
+      return;
+    }
     const recentInserted = recentInsertedRowFocusRef.current;
     if (!nextRowId && recentInserted?.rowId === rowId && Date.now() < recentInserted.expiresAt) {
       debugLog('blur recovered inserted-row focus', {
@@ -236,7 +347,11 @@ export function WordListPanel(props: WordListPanelProps) {
     }
   }
 
-  function insertRowAfterAndFocus(rowId: string): boolean {
+  function insertRowAfterAndFocus(
+    rowId: string,
+    sourceColumn: 'word' | 'subtitle',
+    kind: 'enter' | 'tab'
+  ): boolean {
     const rowIndex = rows.findIndex((item) => item.id === rowId);
     if (rowIndex < 0 || isRowEmpty(rows[rowIndex])) {
       return false;
@@ -245,6 +360,7 @@ export function WordListPanel(props: WordListPanelProps) {
     if (!insertedRowId) {
       return false;
     }
+    startNavigationTxn(kind, { rowId, column: sourceColumn }, { rowId: insertedRowId, column: 'word' });
     scheduleSelectionCommit(insertedRowId);
     pendingFocusRef.current = { rowId: insertedRowId, column: 'word', arrowDirection: 'down' };
     recentInsertedRowFocusRef.current = {
@@ -263,10 +379,11 @@ export function WordListPanel(props: WordListPanelProps) {
     return true;
   }
 
-  function submitDraftRowAndRefocus() {
+  function submitDraftRowAndRefocus(sourceColumn: 'word' | 'subtitle') {
     if (isRowEmpty(draftRow)) {
       return;
     }
+    startNavigationTxn('enter', { rowId: '__draft__', column: sourceColumn }, { rowId: '__draft__', column: 'word' });
     onAppendRow({
       word: draftRow.word,
       subtitle: draftRow.subtitle
@@ -348,6 +465,37 @@ export function WordListPanel(props: WordListPanelProps) {
       }
       focusInput(rowId, 'subtitle');
     }
+  }
+
+  function getTabNavigationTarget(
+    rowId: string,
+    column: 'word' | 'subtitle',
+    shiftKey: boolean
+  ): { rowId: string; column: 'word' | 'subtitle' } | null {
+    const rowsWithDraft = [...rows.map((row) => row.id), '__draft__'];
+    const currentIndex = rowsWithDraft.indexOf(rowId);
+    if (currentIndex < 0) {
+      return null;
+    }
+
+    if (shiftKey) {
+      if (column === 'subtitle') {
+        return { rowId, column: 'word' };
+      }
+      if (column === 'word' && currentIndex > 0) {
+        return { rowId: rowsWithDraft[currentIndex - 1], column: 'subtitle' };
+      }
+      return null;
+    }
+
+    if (column === 'word') {
+      return { rowId, column: 'subtitle' };
+    }
+
+    if (column === 'subtitle' && currentIndex < rowsWithDraft.length - 1) {
+      return { rowId: rowsWithDraft[currentIndex + 1], column: 'word' };
+    }
+    return null;
   }
 
   function runTabNavigation(rowId: string, column: 'word' | 'subtitle', shiftKey: boolean): boolean {
@@ -434,10 +582,10 @@ export function WordListPanel(props: WordListPanelProps) {
       return;
     }
     if (action.type === 'existing-row-enter') {
-      insertRowAfterAndFocus(action.rowId);
+      insertRowAfterAndFocus(action.rowId, action.column, 'enter');
       return;
     }
-    submitDraftRowAndRefocus();
+    submitDraftRowAndRefocus(action.column);
   }
 
   function isComposingEvent(event: ReactKeyboardEvent<HTMLInputElement>): boolean {
@@ -486,6 +634,10 @@ export function WordListPanel(props: WordListPanelProps) {
     if (event.key !== 'Tab') {
       return;
     }
+    if (shouldBlockKeyForTxn('Tab', rowId, column)) {
+      event.preventDefault();
+      return;
+    }
     const suppressedTab = suppressTabAfterEnterRef.current;
     if (suppressedTab && suppressedTab.rowId === rowId && suppressedTab.column === column && Date.now() < suppressedTab.expiresAt) {
       debugLog('tab suppressed after enter', { rowId, column });
@@ -502,17 +654,23 @@ export function WordListPanel(props: WordListPanelProps) {
     const isLastRowSubtitleTab = !event.shiftKey && column === 'subtitle' && rowId === rows[rows.length - 1]?.id;
     if (isLastRowSubtitleTab) {
       event.preventDefault();
-      insertRowAfterAndFocus(rowId);
+      insertRowAfterAndFocus(rowId, column, 'tab');
       return;
     }
 
-    if (runTabNavigation(rowId, column, event.shiftKey)) {
+    const target = getTabNavigationTarget(rowId, column, event.shiftKey);
+    if (target && runTabNavigation(rowId, column, event.shiftKey)) {
+      startNavigationTxn('tab', { rowId, column }, target);
       event.preventDefault();
     }
   }
 
   function onDraftEnter(event: ReactKeyboardEvent<HTMLInputElement>, column: 'word' | 'subtitle') {
     if (event.key !== 'Enter') {
+      return;
+    }
+    if (shouldBlockKeyForTxn('Enter', '__draft__', column)) {
+      event.preventDefault();
       return;
     }
     if (event.repeat) {
@@ -531,17 +689,21 @@ export function WordListPanel(props: WordListPanelProps) {
     }
     if (composing) {
       event.preventDefault();
-      pendingKeyboardActionRef.current = { type: 'draft-enter' };
+      pendingKeyboardActionRef.current = { type: 'draft-enter', column };
       return;
     }
     event.preventDefault();
     armSuppressNextEnterKeydown();
     armTabSuppressionAfterEnter('__draft__', column);
-    submitDraftRowAndRefocus();
+    submitDraftRowAndRefocus(column);
   }
 
   function onExistingRowEnter(event: ReactKeyboardEvent<HTMLInputElement>, rowId: string, column: 'word' | 'subtitle') {
     if (event.key !== 'Enter') {
+      return;
+    }
+    if (shouldBlockKeyForTxn('Enter', rowId, column)) {
+      event.preventDefault();
       return;
     }
     if (event.repeat) {
@@ -560,13 +722,13 @@ export function WordListPanel(props: WordListPanelProps) {
     }
     if (composing) {
       event.preventDefault();
-      pendingKeyboardActionRef.current = { type: 'existing-row-enter', rowId };
+      pendingKeyboardActionRef.current = { type: 'existing-row-enter', rowId, column };
       return;
     }
     event.preventDefault();
     armSuppressNextEnterKeydown();
     armTabSuppressionAfterEnter(rowId, column);
-    insertRowAfterAndFocus(rowId);
+    insertRowAfterAndFocus(rowId, column, 'enter');
   }
 
   return (
@@ -600,6 +762,7 @@ export function WordListPanel(props: WordListPanelProps) {
                       value={row.word}
                       onChange={(event) => onUpdateRow(row.id, { word: event.target.value })}
                       onFocus={(event) => {
+                        completeNavigationTxnIfTarget(row.id, 'word');
                         debugLog('focus', {
                           rowId: row.id,
                           column: 'word',
@@ -653,6 +816,7 @@ export function WordListPanel(props: WordListPanelProps) {
                         value={row.subtitle}
                         onChange={(event) => onUpdateRow(row.id, { subtitle: event.target.value })}
                         onFocus={(event) => {
+                          completeNavigationTxnIfTarget(row.id, 'subtitle');
                           debugLog('focus', {
                             rowId: row.id,
                             column: 'subtitle',
@@ -713,6 +877,7 @@ export function WordListPanel(props: WordListPanelProps) {
                   value={draftRow.word}
                   onChange={(event) => setDraftRow((current) => ({ ...current, word: event.target.value }))}
                   onFocus={(event) => {
+                    completeNavigationTxnIfTarget('__draft__', 'word');
                     debugLog('focus', {
                       rowId: '__draft__',
                       column: 'word',
@@ -763,6 +928,7 @@ export function WordListPanel(props: WordListPanelProps) {
                     value={draftRow.subtitle}
                     onChange={(event) => setDraftRow((current) => ({ ...current, subtitle: event.target.value }))}
                     onFocus={(event) => {
+                      completeNavigationTxnIfTarget('__draft__', 'subtitle');
                       debugLog('focus', {
                         rowId: '__draft__',
                         column: 'subtitle',
