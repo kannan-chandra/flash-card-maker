@@ -112,6 +112,7 @@ export const EMPTY_SET_BASE: Omit<FlashcardSet, 'id' | 'name' | 'createdAt'> = {
   doubleSided: false,
   rows: [],
   preset: 6,
+  pdfSpacingMode: 'with-margin',
   showCutGuides: true,
   updatedAt: Date.now()
 };
@@ -187,6 +188,7 @@ export function normalizeSet(setItem: FlashcardSet): FlashcardSet {
   return {
     ...setItem,
     doubleSided,
+    pdfSpacingMode: setItem.pdfSpacingMode === 'easy-cut' ? 'easy-cut' : 'with-margin',
     singleSidedTemplate,
     doubleSidedTemplate,
     template: doubleSided ? doubleSidedTemplate : singleSidedTemplate

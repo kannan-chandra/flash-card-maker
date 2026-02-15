@@ -1,6 +1,6 @@
 import { PDFDocument, StandardFonts, clip, endPath, popGraphicsState, pushGraphicsState, rectangle, type PDFImage, type PDFFont, rgb } from 'pdf-lib';
 import fontkit from '@pdf-lib/fontkit';
-import type { CardPreset, FlashcardRow, ProjectData, TextElement } from '../types';
+import type { CardPreset, FlashcardRow, PdfSpacingMode, ProjectData, TextElement } from '../types';
 import { splitTextForPdf } from '../utils/layout';
 
 function getPresetGrid(preset: CardPreset): { cols: number; rows: number } {
@@ -15,12 +15,13 @@ interface PresetLayoutConfig {
   fixedCardSize?: { width: number; height: number };
 }
 
-function getPresetLayoutConfig(preset: CardPreset): PresetLayoutConfig {
+function getPresetLayoutConfig(preset: CardPreset, spacingMode: PdfSpacingMode): PresetLayoutConfig {
+  const isEasyCut = spacingMode === 'easy-cut';
   if (preset === 8) {
     // Match standard playing-card dimensions (landscape): 3.5in x 2.5in.
     return {
       margin: 24,
-      gutter: 8,
+      gutter: isEasyCut ? 0 : 8,
       fixedCardSize: {
         width: 72 * 3.5,
         height: 72 * 2.5
@@ -29,7 +30,7 @@ function getPresetLayoutConfig(preset: CardPreset): PresetLayoutConfig {
   }
   return {
     margin: 36,
-    gutter: 12
+    gutter: isEasyCut ? 0 : 12
   };
 }
 
@@ -223,7 +224,7 @@ export async function generatePdfBytes(options: GeneratePdfOptions): Promise<Pdf
   onProgress(5, 'Preparing layout...');
   const standardFontCache = new Map<StandardFonts, PDFFont>();
   const grid = getPresetGrid(project.preset);
-  const layout = getPresetLayoutConfig(project.preset);
+  const layout = getPresetLayoutConfig(project.preset, project.pdfSpacingMode);
   const pageWidth = 612;
   const pageHeight = 792;
   const margin = layout.margin;

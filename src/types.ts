@@ -1,4 +1,5 @@
 export type CardPreset = 6 | 8 | 12;
+export type PdfSpacingMode = 'with-margin' | 'easy-cut';
 
 export type FontFamily = 'Arial' | 'Verdana' | 'Times New Roman' | 'Georgia' | 'Courier New' | 'Noto Sans Tamil';
 
@@ -57,6 +58,7 @@ export interface ProjectData {
   doubleSided: boolean;
   rows: FlashcardRow[];
   preset: CardPreset;
+  pdfSpacingMode: PdfSpacingMode;
   showCutGuides: boolean;
   selectedRowId?: string;
   updatedAt: number;

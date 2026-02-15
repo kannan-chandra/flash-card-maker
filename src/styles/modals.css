@@ -55,6 +55,40 @@
   margin-top: 2px;
 }
 
+.export-modal-spacing {
+  display: grid;
+  gap: 6px;
+}
+
+.export-modal-spacing > span {
+  font-size: 14px;
+}
+
+.export-modal-spacing-options {
+  display: inline-grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.export-modal-spacing-options button {
+  min-height: 34px;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  background: rgba(219, 234, 254, 0.35);
+  color: #1e3a8a;
+}
+
+.export-modal-spacing-options button.active {
+  border-color: #1d4ed8;
+  background: #1d4ed8;
+  color: #ffffff;
+}
+
+.export-modal-spacing-options button:focus-visible {
+  outline: 2px solid #93c5fd;
+  outline-offset: 1px;
+}
+
 .export-modal-actions {
   margin: 2px 0 0;
   justify-content: flex-end;

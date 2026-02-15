@@ -136,6 +136,24 @@ test('generates PDF successfully when rows have no images', async ({ page }) => 
   await expect(page.getByText('PDF generated successfully.')).toBeVisible();
 });
 
+test('generates PDF in easy cut mode with no gap between cards', async ({ page }) => {
+  await page.goto('/');
+
+  await importCsv(page, 'word,subtitle\nOne,First\nTwo,Second\nThree,Third\nFour,Fourth');
+  await openExportModal(page);
+
+  const exportDialog = page.getByRole('dialog', { name: 'Export PDF' });
+  await exportDialog.getByRole('button', { name: 'Easy cut', exact: true }).click();
+  await expect(exportDialog.getByRole('button', { name: 'Easy cut', exact: true })).toHaveAttribute('aria-pressed', 'true');
+
+  const downloadPromise = page.waitForEvent('download');
+  await exportDialog.getByRole('button', { name: 'Generate PDF' }).click();
+  const download = await downloadPromise;
+
+  expect(await download.failure()).toBeNull();
+  await expect(page.getByText(/PDF generated/i)).toBeVisible();
+});
+
 test('flags long unbroken words as overflow', async ({ page }) => {
   await page.goto('/');
 

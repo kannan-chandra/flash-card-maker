@@ -431,6 +431,27 @@ export default function App() {
                   <option value={12}>12 per page</option>
                 </select>
               </label>
+              <div className="export-modal-spacing">
+                <span>Card spacing</span>
+                <div className="export-modal-spacing-options" role="group" aria-label="PDF card spacing mode">
+                  <button
+                    type="button"
+                    className={project.pdfSpacingMode === 'with-margin' ? 'active' : ''}
+                    aria-pressed={project.pdfSpacingMode === 'with-margin'}
+                    onClick={() => updateActiveSet((current) => ({ ...current, pdfSpacingMode: 'with-margin' }))}
+                  >
+                    With margin
+                  </button>
+                  <button
+                    type="button"
+                    className={project.pdfSpacingMode === 'easy-cut' ? 'active' : ''}
+                    aria-pressed={project.pdfSpacingMode === 'easy-cut'}
+                    onClick={() => updateActiveSet((current) => ({ ...current, pdfSpacingMode: 'easy-cut' }))}
+                  >
+                    Easy cut
+                  </button>
+                </div>
+              </div>
               <label className="checkbox-row export-modal-checkbox">
                 <input
                   type="checkbox"
