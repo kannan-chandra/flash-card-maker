@@ -36,6 +36,33 @@
   line-height: 1.2;
 }
 
+.export-modal-preview {
+  border: 1px solid #dbeafe;
+  border-radius: 10px;
+  background: linear-gradient(180deg, #f8fafc 0%, #eff6ff 100%);
+  padding: 8px;
+  display: flex;
+  justify-content: center;
+}
+
+.export-modal-preview svg {
+  width: min(180px, 100%);
+  height: auto;
+  display: block;
+}
+
+.export-modal-preview .export-page-outline {
+  fill: #ffffff;
+  stroke: #94a3b8;
+  stroke-width: 1.5;
+}
+
+.export-modal-preview .export-card-outline {
+  fill: #dbeafe;
+  stroke: #3b82f6;
+  stroke-width: 1.25;
+}
+
 .export-modal-header p {
   margin: 6px 0 0;
   color: var(--color-text-muted);

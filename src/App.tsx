@@ -7,6 +7,7 @@ import '@fontsource/noto-sans-tamil/400.css';
 import type { RowValidation } from './types';
 import { CanvasEditor } from './components/CanvasEditor';
 import { SelectedCardDetails } from './components/SelectedCardDetails';
+import { ExportLayoutPreview } from './components/ExportLayoutPreview';
 import { SetsDrawer } from './components/SetsDrawer';
 import { Modal } from './components/ui/Modal';
 import { OverlayBackdrop } from './components/ui/OverlayBackdrop';
@@ -421,6 +422,7 @@ export default function App() {
             <div className="export-modal-header">
               <h3>Export PDF</h3>
             </div>
+            <ExportLayoutPreview preset={project.preset} spacingMode={project.pdfSpacingMode} />
             <div className="export-modal-controls">
               <div className="export-modal-spacing">
                 <span>Cards per page</span>
