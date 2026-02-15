@@ -33,6 +33,8 @@ export function WordListPanel(props: WordListPanelProps) {
   const draftSubtitleRef = useRef<HTMLInputElement | null>(null);
   const pendingFocusRef = useRef<{ rowId: string; column: 'word' | 'subtitle'; arrowDirection?: 'up' | 'down' } | null>(null);
   const recentInsertedRowFocusRef = useRef<{ rowId: string; expiresAt: number } | null>(null);
+  const lastHandledEnterRef = useRef<{ rowId: string; column: 'word' | 'subtitle'; at: number } | null>(null);
+  const suppressTabAfterEnterRef = useRef<{ rowId: string; column: 'word' | 'subtitle'; expiresAt: number } | null>(null);
   const selectDebounceTimerRef = useRef<number | null>(null);
   const suppressNextEnterKeydownRef = useRef(false);
   const suppressNextEnterResetTimerRef = useRef<number | null>(null);
@@ -462,8 +464,32 @@ export function WordListPanel(props: WordListPanelProps) {
     });
   }
 
+  function shouldIgnoreDuplicateEnter(rowId: string, column: 'word' | 'subtitle'): boolean {
+    const last = lastHandledEnterRef.current;
+    const now = performance.now();
+    if (last && last.rowId === rowId && last.column === column && now - last.at < 160) {
+      return true;
+    }
+    lastHandledEnterRef.current = { rowId, column, at: now };
+    return false;
+  }
+
+  function armTabSuppressionAfterEnter(rowId: string, column: 'word' | 'subtitle') {
+    suppressTabAfterEnterRef.current = {
+      rowId,
+      column,
+      expiresAt: Date.now() + 280
+    };
+  }
+
   function onTabNavigation(event: ReactKeyboardEvent<HTMLInputElement>, rowId: string, column: 'word' | 'subtitle') {
     if (event.key !== 'Tab') {
+      return;
+    }
+    const suppressedTab = suppressTabAfterEnterRef.current;
+    if (suppressedTab && suppressedTab.rowId === rowId && suppressedTab.column === column && Date.now() < suppressedTab.expiresAt) {
+      debugLog('tab suppressed after enter', { rowId, column });
+      event.preventDefault();
       return;
     }
 
@@ -485,11 +511,16 @@ export function WordListPanel(props: WordListPanelProps) {
     }
   }
 
-  function onDraftEnter(event: ReactKeyboardEvent<HTMLInputElement>) {
+  function onDraftEnter(event: ReactKeyboardEvent<HTMLInputElement>, column: 'word' | 'subtitle') {
     if (event.key !== 'Enter') {
       return;
     }
     if (event.repeat) {
+      event.preventDefault();
+      return;
+    }
+    if (shouldIgnoreDuplicateEnter('__draft__', column)) {
+      debugLog('enter deduped', { rowId: '__draft__', column });
       event.preventDefault();
       return;
     }
@@ -505,14 +536,20 @@ export function WordListPanel(props: WordListPanelProps) {
     }
     event.preventDefault();
     armSuppressNextEnterKeydown();
+    armTabSuppressionAfterEnter('__draft__', column);
     submitDraftRowAndRefocus();
   }
 
-  function onExistingRowEnter(event: ReactKeyboardEvent<HTMLInputElement>, rowId: string) {
+  function onExistingRowEnter(event: ReactKeyboardEvent<HTMLInputElement>, rowId: string, column: 'word' | 'subtitle') {
     if (event.key !== 'Enter') {
       return;
     }
     if (event.repeat) {
+      event.preventDefault();
+      return;
+    }
+    if (shouldIgnoreDuplicateEnter(rowId, column)) {
+      debugLog('enter deduped', { rowId, column });
       event.preventDefault();
       return;
     }
@@ -528,6 +565,7 @@ export function WordListPanel(props: WordListPanelProps) {
     }
     event.preventDefault();
     armSuppressNextEnterKeydown();
+    armTabSuppressionAfterEnter(rowId, column);
     insertRowAfterAndFocus(rowId);
   }
 
@@ -599,7 +637,7 @@ export function WordListPanel(props: WordListPanelProps) {
                         });
                         onTabNavigation(event, row.id, 'word');
                         onArrowNavigation(event, row.id, 'word');
-                        onExistingRowEnter(event, row.id);
+                        onExistingRowEnter(event, row.id, 'word');
                       }}
                       data-column="word"
                       aria-label="Word"
@@ -652,7 +690,7 @@ export function WordListPanel(props: WordListPanelProps) {
                           });
                           onTabNavigation(event, row.id, 'subtitle');
                           onArrowNavigation(event, row.id, 'subtitle');
-                          onExistingRowEnter(event, row.id);
+                          onExistingRowEnter(event, row.id, 'subtitle');
                         }}
                         data-column="subtitle"
                         aria-label="Subtitle"
@@ -710,7 +748,7 @@ export function WordListPanel(props: WordListPanelProps) {
                     });
                     onTabNavigation(event, '__draft__', 'word');
                     onArrowNavigation(event, '__draft__', 'word');
-                    onDraftEnter(event);
+                    onDraftEnter(event, 'word');
                   }}
                   data-column="word"
                   aria-label="New word"
@@ -760,7 +798,7 @@ export function WordListPanel(props: WordListPanelProps) {
                       });
                       onTabNavigation(event, '__draft__', 'subtitle');
                       onArrowNavigation(event, '__draft__', 'subtitle');
-                      onDraftEnter(event);
+                      onDraftEnter(event, 'subtitle');
                     }}
                     data-column="subtitle"
                     aria-label="New subtitle"
