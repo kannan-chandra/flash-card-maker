@@ -32,6 +32,8 @@ export function WordListPanel(props: WordListPanelProps) {
   const draftWordRef = useRef<HTMLInputElement | null>(null);
   const draftSubtitleRef = useRef<HTMLInputElement | null>(null);
   const selectDebounceTimerRef = useRef<number | null>(null);
+  const suppressNextEnterKeydownRef = useRef(false);
+  const suppressNextEnterResetTimerRef = useRef<number | null>(null);
   const isComposingRef = useRef(false);
   const pendingKeyboardActionRef = useRef<
     | { type: 'tab'; rowId: string; column: 'word' | 'subtitle'; shiftKey: boolean }
@@ -48,6 +50,9 @@ export function WordListPanel(props: WordListPanelProps) {
     () => () => {
       if (selectDebounceTimerRef.current) {
         window.clearTimeout(selectDebounceTimerRef.current);
+      }
+      if (suppressNextEnterResetTimerRef.current) {
+        window.clearTimeout(suppressNextEnterResetTimerRef.current);
       }
     },
     []
@@ -330,6 +335,29 @@ export function WordListPanel(props: WordListPanelProps) {
     isComposingRef.current = true;
   }
 
+  function armSuppressNextEnterKeydown() {
+    suppressNextEnterKeydownRef.current = true;
+    if (suppressNextEnterResetTimerRef.current) {
+      window.clearTimeout(suppressNextEnterResetTimerRef.current);
+    }
+    suppressNextEnterResetTimerRef.current = window.setTimeout(() => {
+      suppressNextEnterKeydownRef.current = false;
+      suppressNextEnterResetTimerRef.current = null;
+    }, 200);
+  }
+
+  function consumeSuppressedEnterKeydown(): boolean {
+    if (!suppressNextEnterKeydownRef.current) {
+      return false;
+    }
+    suppressNextEnterKeydownRef.current = false;
+    if (suppressNextEnterResetTimerRef.current) {
+      window.clearTimeout(suppressNextEnterResetTimerRef.current);
+      suppressNextEnterResetTimerRef.current = null;
+    }
+    return true;
+  }
+
   function runKeyboardAction(action: NonNullable<typeof pendingKeyboardActionRef.current>) {
     if (action.type === 'tab') {
       runTabNavigation(action.rowId, action.column, action.shiftKey);
@@ -354,6 +382,9 @@ export function WordListPanel(props: WordListPanelProps) {
       return;
     }
     pendingKeyboardActionRef.current = null;
+    if (pending.type === 'existing-row-enter' || pending.type === 'draft-enter') {
+      armSuppressNextEnterKeydown();
+    }
     requestAnimationFrame(() => {
       runKeyboardAction(pending);
     });
@@ -386,7 +417,12 @@ export function WordListPanel(props: WordListPanelProps) {
     if (event.key !== 'Enter') {
       return;
     }
-    if (isComposingEvent(event)) {
+    const composing = isComposingEvent(event);
+    if (!composing && consumeSuppressedEnterKeydown()) {
+      event.preventDefault();
+      return;
+    }
+    if (composing) {
       event.preventDefault();
       pendingKeyboardActionRef.current = { type: 'draft-enter' };
       return;
@@ -399,7 +435,12 @@ export function WordListPanel(props: WordListPanelProps) {
     if (event.key !== 'Enter') {
       return;
     }
-    if (isComposingEvent(event)) {
+    const composing = isComposingEvent(event);
+    if (!composing && consumeSuppressedEnterKeydown()) {
+      event.preventDefault();
+      return;
+    }
+    if (composing) {
       event.preventDefault();
       pendingKeyboardActionRef.current = { type: 'existing-row-enter', rowId };
       return;

@@ -25,6 +25,19 @@ async function endComposition(input: Locator, value: string) {
   }, value);
 }
 
+async function composeEnterThenCommitWithExtraEnter(input: Locator, value: string) {
+  await input.evaluate((element, composedValue) => {
+    const target = element as HTMLInputElement;
+    target.focus();
+    target.dispatchEvent(new CompositionEvent('compositionstart', { bubbles: true, data: composedValue }));
+    target.value = composedValue;
+    target.dispatchEvent(new InputEvent('input', { bubbles: true, data: composedValue, inputType: 'insertCompositionText' }));
+    target.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'Enter', isComposing: true }));
+    target.dispatchEvent(new CompositionEvent('compositionend', { bubbles: true, data: composedValue }));
+    target.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'Enter', isComposing: false }));
+  }, value);
+}
+
 test('tab navigation waits for IME composition commit and does not leak text to subtitle', async ({ page }) => {
   await page.goto('/');
   await importCsv(page, 'word,subtitle\nsample,');
@@ -87,6 +100,21 @@ test('ime enter waits for composition end and does not leak text to inserted row
   await expect(firstWordInput).toBeFocused();
 
   await endComposition(firstWordInput, 'க');
+  await expect(rows).toHaveCount(2);
+  const insertedRowWord = rows.nth(1).getByLabel('Word');
+  await expect(insertedRowWord).toBeFocused();
+  await expect(insertedRowWord).toHaveValue('');
+});
+
+test('ime enter does not double-insert when composition end is followed by a plain enter keydown', async ({ page }) => {
+  await page.goto('/');
+  await importCsv(page, 'word,subtitle\nsample,');
+
+  const rows = page.locator('tbody tr').filter({ has: page.getByLabel('Word', { exact: true }) });
+  const firstWordInput = rows.first().getByLabel('Word');
+
+  await composeEnterThenCommitWithExtraEnter(firstWordInput, 'க்');
+
   await expect(rows).toHaveCount(2);
   const insertedRowWord = rows.nth(1).getByLabel('Word');
   await expect(insertedRowWord).toBeFocused();
