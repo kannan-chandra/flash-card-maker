@@ -472,6 +472,10 @@ export function WordListPanel(props: WordListPanelProps) {
     if (event.key !== 'Enter') {
       return;
     }
+    if (event.repeat) {
+      event.preventDefault();
+      return;
+    }
     const composing = isComposingEvent(event);
     if (!composing && consumeSuppressedEnterKeydown()) {
       event.preventDefault();
@@ -483,11 +487,16 @@ export function WordListPanel(props: WordListPanelProps) {
       return;
     }
     event.preventDefault();
+    armSuppressNextEnterKeydown();
     submitDraftRowAndRefocus();
   }
 
   function onExistingRowEnter(event: ReactKeyboardEvent<HTMLInputElement>, rowId: string) {
     if (event.key !== 'Enter') {
+      return;
+    }
+    if (event.repeat) {
+      event.preventDefault();
       return;
     }
     const composing = isComposingEvent(event);
@@ -501,6 +510,7 @@ export function WordListPanel(props: WordListPanelProps) {
       return;
     }
     event.preventDefault();
+    armSuppressNextEnterKeydown();
     insertRowAfterAndFocus(rowId);
   }
 
@@ -560,6 +570,7 @@ export function WordListPanel(props: WordListPanelProps) {
                           column: 'word',
                           key: event.key,
                           code: event.code,
+                          repeat: event.repeat,
                           shiftKey: event.shiftKey,
                           ctrlKey: event.ctrlKey,
                           altKey: event.altKey,
@@ -612,6 +623,7 @@ export function WordListPanel(props: WordListPanelProps) {
                             column: 'subtitle',
                             key: event.key,
                             code: event.code,
+                            repeat: event.repeat,
                             shiftKey: event.shiftKey,
                             ctrlKey: event.ctrlKey,
                             altKey: event.altKey,
@@ -669,6 +681,7 @@ export function WordListPanel(props: WordListPanelProps) {
                       column: 'word',
                       key: event.key,
                       code: event.code,
+                      repeat: event.repeat,
                       shiftKey: event.shiftKey,
                       ctrlKey: event.ctrlKey,
                       altKey: event.altKey,
@@ -718,6 +731,7 @@ export function WordListPanel(props: WordListPanelProps) {
                         column: 'subtitle',
                         key: event.key,
                         code: event.code,
+                        repeat: event.repeat,
                         shiftKey: event.shiftKey,
                         ctrlKey: event.ctrlKey,
                         altKey: event.altKey,
