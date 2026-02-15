@@ -20,3 +20,84 @@
   width: 100%;
 }
 
+.export-modal {
+  width: min(560px, calc(100vw - 24px));
+  display: grid;
+  gap: 12px;
+  border-color: #c7d2fe;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(37, 99, 235, 0.1), transparent 45%),
+    linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+}
+
+.export-modal-header h3 {
+  margin: 0;
+  font-size: 22px;
+  line-height: 1.2;
+}
+
+.export-modal-header p {
+  margin: 6px 0 0;
+  color: var(--color-text-muted);
+  font-size: 13px;
+}
+
+.export-modal-controls {
+  display: grid;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid #dbeafe;
+  border-radius: 10px;
+  background: rgba(239, 246, 255, 0.55);
+}
+
+.export-modal .checkbox-row.export-modal-checkbox {
+  margin-top: 2px;
+}
+
+.export-modal-actions {
+  margin: 2px 0 0;
+  justify-content: flex-end;
+}
+
+.export-modal-actions .primary {
+  min-width: 132px;
+}
+
+.export-modal-progress {
+  margin: 4px 0 0;
+  padding: 10px;
+  border: 1px solid #bfdbfe;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.export-modal-progress .progress-label {
+  font-weight: 600;
+}
+
+.export-modal-progress .progress-track {
+  height: 10px;
+  border-radius: 999px;
+  border-color: #93c5fd;
+}
+
+.export-modal-progress .progress-fill {
+  background: linear-gradient(90deg, #2563eb 0%, #0ea5e9 100%);
+}
+
+.export-modal-status {
+  margin: 0;
+  padding: 10px;
+  border: 1px solid #c7d2fe;
+  border-radius: 10px;
+  background: #eef2ff;
+}
+
+.export-modal-hint {
+  margin: 0;
+  padding: 8px 10px;
+  border-left: 3px solid #60a5fa;
+  border-radius: 8px;
+  background: rgba(219, 234, 254, 0.55);
+}

@@ -417,25 +417,30 @@ export default function App() {
       {exportModalOpen && (
         <>
           <OverlayBackdrop className="menu-backdrop csv-backdrop" onClick={() => setExportModalOpen(false)} ariaLabel="Close export" />
-          <Modal className="csv-modal" ariaLabel="Export PDF">
-            <h3>Export PDF</h3>
-            <label>
-              Cards per page
-              <select value={project.preset} onChange={(event) => updateActiveSet((current) => ({ ...current, preset: Number(event.target.value) as 6 | 8 | 12 }))}>
-                <option value={6}>6 per page</option>
-                <option value={8}>8 per page</option>
-                <option value={12}>12 per page</option>
-              </select>
-            </label>
-            <label className="checkbox-row">
-              <input
-                type="checkbox"
-                checked={project.showCutGuides}
-                onChange={(event) => updateActiveSet((current) => ({ ...current, showCutGuides: event.target.checked }))}
-              />
-              Include cut guide borders
-            </label>
-            <div className="row-buttons">
+          <Modal className="csv-modal export-modal" ariaLabel="Export PDF">
+            <div className="export-modal-header">
+              <h3>Export PDF</h3>
+              <p>Choose layout options, then generate your printable flashcard file.</p>
+            </div>
+            <div className="export-modal-controls">
+              <label>
+                Cards per page
+                <select value={project.preset} onChange={(event) => updateActiveSet((current) => ({ ...current, preset: Number(event.target.value) as 6 | 8 | 12 }))}>
+                  <option value={6}>6 per page</option>
+                  <option value={8}>8 per page</option>
+                  <option value={12}>12 per page</option>
+                </select>
+              </label>
+              <label className="checkbox-row export-modal-checkbox">
+                <input
+                  type="checkbox"
+                  checked={project.showCutGuides}
+                  onChange={(event) => updateActiveSet((current) => ({ ...current, showCutGuides: event.target.checked }))}
+                />
+                Include cut guide borders
+              </label>
+            </div>
+            <div className="row-buttons export-modal-actions">
               <button className="primary" type="button" onClick={() => void generatePdf()} disabled={pdfProgress.active}>
                 {pdfProgress.active ? 'Generating...' : 'Generate PDF'}
               </button>
@@ -444,7 +449,7 @@ export default function App() {
               </button>
             </div>
             {pdfProgress.active && (
-              <div className="progress-wrap" aria-live="polite">
+              <div className="progress-wrap export-modal-progress" aria-live="polite">
                 <div className="progress-label">
                   <span>{pdfProgress.stage}</span>
                   <span>{pdfProgress.percent}%</span>
@@ -454,8 +459,8 @@ export default function App() {
                 </div>
               </div>
             )}
-            {pdfStatus && <p className="status">{pdfStatus}</p>}
-            <p className="hint">If a web image fails due to CORS/restrictions, save it to your computer and upload it from the image modal.</p>
+            {pdfStatus && <p className="status export-modal-status">{pdfStatus}</p>}
+            <p className="hint export-modal-hint">If a web image fails due to CORS/restrictions, save it to your computer and upload it from the image modal.</p>
           </Modal>
         </>
       )}
