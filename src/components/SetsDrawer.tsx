@@ -89,7 +89,10 @@ export function SetsDrawer(props: SetsDrawerProps) {
     <>
       <Drawer className="panel sets-drawer" isOpen={setsMenuOpen}>
         <div className="sets-drawer-header">
-          <h2>Flash Card Sets</h2>
+          <div className="sets-drawer-header-copy">
+            <h2>Flash Card Sets</h2>
+            <p>Organize, rename, and switch sets.</p>
+          </div>
           <button type="button" className="sets-drawer-close" onClick={onClose} aria-label="Close sets menu">
             <span aria-hidden="true" />
           </button>
@@ -105,8 +108,8 @@ export function SetsDrawer(props: SetsDrawerProps) {
                   onClose();
                 }}
               >
-                <strong>{setItem.name}</strong>
-                <span>{setItem.rows.length} rows</span>
+                <strong className="set-name">{setItem.name}</strong>
+                <span className="set-meta">{setItem.rows.length} rows</span>
               </button>
               <div className="set-item-actions">
                 <button type="button" className="set-rename-button" aria-label="Rename set" onClick={() => openRenameModal(setItem)}>
