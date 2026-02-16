@@ -4,6 +4,7 @@
   left: 0;
   width: min(390px, 92vw);
   height: 100vh;
+  height: 100dvh;
   z-index: var(--z-drawer);
   border-radius: 0 12px 12px 0;
   transform: translateX(-105%);
