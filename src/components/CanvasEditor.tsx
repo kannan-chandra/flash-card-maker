@@ -611,16 +611,20 @@ export function CanvasEditor(props: CanvasEditorProps) {
   }) {
     const gutter = 12;
     const anchorGap = 4;
-    const desiredLeftAbs = stageWrapLeft + args.anchorX;
-    const maxLeftAbs = Math.max(gutter, window.innerWidth - args.panelWidth - gutter);
+    const availableViewportWidth = viewportWidth || window.visualViewport?.width || window.innerWidth;
+    const availableViewportHeight = window.visualViewport?.height || window.innerHeight;
+    const panelRenderWidth = Math.min(args.panelWidth, Math.max(220, availableViewportWidth - gutter * 2));
+    const desiredLeftAbs = isCompactLayout ? (availableViewportWidth - panelRenderWidth) / 2 : stageWrapLeft + args.anchorX;
+    const maxLeftAbs = Math.max(gutter, availableViewportWidth - panelRenderWidth - gutter);
     const clampedLeftAbs = Math.min(Math.max(desiredLeftAbs, gutter), maxLeftAbs);
     const belowTopAbs = stageWrapTop + args.anchorBottom + anchorGap;
     const aboveTopAbs = stageWrapTop + args.anchorTop - args.panelHeight - anchorGap;
-    const fitsBelow = belowTopAbs + args.panelHeight <= window.innerHeight - gutter;
+    const fitsBelow = belowTopAbs + args.panelHeight <= availableViewportHeight - gutter;
     const topAbs = fitsBelow ? belowTopAbs : Math.max(gutter, aboveTopAbs);
     return {
       left: clampedLeftAbs - stageWrapLeft,
-      top: topAbs - stageWrapTop
+      top: topAbs - stageWrapTop,
+      width: panelRenderWidth
     };
   }
   const imageCanvasPos = toCanvasPosition(project.template.image.x, project.template.image.y, project.template.image.side);
@@ -1035,7 +1039,7 @@ export function CanvasEditor(props: CanvasEditorProps) {
                   className="floating-image-panel"
                   left={imagePanelPos.left}
                   top={imagePanelPos.top}
-                  width={imagePanelWidth}
+                  width={imagePanelPos.width}
                   onHeightChange={setImagePanelHeight}
                 >
                   {children}
@@ -1046,7 +1050,7 @@ export function CanvasEditor(props: CanvasEditorProps) {
                   className="floating-text-panel"
                   left={textPanelPos.left}
                   top={textPanelPos.top}
-                  width={textPanelWidth}
+                  width={textPanelPos.width}
                   onHeightChange={setTextPanelHeight}
                 >
                   <div className="text-control-panel">

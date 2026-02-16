@@ -391,6 +391,8 @@ input[type='color'] {
 .floating-inspector-panel {
   position: absolute;
   z-index: var(--z-drawer);
+  max-width: calc(100vw - 24px);
+  box-sizing: border-box;
 }
 
 .floating-inspector-panel .card-detail-panel,
