@@ -43,6 +43,7 @@ td input:not([type]) {
   border-radius: 0;
   padding: 9px 10px;
   min-height: 40px;
+  font-size: 16px;
 }
 
 .list-table td input:focus {
