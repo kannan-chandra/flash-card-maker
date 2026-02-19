@@ -232,3 +232,46 @@ test('mobile arrows keep draft row highlight visible when selected', async ({ pa
   expect(draftSelectedBg).not.toBe(draftUnselectedBg);
   expect(draftSelectedInputBg).not.toBe(draftUnselectedInputBg);
 });
+
+test('mobile up arrow keeps newly active row visible when scrolling upward', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/');
+  await dismissFirstLaunchGuide(page);
+  await importCsv(page, makeRowsCsv(28));
+
+  const listTable = page.locator('.list-table');
+  const rows = page.locator('tbody tr').filter({ has: page.locator('input[aria-label="Word"]') });
+  await expect(rows).toHaveCount(28);
+
+  await listTable.evaluate((node) => {
+    const el = node as HTMLDivElement;
+    el.scrollTop = el.scrollHeight;
+  });
+
+  const lastRowWord = rows.nth(27).getByLabel('Word');
+  await lastRowWord.click();
+
+  const navUp = page.locator('.mobile-card-nav-button').first();
+  for (let step = 0; step < 12; step += 1) {
+    await navUp.click();
+
+    const selectedRow = page.locator('tbody tr.selected').first();
+    await expect(selectedRow).toBeVisible();
+
+    const selectedRowVisible = await selectedRow.evaluate((row) => {
+      const container = row.closest('.list-table');
+      if (!container) {
+        return false;
+      }
+      const rowRect = row.getBoundingClientRect();
+      const containerRect = container.getBoundingClientRect();
+      const header = container.querySelector('thead');
+      const headerHeight = header ? header.getBoundingClientRect().height : 0;
+      const visibleTop = containerRect.top + headerHeight;
+      const visibleBottom = containerRect.bottom;
+      return rowRect.top >= visibleTop - 1 && rowRect.bottom <= visibleBottom + 1;
+    });
+
+    expect(selectedRowVisible).toBe(true);
+  }
+});

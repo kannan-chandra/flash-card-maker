@@ -33,6 +33,7 @@ export function WordListPanel(props: WordListPanelProps) {
   const subtitleRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const rowRefs = useRef<Record<string, HTMLTableRowElement | null>>({});
   const draftRowRef = useRef<HTMLTableRowElement | null>(null);
+  const previousSelectedRowIdRef = useRef<string | undefined>(undefined);
   const draftWordRef = useRef<HTMLInputElement | null>(null);
   const draftSubtitleRef = useRef<HTMLInputElement | null>(null);
   const suppressNextEnterKeydownRef = useRef(false);
@@ -60,18 +61,29 @@ export function WordListPanel(props: WordListPanelProps) {
 
   useEffect(() => {
     if (!selectedRowId) {
+      previousSelectedRowIdRef.current = undefined;
       return;
     }
     const activeElement = document.activeElement as HTMLElement | null;
     if (activeElement && listTableRef.current?.contains(activeElement) && activeElement.tagName === 'INPUT') {
+      previousSelectedRowIdRef.current = selectedRowId;
       return;
     }
     const row = selectedRowId === '__draft__' ? draftRowRef.current : rowRefs.current[selectedRowId];
     if (!row) {
+      previousSelectedRowIdRef.current = selectedRowId;
       return;
     }
-    row.scrollIntoView({ block: 'nearest' });
     row.focus({ preventScroll: true });
+    const rowsWithDraft = [...rows.map((item) => item.id), '__draft__'];
+    const previousIndex = previousSelectedRowIdRef.current ? rowsWithDraft.indexOf(previousSelectedRowIdRef.current) : -1;
+    const currentIndex = rowsWithDraft.indexOf(selectedRowId);
+    if (previousIndex >= 0 && currentIndex >= 0 && previousIndex !== currentIndex) {
+      scrollRowByOneIfNeeded(row, currentIndex > previousIndex ? 'down' : 'up');
+    } else {
+      row.scrollIntoView({ block: 'nearest' });
+    }
+    previousSelectedRowIdRef.current = selectedRowId;
   }, [selectedRowId, rows.length]);
 
   function updateDraftRow(updater: (current: { word: string; subtitle: string }) => { word: string; subtitle: string }) {
@@ -104,9 +116,8 @@ export function WordListPanel(props: WordListPanelProps) {
     return messages.join('. ');
   }
 
-  function scrollByOneRowIfNeeded(input: HTMLInputElement, direction: 'up' | 'down') {
+  function scrollRowByOneIfNeeded(row: HTMLElement, direction: 'up' | 'down') {
     const container = listTableRef.current;
-    const row = input.closest('tr');
     if (!container || !row) {
       return;
     }
@@ -127,6 +138,14 @@ export function WordListPanel(props: WordListPanelProps) {
     if (direction === 'up' && rowRect.top < visibleTop) {
       container.scrollTop -= rowHeight;
     }
+  }
+
+  function scrollByOneRowIfNeeded(input: HTMLInputElement, direction: 'up' | 'down') {
+    const row = input.closest('tr');
+    if (!row) {
+      return;
+    }
+    scrollRowByOneIfNeeded(row, direction);
   }
 
   function focusInput(
