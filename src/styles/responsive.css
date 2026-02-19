@@ -35,12 +35,6 @@
   .editor-layout {
     grid-template-columns: 1fr;
   }
-
-  .stage-shell {
-    padding-right: 42px;
-    box-sizing: border-box;
-  }
-
 }
 
 @media (max-width: 720px) {

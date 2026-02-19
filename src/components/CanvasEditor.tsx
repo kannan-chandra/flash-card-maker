@@ -615,7 +615,11 @@ export function CanvasEditor(props: CanvasEditorProps) {
   const showTextPanel = Boolean(selectedText);
   const imagePanelWidth = 340;
   const textPanelWidth = 340;
-  const stageWrapLeft = stageShellLeft + Math.max((stageViewportWidth - scaledStageWidth) / 2, 0);
+  const stageSideGap = Math.max((stageViewportWidth - scaledStageWidth) / 2, 0);
+  const navRightClearance = 38;
+  const showMobileNav = isNarrowLayout && (canMoveSelectedRowUp || canMoveSelectedRowDown);
+  const stageWrapShiftX = showMobileNav ? Math.max(0, navRightClearance - stageSideGap) : 0;
+  const stageWrapLeft = stageShellLeft + stageSideGap - stageWrapShiftX;
   const stageWrapTop = stageShellTop;
   function getPanelPosition(args: {
     anchorX: number;
@@ -693,8 +697,8 @@ export function CanvasEditor(props: CanvasEditorProps) {
           </div>
 
           <div className="stage-shell" ref={stageShellRef}>
-            <div className="stage-wrap" style={{ width: scaledStageWidth, height: scaledStageHeight }}>
-              {isNarrowLayout && (canMoveSelectedRowUp || canMoveSelectedRowDown) ? (
+            <div className="stage-wrap" style={{ width: scaledStageWidth, height: scaledStageHeight, transform: `translateX(${-stageWrapShiftX}px)` }}>
+              {showMobileNav ? (
                 <div className="mobile-card-nav" role="group" aria-label="Move selected card">
                   <button type="button" className="mobile-card-nav-button" onClick={onMoveSelectedRowUp} disabled={!canMoveSelectedRowUp}>
                     ↑
