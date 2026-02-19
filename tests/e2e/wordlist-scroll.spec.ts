@@ -176,3 +176,49 @@ test('mobile arrows move row highlight/focus without keeping input cursor active
   const selectedRowId = await rows.nth(2).getAttribute('data-row-id');
   expect(activeState.rowId).toBe(selectedRowId);
 });
+
+async function getDraftWordCellBackground(page: Page): Promise<string> {
+  return page.locator('tr.draft-row td').first().evaluate((cell) => getComputedStyle(cell).backgroundColor);
+}
+
+test('narrow desktop viewport arrows keep draft row highlight visible when selected', async ({ page }) => {
+  await page.setViewportSize({ width: 1024, height: 844 });
+  await page.goto('/');
+  await dismissFirstLaunchGuide(page);
+  await importCsv(page, makeRowsCsv(1));
+
+  const firstWord = page.locator('tbody tr').filter({ has: page.locator('input[aria-label="Word"]') }).first().getByLabel('Word');
+  await firstWord.click();
+
+  const draftUnselectedBg = await getDraftWordCellBackground(page);
+
+  const navDown = page.locator('.mobile-card-nav-button').nth(1);
+  await navDown.click();
+
+  const draftRow = page.locator('tr.draft-row');
+  await expect(draftRow).toHaveClass(/selected/);
+  const draftSelectedBg = await getDraftWordCellBackground(page);
+
+  expect(draftSelectedBg).not.toBe(draftUnselectedBg);
+});
+
+test('mobile arrows keep draft row highlight visible when selected', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/');
+  await dismissFirstLaunchGuide(page);
+  await importCsv(page, makeRowsCsv(1));
+
+  const firstWord = page.locator('tbody tr').filter({ has: page.locator('input[aria-label="Word"]') }).first().getByLabel('Word');
+  await firstWord.click();
+
+  const draftUnselectedBg = await getDraftWordCellBackground(page);
+
+  const navDown = page.locator('.mobile-card-nav-button').nth(1);
+  await navDown.click();
+
+  const draftRow = page.locator('tr.draft-row');
+  await expect(draftRow).toHaveClass(/selected/);
+  const draftSelectedBg = await getDraftWordCellBackground(page);
+
+  expect(draftSelectedBg).not.toBe(draftUnselectedBg);
+});

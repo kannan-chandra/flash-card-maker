@@ -80,6 +80,14 @@ td input:not([type]) {
   background: var(--color-surface-accent);
 }
 
+.list-table:not(:focus-within) tr.selected td {
+  background: var(--color-surface-accent);
+}
+
 .list-table tbody tr:focus-within {
+  background: var(--color-surface-accent);
+}
+
+.list-table tbody tr:focus-within td {
   background: var(--color-surface-accent);
 }
