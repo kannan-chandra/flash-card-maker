@@ -294,6 +294,10 @@ main {
   padding-right: 2px;
 }
 
+.floating-image-panel .emoji-search-results {
+  max-height: clamp(96px, calc(var(--floating-panel-max-height, 360px) - 220px), 234px);
+}
+
 .emoji-grid {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
@@ -389,8 +393,8 @@ input[type='color'] {
 }
 
 .floating-inspector-panel {
-  position: absolute;
-  z-index: var(--z-drawer);
+  position: fixed;
+  z-index: calc(var(--z-modal) + 1);
   max-width: calc(100vw - 24px);
   box-sizing: border-box;
 }

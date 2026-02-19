@@ -24,6 +24,13 @@ interface PanelPositionArgs {
   panelHeight: number;
 }
 
+interface PanelPosition {
+  left: number;
+  top: number;
+  width: number;
+  maxHeight: number;
+}
+
 export function useCanvasLayout(args: UseCanvasLayoutArgs) {
   const { sideWidth, sideHeight, doubleSided, canShowMobileNav, stageShellRef, editorPanelRef } = args;
   const [stageViewportWidth, setStageViewportWidth] = useState<number>(0);
@@ -112,7 +119,7 @@ export function useCanvasLayout(args: UseCanvasLayoutArgs) {
     };
   }, [editorPanelRef, stageShellRef]);
 
-  function getPanelPosition(args: PanelPositionArgs) {
+  function getPanelPosition(args: PanelPositionArgs): PanelPosition {
     const availableViewportWidth = viewportWidth || window.innerWidth;
     const availableViewportHeight = window.innerHeight;
     const panelRenderWidth = Math.min(args.panelWidth, Math.max(220, availableViewportWidth - FLOATING_PANEL_GUTTER_PX * 2));
@@ -123,10 +130,12 @@ export function useCanvasLayout(args: UseCanvasLayoutArgs) {
     const aboveTopAbs = stageWrapTop + args.anchorTop - args.panelHeight - FLOATING_PANEL_ANCHOR_GAP_PX;
     const fitsBelow = belowTopAbs + args.panelHeight <= availableViewportHeight - FLOATING_PANEL_GUTTER_PX;
     const topAbs = fitsBelow ? belowTopAbs : Math.max(FLOATING_PANEL_GUTTER_PX, aboveTopAbs);
+    const maxHeight = Math.max(160, availableViewportHeight - topAbs - FLOATING_PANEL_GUTTER_PX);
     return {
-      left: clampedLeftAbs - stageWrapLeft,
-      top: topAbs - stageWrapTop,
-      width: panelRenderWidth
+      left: clampedLeftAbs,
+      top: topAbs,
+      width: panelRenderWidth,
+      maxHeight
     };
   }
 

@@ -963,6 +963,7 @@ export function CanvasEditor(props: CanvasEditorProps) {
                   left={imagePanelPos.left}
                   top={imagePanelPos.top}
                   width={imagePanelPos.width}
+                  maxHeight={imagePanelPos.maxHeight}
                   onHeightChange={setImagePanelHeight}
                 >
                   {children}
@@ -974,6 +975,7 @@ export function CanvasEditor(props: CanvasEditorProps) {
                   left={textPanelPos.left}
                   top={textPanelPos.top}
                   width={textPanelPos.width}
+                  maxHeight={textPanelPos.maxHeight}
                   onHeightChange={setTextPanelHeight}
                 >
                   <div className="text-control-panel">

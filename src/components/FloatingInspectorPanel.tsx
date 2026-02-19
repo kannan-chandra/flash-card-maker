@@ -1,16 +1,18 @@
 import { useEffect, useRef, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 
 interface FloatingInspectorPanelProps {
   left: number;
   top: number;
   width: number;
+  maxHeight?: number;
   className?: string;
   onHeightChange?: (height: number) => void;
   children: ReactNode;
 }
 
 export function FloatingInspectorPanel(props: FloatingInspectorPanelProps) {
-  const { left, top, width, className, onHeightChange, children } = props;
+  const { left, top, width, maxHeight, className, onHeightChange, children } = props;
   const classes = className ? `floating-inspector-panel ${className}` : 'floating-inspector-panel';
   const panelRef = useRef<HTMLDivElement>(null);
 
@@ -30,17 +32,26 @@ export function FloatingInspectorPanel(props: FloatingInspectorPanelProps) {
     return () => observer.disconnect();
   }, [onHeightChange]);
 
-  return (
+  const panel = (
     <div
       ref={panelRef}
       className={classes}
       style={{
+        position: 'fixed',
         left,
         top,
-        width
+        width,
+        maxHeight,
+        overflowY: 'auto',
+        ['--floating-panel-max-height' as string]: maxHeight ? `${Math.round(maxHeight)}px` : undefined
       }}
     >
       {children}
     </div>
   );
+
+  if (typeof document === 'undefined') {
+    return panel;
+  }
+  return createPortal(panel, document.body);
 }
