@@ -16,7 +16,6 @@ import { DEFAULT_TEMPLATE } from './constants/project';
 import { useImage } from './hooks/useImage';
 import { useWorkspace } from './hooks/useWorkspace';
 import { generatePdfBytes } from './services/pdfExport';
-import { fromCanvasY as mapFromCanvasY, getStageHeight, toCanvasY as mapToCanvasY } from './utils/canvasLayout';
 import { parseCsvInput } from './utils/csv';
 import { createEmojiImageDataUrl, findTopEmojiMatches } from './utils/emoji';
 import { validateRows } from './utils/layout';
@@ -124,10 +123,6 @@ export default function App() {
   const { image: previewImage, isLoading: previewImageLoading } = useImage(previewImageSrc);
   const imageIsEmpty = !previewImageSrc;
   const cardHeight = project?.template.height ?? DEFAULT_TEMPLATE.height;
-  const canvasContext = { cardHeight, doubleSided: Boolean(project?.doubleSided) };
-  const stageHeight = getStageHeight(canvasContext);
-  const toCanvasY = (y: number, side: 1 | 2) => mapToCanvasY(y, side, canvasContext);
-  const fromCanvasY = (canvasY: number, elementHeight: number) => mapFromCanvasY(canvasY, elementHeight, canvasContext);
 
   const validations: RowValidation[] = useMemo(() => {
     if (!project) {
@@ -644,6 +639,7 @@ export default function App() {
       <main>
         <CanvasEditor
           project={project}
+          cardHeight={cardHeight}
           selection={{
             selectedRow,
             selectedElement,
@@ -651,7 +647,6 @@ export default function App() {
             imageIsEmpty,
             imageIsLoading: previewImageLoading
           }}
-          canvas={{ cardHeight, stageHeight, toCanvasY, fromCanvasY }}
           actions={{
             onSelectElement: setSelectedElement,
             onPatchTemplate: patchTemplate,

@@ -15,12 +15,7 @@ interface CanvasEditorProps {
     imageIsEmpty: boolean;
     imageIsLoading: boolean;
   };
-  canvas: {
-    cardHeight: number;
-    stageHeight: number;
-    toCanvasY: (y: number, side: 1 | 2) => number;
-    fromCanvasY: (canvasY: number, elementHeight: number) => { side: 1 | 2; y: number };
-  };
+  cardHeight: number;
   actions: {
     onSelectElement: (element: 'image' | 'text1' | 'text2' | null) => void;
     onPatchTemplate: (patch: Partial<CardTemplate>) => void;
@@ -96,9 +91,8 @@ function getContainSize(containerWidth: number, containerHeight: number, sourceW
 }
 
 export function CanvasEditor(props: CanvasEditorProps) {
-  const { project, selection, canvas, actions, children } = props;
+  const { project, selection, cardHeight, actions, children } = props;
   const { selectedRow, selectedElement, previewImage, imageIsEmpty, imageIsLoading } = selection;
-  const { cardHeight } = canvas;
   const {
     onSelectElement,
     onPatchTemplate,
