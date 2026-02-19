@@ -35,7 +35,6 @@ export function WordListPanel(props: WordListPanelProps) {
   const draftRowRef = useRef<HTMLTableRowElement | null>(null);
   const draftWordRef = useRef<HTMLInputElement | null>(null);
   const draftSubtitleRef = useRef<HTMLInputElement | null>(null);
-  const selectDebounceTimerRef = useRef<number | null>(null);
   const suppressNextEnterKeydownRef = useRef(false);
   const suppressNextEnterResetTimerRef = useRef<number | null>(null);
   const isComposingRef = useRef(false);
@@ -52,9 +51,6 @@ export function WordListPanel(props: WordListPanelProps) {
 
   useEffect(
     () => () => {
-      if (selectDebounceTimerRef.current) {
-        window.clearTimeout(selectDebounceTimerRef.current);
-      }
       if (suppressNextEnterResetTimerRef.current) {
         window.clearTimeout(suppressNextEnterResetTimerRef.current);
       }
@@ -86,27 +82,9 @@ export function WordListPanel(props: WordListPanelProps) {
     });
   }
 
-  function scheduleSelectionCommit(rowId: string | undefined) {
-    if (selectDebounceTimerRef.current) {
-      window.clearTimeout(selectDebounceTimerRef.current);
-      selectDebounceTimerRef.current = null;
-    }
-    if (!rowId) {
-      return;
-    }
-    selectDebounceTimerRef.current = window.setTimeout(() => {
-      onSelectRow(rowId);
-      selectDebounceTimerRef.current = null;
-    }, 90);
-  }
-
   function commitSelectionNow(rowId: string | undefined) {
     if (!rowId) {
       return;
-    }
-    if (selectDebounceTimerRef.current) {
-      window.clearTimeout(selectDebounceTimerRef.current);
-      selectDebounceTimerRef.current = null;
     }
     onSelectRow(rowId);
   }
@@ -207,7 +185,7 @@ export function WordListPanel(props: WordListPanelProps) {
     if (!insertedRowId) {
       return false;
     }
-    scheduleSelectionCommit(insertedRowId);
+    commitSelectionNow(insertedRowId);
     const focusInsertedRow = (attempt: number) => {
       const focused = focusInput(insertedRowId, 'word', { arrowDirection: 'down' });
       if (!focused && attempt < 2) {
@@ -268,11 +246,7 @@ export function WordListPanel(props: WordListPanelProps) {
       }
       event.preventDefault();
       const previousRowId = rowsWithDraft[currentIndex - 1];
-      if (previousRowId !== '__draft__') {
-        scheduleSelectionCommit(previousRowId);
-      } else {
-        scheduleSelectionCommit(undefined);
-      }
+      commitSelectionNow(previousRowId);
       focusInput(previousRowId, column, { arrowDirection: 'up' });
       return;
     }
@@ -283,11 +257,7 @@ export function WordListPanel(props: WordListPanelProps) {
       }
       event.preventDefault();
       const nextRowId = rowsWithDraft[currentIndex + 1];
-      if (nextRowId !== '__draft__') {
-        scheduleSelectionCommit(nextRowId);
-      } else {
-        scheduleSelectionCommit(undefined);
-      }
+      commitSelectionNow(nextRowId);
       focusInput(nextRowId, column, { arrowDirection: 'down' });
       return;
     }
@@ -295,18 +265,14 @@ export function WordListPanel(props: WordListPanelProps) {
     const target = event.currentTarget;
     if (event.key === 'ArrowLeft' && column === 'subtitle' && atStart(target)) {
       event.preventDefault();
-      if (rowId !== '__draft__') {
-        scheduleSelectionCommit(rowId);
-      }
+      commitSelectionNow(rowId);
       focusInput(rowId, 'word');
       return;
     }
 
     if (event.key === 'ArrowRight' && column === 'word' && atEnd(target)) {
       event.preventDefault();
-      if (rowId !== '__draft__') {
-        scheduleSelectionCommit(rowId);
-      }
+      commitSelectionNow(rowId);
       focusInput(rowId, 'subtitle');
     }
   }
@@ -320,20 +286,14 @@ export function WordListPanel(props: WordListPanelProps) {
 
     if (shiftKey) {
       if (column === 'subtitle') {
-        if (rowId !== '__draft__') {
-          scheduleSelectionCommit(rowId);
-        }
+        commitSelectionNow(rowId);
         focusInput(rowId, 'word');
         return true;
       }
 
       if (column === 'word' && currentIndex > 0) {
         const previousRowId = rowsWithDraft[currentIndex - 1];
-        if (previousRowId !== '__draft__') {
-          scheduleSelectionCommit(previousRowId);
-        } else {
-          scheduleSelectionCommit(undefined);
-        }
+        commitSelectionNow(previousRowId);
         focusInput(previousRowId, 'subtitle', { arrowDirection: 'up' });
         return true;
       }
@@ -341,20 +301,14 @@ export function WordListPanel(props: WordListPanelProps) {
     }
 
     if (column === 'word') {
-      if (rowId !== '__draft__') {
-        scheduleSelectionCommit(rowId);
-      }
+      commitSelectionNow(rowId);
       focusInput(rowId, 'subtitle');
       return true;
     }
 
     if (column === 'subtitle' && currentIndex < rowsWithDraft.length - 1) {
       const nextRowId = rowsWithDraft[currentIndex + 1];
-      if (nextRowId !== '__draft__') {
-        scheduleSelectionCommit(nextRowId);
-      } else {
-        scheduleSelectionCommit(undefined);
-      }
+      commitSelectionNow(nextRowId);
       focusInput(nextRowId, 'word', { arrowDirection: 'down' });
       return true;
     }
@@ -514,7 +468,7 @@ export function WordListPanel(props: WordListPanelProps) {
                       data-row-id={row.id}
                       value={row.word}
                       onChange={(event) => onUpdateRow(row.id, { word: event.target.value })}
-                      onFocus={() => scheduleSelectionCommit(row.id)}
+                      onFocus={() => commitSelectionNow(row.id)}
                       onBlur={(event) => onRowBlur(row.id, event)}
                       onCompositionStart={onCompositionStart}
                       onCompositionEnd={onCompositionEnd}
@@ -535,7 +489,7 @@ export function WordListPanel(props: WordListPanelProps) {
                         data-row-id={row.id}
                         value={row.subtitle}
                         onChange={(event) => onUpdateRow(row.id, { subtitle: event.target.value })}
-                        onFocus={() => scheduleSelectionCommit(row.id)}
+                        onFocus={() => commitSelectionNow(row.id)}
                         onBlur={(event) => onRowBlur(row.id, event)}
                         onCompositionStart={onCompositionStart}
                         onCompositionEnd={onCompositionEnd}

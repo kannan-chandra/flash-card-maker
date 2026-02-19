@@ -47,7 +47,7 @@ export default function App() {
   const [imageIssues, setImageIssues] = useState<Record<string, string>>({});
   const [emojiBulkPromptRowId, setEmojiBulkPromptRowId] = useState<string | null>(null);
   const [draftRow, setDraftRow] = useState<Pick<FlashcardRow, 'word' | 'subtitle'>>({ word: '', subtitle: '' });
-  const [isDraftRowSelected, setIsDraftRowSelected] = useState(false);
+  const [activeRowId, setActiveRowId] = useState<string | undefined>(undefined);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const emojiBulkPromptTimerRef = useRef<number | null>(null);
 
@@ -58,14 +58,19 @@ export default function App() {
     if (!project.rows.length) {
       return undefined;
     }
-    if (!project.selectedRowId) {
-      return project.rows[0];
+    if (activeRowId && activeRowId !== DRAFT_ROW_ID) {
+      const activeRow = project.rows.find((row) => row.id === activeRowId);
+      if (activeRow) {
+        return activeRow;
+      }
     }
-    return project.rows.find((row) => row.id === project.selectedRowId) ?? project.rows[0];
-  }, [project]);
-  const draftHasContent = Boolean(draftRow.word.trim() || draftRow.subtitle.trim());
+    if (project.selectedRowId) {
+      return project.rows.find((row) => row.id === project.selectedRowId) ?? project.rows[0];
+    }
+    return project.rows[0];
+  }, [activeRowId, project]);
   const selectedRow = useMemo(() => {
-    if (isDraftRowSelected && draftHasContent) {
+    if (activeRowId === DRAFT_ROW_ID) {
       return {
         id: DRAFT_ROW_ID,
         word: draftRow.word,
@@ -74,27 +79,26 @@ export default function App() {
       };
     }
     return selectedPersistedRow;
-  }, [draftHasContent, draftRow.subtitle, draftRow.word, isDraftRowSelected, selectedPersistedRow]);
-  const selectedRowIsDraft = selectedRow?.id === DRAFT_ROW_ID;
+  }, [activeRowId, draftRow.subtitle, draftRow.word, selectedPersistedRow]);
+  const selectedRowIsDraft = activeRowId === DRAFT_ROW_ID;
+  const rowCount = project?.rows.length ?? 0;
   const selectedListIndex = useMemo(() => {
-    if (!project) {
+    if (!project || rowCount === 0) {
+      return selectedRowIsDraft ? 0 : -1;
+    }
+    if (selectedRowIsDraft) {
+      return rowCount;
+    }
+    if (!selectedPersistedRow) {
       return -1;
     }
-    const maxIndex = draftHasContent ? project.rows.length : project.rows.length - 1;
-    if (maxIndex < 0) {
-      return -1;
-    }
-    if (selectedRowIsDraft && draftHasContent) {
-      return project.rows.length;
-    }
-    const persistedIndex = project.rows.findIndex((row) => row.id === selectedPersistedRow?.id);
+    const persistedIndex = project.rows.findIndex((row) => row.id === selectedPersistedRow.id);
     if (persistedIndex >= 0) {
       return persistedIndex;
     }
     return project.rows.length ? 0 : -1;
-  }, [draftHasContent, project, selectedPersistedRow?.id, selectedRowIsDraft]);
-  const rowCount = project?.rows.length ?? 0;
-  const maxSelectableIndex = draftHasContent ? rowCount : rowCount - 1;
+  }, [project, rowCount, selectedPersistedRow, selectedRowIsDraft]);
+  const maxSelectableIndex = rowCount;
   const canMoveSelectedRowUp = selectedListIndex > 0;
   const canMoveSelectedRowDown = selectedListIndex >= 0 && selectedListIndex < maxSelectableIndex;
   const selectedRowHasImage = hasRowImage(selectedRow);
@@ -139,14 +143,25 @@ export default function App() {
 
   useEffect(() => {
     setDraftRow({ word: '', subtitle: '' });
-    setIsDraftRowSelected(false);
   }, [project?.id]);
 
   useEffect(() => {
-    if (isDraftRowSelected && !draftHasContent) {
-      setIsDraftRowSelected(false);
+    if (!project) {
+      return;
     }
-  }, [draftHasContent, isDraftRowSelected]);
+    setActiveRowId((current) => {
+      if (current === DRAFT_ROW_ID) {
+        return current;
+      }
+      if (current && project.rows.some((row) => row.id === current)) {
+        return current;
+      }
+      if (project.selectedRowId && project.rows.some((row) => row.id === project.selectedRowId)) {
+        return project.selectedRowId;
+      }
+      return project.rows[0]?.id ?? DRAFT_ROW_ID;
+    });
+  }, [project]);
 
   useEffect(
     () => () => {
@@ -274,7 +289,7 @@ export default function App() {
     if (!project) {
       return;
     }
-    const maxIndex = draftHasContent ? project.rows.length : project.rows.length - 1;
+    const maxIndex = project.rows.length;
     if (maxIndex < 0) {
       return;
     }
@@ -284,14 +299,14 @@ export default function App() {
       return;
     }
     if (nextIndex === project.rows.length) {
-      setIsDraftRowSelected(true);
+      setActiveRowId(DRAFT_ROW_ID);
       return;
     }
     const nextRowId = project.rows[nextIndex]?.id;
     if (!nextRowId) {
       return;
     }
-    setIsDraftRowSelected(false);
+    setActiveRowId(nextRowId);
     if (nextRowId !== project.selectedRowId) {
       updateActiveSet((current) => ({ ...current, selectedRowId: nextRowId }));
     }
@@ -307,11 +322,10 @@ export default function App() {
   }
 
   function onSelectListRow(rowId: string) {
+    setActiveRowId(rowId);
     if (rowId === DRAFT_ROW_ID) {
-      setIsDraftRowSelected(true);
       return;
     }
-    setIsDraftRowSelected(false);
     updateActiveSet((current) => ({ ...current, selectedRowId: rowId }));
   }
 
@@ -692,7 +706,7 @@ export default function App() {
           rows={project.rows}
           validations={validations}
           imageIssues={imageIssues}
-          selectedRowId={selectedRowIsDraft ? DRAFT_ROW_ID : selectedRow?.id}
+          selectedRowId={activeRowId}
           onSelectRow={onSelectListRow}
           onUpdateRow={updateRow}
           onAppendRow={onAppendRow}
