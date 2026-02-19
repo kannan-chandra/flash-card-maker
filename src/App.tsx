@@ -96,11 +96,10 @@ export default function App() {
     if (persistedIndex >= 0) {
       return persistedIndex;
     }
-    return project.rows.length ? 0 : -1;
+    return 0;
   }, [project, rowCount, selectedPersistedRow, selectedRowIsDraft]);
-  const maxSelectableIndex = rowCount;
   const canMoveSelectedRowUp = selectedListIndex > 0;
-  const canMoveSelectedRowDown = selectedListIndex >= 0 && selectedListIndex < maxSelectableIndex;
+  const canMoveSelectedRowDown = selectedListIndex >= 0 && selectedListIndex < rowCount;
   const selectedRowHasImage = hasRowImage(selectedRow);
   const selectedRowEmojiMatches = useMemo(() => {
     if (!selectedRow) {
@@ -289,10 +288,7 @@ export default function App() {
     if (!project) {
       return;
     }
-    const maxIndex = project.rows.length;
-    if (maxIndex < 0) {
-      return;
-    }
+    const maxIndex = rowCount;
     const currentIndex = selectedListIndex >= 0 ? selectedListIndex : 0;
     const nextIndex = Math.min(Math.max(currentIndex + offset, 0), maxIndex);
     if (nextIndex === currentIndex) {

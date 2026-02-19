@@ -545,8 +545,8 @@ export function WordListPanel(props: WordListPanelProps) {
                     value={draftRow.subtitle}
                     onChange={(event) => updateDraftRow((current) => ({ ...current, subtitle: event.target.value }))}
                     onFocus={() => commitSelectionNow('__draft__')}
-                  onCompositionStart={onCompositionStart}
-                  onCompositionEnd={onCompositionEnd}
+                    onCompositionStart={onCompositionStart}
+                    onCompositionEnd={onCompositionEnd}
                     onKeyDown={(event) => {
                       onTabNavigation(event, '__draft__', 'subtitle');
                       onArrowNavigation(event, '__draft__', 'subtitle');
@@ -559,10 +559,9 @@ export function WordListPanel(props: WordListPanelProps) {
               </td>
             </tr>
             {!rows.length ? (
-            <tr className="sheet-hint-row">
-              <td colSpan={2}>
-              </td>
-            </tr>
+              <tr className="sheet-hint-row">
+                <td colSpan={2}></td>
+              </tr>
             ) : null}
           </tbody>
         </table>
