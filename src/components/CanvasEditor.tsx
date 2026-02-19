@@ -188,6 +188,23 @@ export function CanvasEditor(props: CanvasEditorProps) {
       y: canvasY - offsetY
     };
   }
+
+  function clampCanvasPosition(canvasX: number, canvasY: number, elementWidth: number, elementHeight: number) {
+    const minX = -elementWidth / 2;
+    const maxX = stageContentWidth - elementWidth / 2;
+    const minY = -elementHeight / 2;
+    const maxY = stageContentHeight - elementHeight / 2;
+    return {
+      x: Math.min(Math.max(canvasX, minX), maxX),
+      y: Math.min(Math.max(canvasY, minY), maxY)
+    };
+  }
+
+  function getClampedSidePosition(side: 1 | 2, x: number, y: number, width: number, height: number) {
+    const canvasPos = toCanvasPosition(x, y, side);
+    const clampedCanvasPos = clampCanvasPosition(canvasPos.x, canvasPos.y, width, height);
+    return fromCanvasPosition(clampedCanvasPos.x, clampedCanvasPos.y, width, height);
+  }
   const canvasDebugEnabled =
     typeof window !== 'undefined' &&
     (new URLSearchParams(window.location.search).get('debugCanvas') === '1' || window.localStorage.getItem('debugCanvas') === '1');
@@ -351,6 +368,48 @@ export function CanvasEditor(props: CanvasEditorProps) {
     viewportLimitedHeight,
     viewportWidth,
     widthScale
+  ]);
+
+  useEffect(() => {
+    const clampedImage = getClampedSidePosition(
+      project.template.image.side,
+      project.template.image.x,
+      project.template.image.y,
+      project.template.image.width,
+      project.template.image.height
+    );
+    if (
+      clampedImage.side !== project.template.image.side ||
+      clampedImage.x !== project.template.image.x ||
+      clampedImage.y !== project.template.image.y
+    ) {
+      onPatchTemplate({
+        image: {
+          ...project.template.image,
+          x: clampedImage.x,
+          y: clampedImage.y,
+          side: clampedImage.side
+        }
+      });
+    }
+
+    for (const textElement of project.template.textElements) {
+      const clampedText = getClampedSidePosition(textElement.side, textElement.x, textElement.y, textElement.width, textElement.height);
+      if (clampedText.side === textElement.side && clampedText.x === textElement.x && clampedText.y === textElement.y) {
+        continue;
+      }
+      onPatchTextElement(textElement.id, {
+        x: clampedText.x,
+        y: clampedText.y,
+        side: clampedText.side
+      });
+    }
+  }, [
+    getClampedSidePosition,
+    onPatchTemplate,
+    onPatchTextElement,
+    project.template.image,
+    project.template.textElements
   ]);
 
   useEffect(() => {
@@ -702,11 +761,18 @@ export function CanvasEditor(props: CanvasEditorProps) {
                     onClick={() => onSelectElement('image')}
                     onTap={() => onSelectElement('image')}
                     onDragMove={(event) => {
-                      syncDraggedImagePreview(event.target.x(), event.target.y());
-                      updateSelectionBadge(event.target.x(), event.target.y(), 'Image');
-                      const sideResult = fromCanvasPosition(
+                      const clamped = clampCanvasPosition(
                         event.target.x(),
                         event.target.y(),
+                        project.template.image.width,
+                        project.template.image.height
+                      );
+                      event.target.position(clamped);
+                      syncDraggedImagePreview(clamped.x, clamped.y);
+                      updateSelectionBadge(clamped.x, clamped.y, 'Image');
+                      const sideResult = fromCanvasPosition(
+                        clamped.x,
+                        clamped.y,
                         project.template.image.width,
                         project.template.image.height
                       );
@@ -722,10 +788,17 @@ export function CanvasEditor(props: CanvasEditorProps) {
                       }
                     }}
                     onDragEnd={(event) => {
-                      syncDraggedImagePreview(event.target.x(), event.target.y());
-                      const sideResult = fromCanvasPosition(
+                      const clamped = clampCanvasPosition(
                         event.target.x(),
                         event.target.y(),
+                        project.template.image.width,
+                        project.template.image.height
+                      );
+                      event.target.position(clamped);
+                      syncDraggedImagePreview(clamped.x, clamped.y);
+                      const sideResult = fromCanvasPosition(
+                        clamped.x,
+                        clamped.y,
                         project.template.image.width,
                         project.template.image.height
                       );
@@ -744,7 +817,9 @@ export function CanvasEditor(props: CanvasEditorProps) {
                       const scaleY = node.scaleY();
                       const nextWidth = Math.max(20, node.width() * scaleX);
                       const nextHeight = Math.max(20, node.height() * scaleY);
-                      const sideResult = fromCanvasPosition(node.x(), node.y(), nextWidth, nextHeight);
+                      const clamped = clampCanvasPosition(node.x(), node.y(), nextWidth, nextHeight);
+                      node.position(clamped);
+                      const sideResult = fromCanvasPosition(clamped.x, clamped.y, nextWidth, nextHeight);
                       onPatchTemplate({
                         image: {
                           x: sideResult.x,
@@ -794,8 +869,10 @@ export function CanvasEditor(props: CanvasEditorProps) {
                       onDblClick={() => startEditingText(textElement.id)}
                       onDblTap={() => startEditingText(textElement.id)}
                       onDragMove={(event) => {
-                        updateSelectionBadge(event.target.x(), event.target.y(), textElement.role === 'word' ? 'Word' : 'Subtitle');
-                        const sideResult = fromCanvasPosition(event.target.x(), event.target.y(), textElement.width, textElement.height);
+                        const clamped = clampCanvasPosition(event.target.x(), event.target.y(), textElement.width, textElement.height);
+                        event.target.position(clamped);
+                        updateSelectionBadge(clamped.x, clamped.y, textElement.role === 'word' ? 'Word' : 'Subtitle');
+                        const sideResult = fromCanvasPosition(clamped.x, clamped.y, textElement.width, textElement.height);
                         if (sideResult.side !== textElement.side) {
                           onPatchTextElement(textElement.id, {
                             x: sideResult.x,
@@ -805,7 +882,9 @@ export function CanvasEditor(props: CanvasEditorProps) {
                         }
                       }}
                       onDragEnd={(event) => {
-                        const sideResult = fromCanvasPosition(event.target.x(), event.target.y(), textElement.width, textElement.height);
+                        const clamped = clampCanvasPosition(event.target.x(), event.target.y(), textElement.width, textElement.height);
+                        event.target.position(clamped);
+                        const sideResult = fromCanvasPosition(clamped.x, clamped.y, textElement.width, textElement.height);
                         onPatchTextElement(textElement.id, {
                           x: sideResult.x,
                           y: sideResult.y,
@@ -818,7 +897,9 @@ export function CanvasEditor(props: CanvasEditorProps) {
                         const scaleY = node.scaleY();
                         const nextWidth = Math.max(40, node.width() * scaleX);
                         const nextHeight = Math.max(30, node.height() * scaleY);
-                        const sideResult = fromCanvasPosition(node.x(), node.y(), nextWidth, nextHeight);
+                        const clamped = clampCanvasPosition(node.x(), node.y(), nextWidth, nextHeight);
+                        node.position(clamped);
+                        const sideResult = fromCanvasPosition(clamped.x, clamped.y, nextWidth, nextHeight);
                         onPatchTextElement(textElement.id, {
                           x: sideResult.x,
                           y: sideResult.y,
@@ -854,8 +935,10 @@ export function CanvasEditor(props: CanvasEditorProps) {
                         onDblClick={() => startEditingText(textElement.id)}
                         onDblTap={() => startEditingText(textElement.id)}
                         onDragMove={(event) => {
-                          updateSelectionBadge(event.target.x(), event.target.y(), textElement.role === 'word' ? 'Word' : 'Subtitle');
-                          const sideResult = fromCanvasPosition(event.target.x(), event.target.y(), textElement.width, textElement.height);
+                          const clamped = clampCanvasPosition(event.target.x(), event.target.y(), textElement.width, textElement.height);
+                          event.target.position(clamped);
+                          updateSelectionBadge(clamped.x, clamped.y, textElement.role === 'word' ? 'Word' : 'Subtitle');
+                          const sideResult = fromCanvasPosition(clamped.x, clamped.y, textElement.width, textElement.height);
                           if (sideResult.side !== textElement.side) {
                             onPatchTextElement(textElement.id, {
                               x: sideResult.x,
@@ -865,7 +948,9 @@ export function CanvasEditor(props: CanvasEditorProps) {
                           }
                         }}
                         onDragEnd={(event) => {
-                          const sideResult = fromCanvasPosition(event.target.x(), event.target.y(), textElement.width, textElement.height);
+                          const clamped = clampCanvasPosition(event.target.x(), event.target.y(), textElement.width, textElement.height);
+                          event.target.position(clamped);
+                          const sideResult = fromCanvasPosition(clamped.x, clamped.y, textElement.width, textElement.height);
                           onPatchTextElement(textElement.id, {
                             x: sideResult.x,
                             y: sideResult.y,
@@ -878,7 +963,9 @@ export function CanvasEditor(props: CanvasEditorProps) {
                           const scaleY = node.scaleY();
                           const nextWidth = Math.max(40, node.width() * scaleX);
                           const nextHeight = Math.max(30, node.height() * scaleY);
-                          const sideResult = fromCanvasPosition(node.x(), node.y(), nextWidth, nextHeight);
+                          const clamped = clampCanvasPosition(node.x(), node.y(), nextWidth, nextHeight);
+                          node.position(clamped);
+                          const sideResult = fromCanvasPosition(clamped.x, clamped.y, nextWidth, nextHeight);
                           onPatchTextElement(textElement.id, {
                             x: sideResult.x,
                             y: sideResult.y,

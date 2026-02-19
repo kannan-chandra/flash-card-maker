@@ -107,6 +107,31 @@ async function dragCanvasPointToCanvasPoint(
   await page.mouse.up();
 }
 
+async function dragCanvasPointFarOutside(
+  page: Page,
+  layout: 'vertical' | 'horizontal',
+  source: { x: number; y: number },
+  target: { x: number; y: number },
+  template: TemplateShape
+) {
+  const stage = page.locator('.stage-canvas');
+  const box = await stage.boundingBox();
+  expect(box).toBeTruthy();
+  if (!box) {
+    return;
+  }
+  const contentWidth = layout === 'horizontal' ? template.width * 2 : template.width;
+  const contentHeight = layout === 'horizontal' ? template.height : template.height * 2;
+  const sourceX = box.x + (source.x / contentWidth) * box.width;
+  const sourceY = box.y + (source.y / contentHeight) * box.height;
+  const targetX = box.x + target.x;
+  const targetY = box.y + target.y;
+  await page.mouse.move(sourceX, sourceY);
+  await page.mouse.down();
+  await page.mouse.move(targetX, targetY, { steps: 20 });
+  await page.mouse.up();
+}
+
 async function dragImageToSide(page: Page, layout: 'vertical' | 'horizontal', targetSide: 1 | 2) {
   const template = await readActiveTemplate(page);
   const source = canvasMidpointForElement(template, layout, template.image);
@@ -146,6 +171,16 @@ async function setupDoubleSidedCanvas(page: Page, width: number, height: number)
   await page.getByRole('button', { name: 'Double-sided' }).click();
 }
 
+function expectMidpointInsideCanvas(template: TemplateShape, layout: 'vertical' | 'horizontal', element: { side: 1 | 2; x: number; y: number; width: number; height: number }) {
+  const midpoint = canvasMidpointForElement(template, layout, element);
+  const contentWidth = layout === 'horizontal' ? template.width * 2 : template.width;
+  const contentHeight = layout === 'horizontal' ? template.height : template.height * 2;
+  expect(midpoint.x).toBeGreaterThanOrEqual(0);
+  expect(midpoint.y).toBeGreaterThanOrEqual(0);
+  expect(midpoint.x).toBeLessThanOrEqual(contentWidth);
+  expect(midpoint.y).toBeLessThanOrEqual(contentHeight);
+}
+
 test('double-sided vertical layout still allows dragging image and text to other side', async ({ page }) => {
   await setupDoubleSidedCanvas(page, 1400, 900);
   await dragImageToSide(page, 'vertical', 1);
@@ -156,4 +191,42 @@ test('double-sided horizontal layout still allows dragging image and text to oth
   await setupDoubleSidedCanvas(page, 1024, 844);
   await dragImageToSide(page, 'horizontal', 1);
   await dragTextToSide(page, 'horizontal', 'text1', 2);
+});
+
+test('image and text midpoints stay inside canvas when dragged far outside bounds', async ({ page }) => {
+  await setupDoubleSidedCanvas(page, 1024, 844);
+
+  const beforeImage = await readActiveTemplate(page);
+  const imageMid = canvasMidpointForElement(beforeImage, 'horizontal', beforeImage.image);
+  await dragCanvasPointFarOutside(page, 'horizontal', imageMid, { x: -400, y: -300 }, beforeImage);
+
+  await expect
+    .poll(async () => {
+      const next = await readActiveTemplate(page);
+      return next.image.x;
+    })
+    .not.toBe(beforeImage.image.x);
+  const afterImage = await readActiveTemplate(page);
+  expectMidpointInsideCanvas(afterImage, 'horizontal', afterImage.image);
+
+  const beforeText = await readActiveTemplate(page);
+  const text1 = beforeText.textElements.find((item) => item.id === 'text1');
+  if (!text1) {
+    throw new Error('Missing text1');
+  }
+  const textMid = canvasMidpointForElement(beforeText, 'horizontal', text1);
+  await dragCanvasPointFarOutside(page, 'horizontal', textMid, { x: 2800, y: 1400 }, beforeText);
+
+  await expect
+    .poll(async () => {
+      const next = await readActiveTemplate(page);
+      return next.textElements.find((item) => item.id === 'text1')?.x;
+    })
+    .not.toBe(text1.x);
+  const afterText = await readActiveTemplate(page);
+  const text1After = afterText.textElements.find((item) => item.id === 'text1');
+  if (!text1After) {
+    throw new Error('Missing text1 after drag');
+  }
+  expectMidpointInsideCanvas(afterText, 'horizontal', text1After);
 });
