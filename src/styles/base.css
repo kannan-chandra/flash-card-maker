@@ -295,7 +295,9 @@ main {
 }
 
 .floating-image-panel .emoji-search-results {
-  max-height: clamp(96px, calc(100dvh - var(--floating-panel-top, 0px) - 232px - env(safe-area-inset-bottom, 0px)), 234px);
+  max-height: clamp(72px, calc(var(--floating-panel-max-height, 360px) - 220px), 234px);
+  min-height: 0;
+  flex: 1 1 auto;
 }
 
 .emoji-grid {
@@ -396,10 +398,7 @@ input[type='color'] {
   position: fixed;
   z-index: calc(var(--z-modal) + 1);
   max-width: calc(100vw - 24px);
-  max-height: min(
-    var(--floating-panel-max-height, 100dvh),
-    calc(100dvh - var(--floating-panel-top, 0px) - 12px - env(safe-area-inset-bottom, 0px))
-  );
+  max-height: calc(var(--floating-panel-max-height, 100vh) - env(safe-area-inset-bottom, 0px));
   box-sizing: border-box;
 }
 
@@ -411,6 +410,26 @@ input[type='color'] {
   background: var(--color-surface);
   padding: 10px;
   box-shadow: var(--shadow-floating);
+  max-height: 100%;
+}
+
+.floating-image-panel .card-detail-panel {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.floating-image-panel .image-options {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.floating-image-panel .emoji-search-mode {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1 1 auto;
 }
 
 .floating-text-panel .text-control-panel {

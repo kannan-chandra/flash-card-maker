@@ -106,6 +106,9 @@ export function useCanvasLayout(args: UseCanvasLayoutArgs) {
 
     syncLayout();
     window.addEventListener('resize', syncLayout);
+    const visualViewport = window.visualViewport;
+    visualViewport?.addEventListener('resize', syncLayout);
+    visualViewport?.addEventListener('scroll', syncLayout);
 
     let observer: ResizeObserver | null = null;
     if (typeof ResizeObserver !== 'undefined') {
@@ -115,6 +118,8 @@ export function useCanvasLayout(args: UseCanvasLayoutArgs) {
 
     return () => {
       window.removeEventListener('resize', syncLayout);
+      visualViewport?.removeEventListener('resize', syncLayout);
+      visualViewport?.removeEventListener('scroll', syncLayout);
       observer?.disconnect();
     };
   }, [editorPanelRef, stageShellRef]);
@@ -129,8 +134,10 @@ export function useCanvasLayout(args: UseCanvasLayoutArgs) {
     const belowTopAbs = stageWrapTop + args.anchorBottom + FLOATING_PANEL_ANCHOR_GAP_PX;
     const aboveTopAbs = stageWrapTop + args.anchorTop - args.panelHeight - FLOATING_PANEL_ANCHOR_GAP_PX;
     const fitsBelow = belowTopAbs + args.panelHeight <= availableViewportHeight - FLOATING_PANEL_GUTTER_PX;
-    const topAbs = fitsBelow ? belowTopAbs : Math.max(FLOATING_PANEL_GUTTER_PX, aboveTopAbs);
-    const maxHeight = Math.max(160, availableViewportHeight - topAbs - FLOATING_PANEL_GUTTER_PX);
+    const unclampedTop = fitsBelow ? belowTopAbs : Math.max(FLOATING_PANEL_GUTTER_PX, aboveTopAbs);
+    const maxTopAbs = Math.max(FLOATING_PANEL_GUTTER_PX, availableViewportHeight - FLOATING_PANEL_GUTTER_PX - 120);
+    const topAbs = Math.min(Math.max(unclampedTop, FLOATING_PANEL_GUTTER_PX), maxTopAbs);
+    const maxHeight = Math.max(0, availableViewportHeight - topAbs - FLOATING_PANEL_GUTTER_PX);
     return {
       left: clampedLeftAbs,
       top: topAbs,

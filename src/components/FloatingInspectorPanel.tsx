@@ -42,7 +42,7 @@ export function FloatingInspectorPanel(props: FloatingInspectorPanelProps) {
         top,
         width,
         maxHeight,
-        overflowY: 'auto',
+        overflow: 'hidden',
         ['--floating-panel-top' as string]: `${Math.max(0, Math.round(top))}px`,
         ['--floating-panel-max-height' as string]: maxHeight ? `${Math.round(maxHeight)}px` : undefined
       }}
