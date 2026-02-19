@@ -106,3 +106,39 @@ test('mobile viewport: enter on bottom row keeps inserted focused row visible', 
 
   expect(insertedRowVisible).toBe(true);
 });
+
+test('mobile viewport: card nav arrows stay within viewport bounds', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/');
+  await dismissFirstLaunchGuide(page);
+  await importCsv(page, makeRowsCsv(3));
+
+  const upButton = page.locator('.mobile-card-nav-button').first();
+  const downButton = page.locator('.mobile-card-nav-button').nth(1);
+  await expect(upButton).toBeVisible();
+  await expect(downButton).toBeVisible();
+
+  const viewport = page.viewportSize();
+  expect(viewport).toBeTruthy();
+  if (!viewport) {
+    return;
+  }
+
+  const upBox = await upButton.boundingBox();
+  const downBox = await downButton.boundingBox();
+  expect(upBox).toBeTruthy();
+  expect(downBox).toBeTruthy();
+  if (!upBox || !downBox) {
+    return;
+  }
+
+  expect(upBox.x).toBeGreaterThanOrEqual(0);
+  expect(upBox.y).toBeGreaterThanOrEqual(0);
+  expect(upBox.x + upBox.width).toBeLessThanOrEqual(viewport.width);
+  expect(upBox.y + upBox.height).toBeLessThanOrEqual(viewport.height);
+
+  expect(downBox.x).toBeGreaterThanOrEqual(0);
+  expect(downBox.y).toBeGreaterThanOrEqual(0);
+  expect(downBox.x + downBox.width).toBeLessThanOrEqual(viewport.width);
+  expect(downBox.y + downBox.height).toBeLessThanOrEqual(viewport.height);
+});
