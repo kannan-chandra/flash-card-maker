@@ -60,6 +60,15 @@ export default function App() {
     }
     return project.rows.find((row) => row.id === project.selectedRowId) ?? project.rows[0];
   }, [project]);
+  const selectedRowIndex = useMemo(() => {
+    if (!project || !project.rows.length) {
+      return -1;
+    }
+    if (!selectedRow) {
+      return 0;
+    }
+    return project.rows.findIndex((row) => row.id === selectedRow.id);
+  }, [project, selectedRow]);
   const selectedRowHasImage = hasRowImage(selectedRow);
   const selectedRowEmojiMatches = useMemo(() => {
     if (!selectedRow) {
@@ -220,6 +229,25 @@ export default function App() {
     }
     updateRow(selectedRow.id, setImageFromUrl(trimmed));
     clearEmojiBulkPrompt();
+  }
+
+  function moveSelectedRowBy(offset: -1 | 1) {
+    updateActiveSet((current) => {
+      if (!current.rows.length) {
+        return current;
+      }
+      const currentIndex = current.rows.findIndex((row) => row.id === current.selectedRowId);
+      const fallbackIndex = currentIndex >= 0 ? currentIndex : 0;
+      const nextIndex = Math.min(Math.max(fallbackIndex + offset, 0), current.rows.length - 1);
+      const nextRowId = current.rows[nextIndex]?.id;
+      if (!nextRowId || nextRowId === current.selectedRowId) {
+        return current;
+      }
+      return {
+        ...current,
+        selectedRowId: nextRowId
+      };
+    });
   }
 
   function onRemoveSelectedRowImage() {
@@ -564,6 +592,10 @@ export default function App() {
             onPatchTextElement: patchTextElement,
             onUpdateRow: updateRow,
             onCanvasImageDrop: (file) => void onSelectedRowImageUpload(file),
+            onMoveSelectedRowUp: () => moveSelectedRowBy(-1),
+            onMoveSelectedRowDown: () => moveSelectedRowBy(1),
+            canMoveSelectedRowUp: selectedRowIndex > 0,
+            canMoveSelectedRowDown: selectedRowIndex >= 0 && selectedRowIndex < project.rows.length - 1,
             onToggleDoubleSided: (doubleSided) =>
               updateActiveSet((current) => {
                 const currentTemplate = current.template;

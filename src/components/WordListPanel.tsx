@@ -29,6 +29,7 @@ export function WordListPanel(props: WordListPanelProps) {
   const listTableRef = useRef<HTMLDivElement | null>(null);
   const wordRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const subtitleRefs = useRef<Record<string, HTMLInputElement | null>>({});
+  const rowRefs = useRef<Record<string, HTMLTableRowElement | null>>({});
   const draftWordRef = useRef<HTMLInputElement | null>(null);
   const draftSubtitleRef = useRef<HTMLInputElement | null>(null);
   const selectDebounceTimerRef = useRef<number | null>(null);
@@ -57,6 +58,22 @@ export function WordListPanel(props: WordListPanelProps) {
     },
     []
   );
+
+  useEffect(() => {
+    if (!selectedRowId) {
+      return;
+    }
+    const activeElement = document.activeElement as HTMLElement | null;
+    if (activeElement && listTableRef.current?.contains(activeElement) && activeElement.tagName === 'INPUT') {
+      return;
+    }
+    const row = rowRefs.current[selectedRowId];
+    if (!row) {
+      return;
+    }
+    row.scrollIntoView({ block: 'nearest' });
+    row.focus({ preventScroll: true });
+  }, [selectedRowId, rows.length]);
 
   function scheduleSelectionCommit(rowId: string | undefined) {
     if (selectDebounceTimerRef.current) {
@@ -466,6 +483,11 @@ export function WordListPanel(props: WordListPanelProps) {
               return (
                 <tr
                   key={row.id}
+                  ref={(node) => {
+                    rowRefs.current[row.id] = node;
+                  }}
+                  data-row-id={row.id}
+                  tabIndex={-1}
                   className={row.id === selectedRowId ? 'selected' : undefined}
                   onClick={() => {
                     commitSelectionNow(row.id);

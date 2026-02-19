@@ -27,6 +27,10 @@ interface CanvasEditorProps {
     onUpdateRow: (rowId: string, patch: Partial<FlashcardRow>) => void;
     onToggleDoubleSided: (value: boolean) => void;
     onCanvasImageDrop: (file: File) => void;
+    onMoveSelectedRowUp: () => void;
+    onMoveSelectedRowDown: () => void;
+    canMoveSelectedRowUp: boolean;
+    canMoveSelectedRowDown: boolean;
   };
   children?: ReactNode;
 }
@@ -97,7 +101,18 @@ export function CanvasEditor(props: CanvasEditorProps) {
   const { project, selection, canvas, actions, children } = props;
   const { selectedRow, selectedElement, previewImage, imageIsEmpty, imageIsLoading } = selection;
   const { cardHeight } = canvas;
-  const { onSelectElement, onPatchTemplate, onPatchTextElement, onUpdateRow, onToggleDoubleSided, onCanvasImageDrop } = actions;
+  const {
+    onSelectElement,
+    onPatchTemplate,
+    onPatchTextElement,
+    onUpdateRow,
+    onToggleDoubleSided,
+    onCanvasImageDrop,
+    onMoveSelectedRowUp,
+    onMoveSelectedRowDown,
+    canMoveSelectedRowUp,
+    canMoveSelectedRowDown
+  } = actions;
 
   const imageRef = useRef<Konva.Image>(null);
   const imageControlRef = useRef<Konva.Rect>(null);
@@ -679,6 +694,21 @@ export function CanvasEditor(props: CanvasEditorProps) {
 
           <div className="stage-shell" ref={stageShellRef}>
             <div className="stage-wrap" style={{ width: scaledStageWidth, height: scaledStageHeight }}>
+              {isNarrowLayout && (canMoveSelectedRowUp || canMoveSelectedRowDown) ? (
+                <div className="mobile-card-nav" role="group" aria-label="Move selected card">
+                  <button type="button" className="mobile-card-nav-button" onClick={onMoveSelectedRowUp} disabled={!canMoveSelectedRowUp}>
+                    ↑
+                  </button>
+                  <button
+                    type="button"
+                    className="mobile-card-nav-button"
+                    onClick={onMoveSelectedRowDown}
+                    disabled={!canMoveSelectedRowDown}
+                  >
+                    ↓
+                  </button>
+                </div>
+              ) : null}
               <div
                 className="stage-canvas"
                 style={{ width: scaledStageWidth, height: scaledStageHeight }}
