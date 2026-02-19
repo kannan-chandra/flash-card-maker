@@ -88,7 +88,7 @@ export function useCanvasLayout(args: UseCanvasLayoutArgs) {
       setStageShellRectTop(rect.top);
       const rootStyle = window.getComputedStyle(document.documentElement);
       const appGutterPx = Number.parseFloat(rootStyle.getPropertyValue('--app-gutter')) || 20;
-      const measuredViewportHeight = window.innerHeight;
+      const measuredViewportHeight = window.visualViewport?.height ?? window.innerHeight;
       setBrowserViewportHeight(measuredViewportHeight);
       const nextViewportLimitedHeight = Math.max(0, measuredViewportHeight - rect.top - appGutterPx);
       setViewportLimitedHeight(nextViewportLimitedHeight);
@@ -121,7 +121,7 @@ export function useCanvasLayout(args: UseCanvasLayoutArgs) {
 
   function getPanelPosition(args: PanelPositionArgs): PanelPosition {
     const availableViewportWidth = viewportWidth || window.innerWidth;
-    const availableViewportHeight = window.innerHeight;
+    const availableViewportHeight = window.visualViewport?.height ?? window.innerHeight;
     const panelRenderWidth = Math.min(args.panelWidth, Math.max(220, availableViewportWidth - FLOATING_PANEL_GUTTER_PX * 2));
     const desiredLeftAbs = isCompactLayout ? (availableViewportWidth - panelRenderWidth) / 2 : stageWrapLeft + args.anchorX;
     const maxLeftAbs = Math.max(FLOATING_PANEL_GUTTER_PX, availableViewportWidth - panelRenderWidth - FLOATING_PANEL_GUTTER_PX);

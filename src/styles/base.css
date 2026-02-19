@@ -295,7 +295,7 @@ main {
 }
 
 .floating-image-panel .emoji-search-results {
-  max-height: clamp(96px, calc(100dvh - var(--floating-panel-top, 0px) - 232px), 234px);
+  max-height: clamp(96px, calc(100dvh - var(--floating-panel-top, 0px) - 232px - env(safe-area-inset-bottom, 0px)), 234px);
 }
 
 .emoji-grid {
@@ -398,7 +398,7 @@ input[type='color'] {
   max-width: calc(100vw - 24px);
   max-height: min(
     var(--floating-panel-max-height, 100dvh),
-    calc(100dvh - var(--floating-panel-top, 0px) - 12px)
+    calc(100dvh - var(--floating-panel-top, 0px) - 12px - env(safe-area-inset-bottom, 0px))
   );
   box-sizing: border-box;
 }
