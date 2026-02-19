@@ -421,7 +421,7 @@ input[type='color'] {
 
 .mobile-card-nav {
   position: absolute;
-  right: 6px;
+  right: -38px;
   top: 50%;
   transform: translateY(-50%);
   z-index: 3;
