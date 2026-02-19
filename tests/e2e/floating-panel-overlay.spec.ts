@@ -124,4 +124,45 @@ test.describe('floating panel overlay behavior', () => {
     });
     expect(emojiResultsHeight).toBeLessThan(234);
   });
+
+  test('ios safari repro: panel should not scroll while emoji area does', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 620 });
+    await page.goto('/');
+    await dismissFirstLaunchGuide(page);
+    await importCsv(page, makeRowsCsv(12));
+
+    await page.locator('tbody tr').first().getByLabel('Word').click();
+    await clickImageBox(page);
+    await expect(page.locator('.floating-image-panel')).toBeVisible();
+
+    const searchButton = page.getByRole('button', { name: 'Search all emoji' });
+    if (await searchButton.count()) {
+      await searchButton.click();
+    }
+    await expect(page.getByLabel('Search emoji')).toBeVisible();
+
+    const panelScrollable = await page.locator('.floating-image-panel').evaluate((node) => {
+      const el = node as HTMLElement;
+      return {
+        overflowY: getComputedStyle(el).overflowY,
+        scrollHeight: el.scrollHeight,
+        clientHeight: el.clientHeight,
+        scrollable: el.scrollHeight > el.clientHeight + 1
+      };
+    });
+    const emojiScrollable = await page.locator('.floating-image-panel .emoji-search-results').evaluate((node) => {
+      const el = node as HTMLElement;
+      return {
+        overflowY: getComputedStyle(el).overflowY,
+        scrollHeight: el.scrollHeight,
+        clientHeight: el.clientHeight,
+        scrollable: el.scrollHeight > el.clientHeight + 1
+      };
+    });
+
+    expect(emojiScrollable.overflowY).toBe('auto');
+    expect(emojiScrollable.scrollable).toBe(true);
+    expect(panelScrollable.overflowY).not.toBe('auto');
+    expect(panelScrollable.scrollable).toBe(false);
+  });
 });
