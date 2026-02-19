@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type DragEvent as ReactDragEvent,
 import { Group, Image as KonvaImage, Layer, Rect, Stage, Text, Transformer } from 'react-konva';
 import type Konva from 'konva';
 import { FONT_FAMILIES } from '../constants/project';
+import { useCanvasLayout } from '../hooks/useCanvasLayout';
 import { FloatingInspectorPanel } from './FloatingInspectorPanel';
 import type { CardTemplate, FlashcardRow, FlashcardSet, FontFamily, TextElement } from '../types';
 
@@ -95,9 +96,6 @@ function getContainSize(containerWidth: number, containerHeight: number, sourceW
 }
 
 export function CanvasEditor(props: CanvasEditorProps) {
-  const singleColumnBreakpoint = 1180;
-  const compactSplitBreakpoint = 720;
-  const compactToggleBreakpoint = 420;
   const { project, selection, canvas, actions, children } = props;
   const { selectedRow, selectedElement, previewImage, imageIsEmpty, imageIsLoading } = selection;
   const { cardHeight } = canvas;
@@ -127,17 +125,6 @@ export function CanvasEditor(props: CanvasEditorProps) {
   const editorPanelRef = useRef<HTMLElement>(null);
   const stageToolbarRef = useRef<HTMLDivElement>(null);
   const stageShellRef = useRef<HTMLDivElement>(null);
-  const [stageViewportWidth, setStageViewportWidth] = useState<number>(0);
-  const [stageViewportHeight, setStageViewportHeight] = useState<number>(0);
-  const [shellClientHeight, setShellClientHeight] = useState<number>(0);
-  const [viewportLimitedHeight, setViewportLimitedHeight] = useState<number>(0);
-  const [allocatedShellHeight, setAllocatedShellHeight] = useState<number>(0);
-  const [browserViewportHeight, setBrowserViewportHeight] = useState<number>(0);
-  const [stageShellRectTop, setStageShellRectTop] = useState<number>(0);
-  const [viewportWidth, setViewportWidth] = useState<number>(0);
-  const [isNarrowLayout, setIsNarrowLayout] = useState<boolean>(false);
-  const [stageShellLeft, setStageShellLeft] = useState<number>(0);
-  const [stageShellTop, setStageShellTop] = useState<number>(0);
   const [imagePanelHeight, setImagePanelHeight] = useState<number>(220);
   const [textPanelHeight, setTextPanelHeight] = useState<number>(170);
   const [isImageDropTargetActive, setIsImageDropTargetActive] = useState(false);
@@ -145,17 +132,24 @@ export function CanvasEditor(props: CanvasEditorProps) {
   const selectionBadgeRectRef = useRef<Konva.Rect>(null);
   const selectionBadgeTextRef = useRef<Konva.Text>(null);
 
-  const isCompactLayout = viewportWidth > 0 && viewportWidth <= compactSplitBreakpoint;
-  const doubleSidedUsesHorizontalSplit = isNarrowLayout && !isCompactLayout;
-  const isHorizontalDoubleSidedReference = doubleSidedUsesHorizontalSplit;
-  const isHorizontalSplit = project.doubleSided && doubleSidedUsesHorizontalSplit;
-  const useCompactToggleLabels = viewportWidth > 0 && viewportWidth <= compactToggleBreakpoint;
   const sideWidth = project.template.width;
   const sideHeight = cardHeight;
-  const stageContentWidth = project.doubleSided && isHorizontalSplit ? sideWidth * 2 : sideWidth;
-  const stageContentHeight = project.doubleSided ? (isHorizontalSplit ? sideHeight : sideHeight * 2) : sideHeight;
-  const referenceWidth = isHorizontalDoubleSidedReference ? sideWidth * 2 : sideWidth;
-  const referenceHeight = isHorizontalDoubleSidedReference ? sideHeight : sideHeight * 2;
+  const canvasLayout = useCanvasLayout({
+    sideWidth,
+    sideHeight,
+    doubleSided: project.doubleSided,
+    canShowMobileNav: canMoveSelectedRowUp || canMoveSelectedRowDown,
+    stageShellRef,
+    editorPanelRef
+  });
+  const { isCompactLayout, doubleSidedUsesHorizontalSplit, isHorizontalSplit, useCompactToggleLabels } = canvasLayout.layout;
+  const { stageContentWidth, stageContentHeight, referenceWidth, referenceHeight } = canvasLayout.footprint;
+  const { stageScale, scaledStageWidth, scaledStageHeight, widthScale, heightScale, renderedHeightScale } = canvasLayout.scale;
+  const { isNarrowLayout } = canvasLayout.layout;
+  const { stageViewportWidth, stageViewportHeight, shellClientHeight, allocatedShellHeight, viewportLimitedHeight, stageShellRectTop } =
+    canvasLayout.measured;
+  const { width: viewportWidth, height: browserViewportHeight } = canvasLayout.viewport;
+  const { stageWrapShiftX, stageWrapLeft, stageWrapTop, showMobileNav } = canvasLayout.placement;
 
   function getSideOffset(side: 1 | 2) {
     if (!project.doubleSided) {
@@ -200,22 +194,6 @@ export function CanvasEditor(props: CanvasEditorProps) {
       y: canvasY - offsetY
     };
   }
-
-  const stageScale = useMemo(() => {
-    // Keep apparent card size consistent across single/double mode by always
-    // scaling against a double-sided reference footprint for the current layout.
-    const widthScale = stageViewportWidth > 0 ? stageViewportWidth / referenceWidth : 1;
-    const heightScale = stageViewportHeight > 0 ? stageViewportHeight / referenceHeight : 1;
-    // Also cap by the real rendered stage height so mobile stacked mode
-    // cannot overlap the word list when the 2/3 area is the limiter.
-    const renderedHeightScale = stageViewportHeight > 0 ? stageViewportHeight / stageContentHeight : 1;
-    return Math.max(0.01, Math.min(widthScale, heightScale, renderedHeightScale));
-  }, [referenceHeight, referenceWidth, stageContentHeight, stageViewportHeight, stageViewportWidth]);
-  const scaledStageWidth = stageContentWidth * stageScale;
-  const scaledStageHeight = stageContentHeight * stageScale;
-  const widthScale = stageViewportWidth > 0 ? stageViewportWidth / referenceWidth : 1;
-  const heightScale = stageViewportHeight > 0 ? stageViewportHeight / referenceHeight : 1;
-  const renderedHeightScale = stageViewportHeight > 0 ? stageViewportHeight / stageContentHeight : 1;
   const canvasDebugEnabled =
     typeof window !== 'undefined' &&
     (new URLSearchParams(window.location.search).get('debugCanvas') === '1' || window.localStorage.getItem('debugCanvas') === '1');
@@ -264,58 +242,6 @@ export function CanvasEditor(props: CanvasEditorProps) {
   }, [editingTextId]);
 
   useEffect(() => {
-    const shell = stageShellRef.current;
-    if (!shell) {
-      return;
-    }
-
-    const syncWidth = () => {
-      setStageViewportWidth(shell.clientWidth);
-      const viewportWidth = window.visualViewport?.width ?? window.innerWidth;
-      setViewportWidth(viewportWidth);
-      const isNarrowWidth = viewportWidth <= singleColumnBreakpoint;
-      setIsNarrowLayout(isNarrowWidth);
-      const rect = shell.getBoundingClientRect();
-      setStageShellLeft(rect.left);
-      setStageShellTop(rect.top);
-      setStageShellRectTop(rect.top);
-      const rootStyle = window.getComputedStyle(document.documentElement);
-      const gutterPx = Number.parseFloat(rootStyle.getPropertyValue('--app-gutter')) || 20;
-      const viewportHeight = window.visualViewport?.height ?? window.innerHeight;
-      setBrowserViewportHeight(viewportHeight);
-      const viewportLimitedHeight = Math.max(0, viewportHeight - rect.top - gutterPx);
-      setViewportLimitedHeight(viewportLimitedHeight);
-      const shellHeight = Math.max(0, shell.clientHeight);
-      setShellClientHeight(shellHeight);
-      const editorRect = editorPanelRef.current?.getBoundingClientRect();
-      const allocatedHeightFromPanel = editorRect ? Math.max(0, editorRect.bottom - rect.top) : 0;
-      setAllocatedShellHeight(allocatedHeightFromPanel);
-      const availableHeight = isNarrowWidth
-        ? Math.max(0, Math.min(viewportLimitedHeight, allocatedHeightFromPanel || viewportLimitedHeight))
-        : viewportLimitedHeight;
-      setStageViewportHeight(availableHeight);
-    };
-
-    syncWidth();
-    window.addEventListener('resize', syncWidth);
-
-    const viewport = window.visualViewport;
-    viewport?.addEventListener('resize', syncWidth);
-
-    let observer: ResizeObserver | null = null;
-    if (typeof ResizeObserver !== 'undefined') {
-      observer = new ResizeObserver(() => syncWidth());
-      observer.observe(shell);
-    }
-
-    return () => {
-      window.removeEventListener('resize', syncWidth);
-      viewport?.removeEventListener('resize', syncWidth);
-      observer?.disconnect();
-    };
-  }, []);
-
-  useEffect(() => {
     if (!canvasDebugEnabled) {
       return;
     }
@@ -325,8 +251,8 @@ export function CanvasEditor(props: CanvasEditorProps) {
     const snapshot = {
       timestamp: new Date().toISOString(),
       breakpoint: {
-        singleColumnBreakpoint,
-        compactSplitBreakpoint
+        singleColumnBreakpoint: canvasLayout.breakpoints.singleColumn,
+        compactSplitBreakpoint: canvasLayout.breakpoints.compactSplit
       },
       viewport: {
         width: viewportWidth,
@@ -383,9 +309,10 @@ export function CanvasEditor(props: CanvasEditorProps) {
     };
     console.log('CANVAS_DEBUG', snapshot);
   }, [
+    canvasLayout.breakpoints.compactSplit,
+    canvasLayout.breakpoints.singleColumn,
     browserViewportHeight,
     canvasDebugEnabled,
-    compactSplitBreakpoint,
     doubleSidedUsesHorizontalSplit,
     heightScale,
     isCompactLayout,
@@ -401,7 +328,6 @@ export function CanvasEditor(props: CanvasEditorProps) {
     shellClientHeight,
     sideHeight,
     sideWidth,
-    singleColumnBreakpoint,
     stageContentHeight,
     stageContentWidth,
     stageScale,
@@ -615,41 +541,10 @@ export function CanvasEditor(props: CanvasEditorProps) {
   const showTextPanel = Boolean(selectedText);
   const imagePanelWidth = 340;
   const textPanelWidth = 340;
-  const stageSideGap = Math.max((stageViewportWidth - scaledStageWidth) / 2, 0);
-  const navRightClearance = 38;
-  const showMobileNav = isNarrowLayout && (canMoveSelectedRowUp || canMoveSelectedRowDown);
-  const stageWrapShiftX = showMobileNav ? Math.max(0, navRightClearance - stageSideGap) : 0;
-  const stageWrapLeft = stageShellLeft + stageSideGap - stageWrapShiftX;
-  const stageWrapTop = stageShellTop;
-  function getPanelPosition(args: {
-    anchorX: number;
-    anchorTop: number;
-    anchorBottom: number;
-    panelWidth: number;
-    panelHeight: number;
-  }) {
-    const gutter = 12;
-    const anchorGap = 4;
-    const availableViewportWidth = viewportWidth || window.visualViewport?.width || window.innerWidth;
-    const availableViewportHeight = window.visualViewport?.height || window.innerHeight;
-    const panelRenderWidth = Math.min(args.panelWidth, Math.max(220, availableViewportWidth - gutter * 2));
-    const desiredLeftAbs = isCompactLayout ? (availableViewportWidth - panelRenderWidth) / 2 : stageWrapLeft + args.anchorX;
-    const maxLeftAbs = Math.max(gutter, availableViewportWidth - panelRenderWidth - gutter);
-    const clampedLeftAbs = Math.min(Math.max(desiredLeftAbs, gutter), maxLeftAbs);
-    const belowTopAbs = stageWrapTop + args.anchorBottom + anchorGap;
-    const aboveTopAbs = stageWrapTop + args.anchorTop - args.panelHeight - anchorGap;
-    const fitsBelow = belowTopAbs + args.panelHeight <= availableViewportHeight - gutter;
-    const topAbs = fitsBelow ? belowTopAbs : Math.max(gutter, aboveTopAbs);
-    return {
-      left: clampedLeftAbs - stageWrapLeft,
-      top: topAbs - stageWrapTop,
-      width: panelRenderWidth
-    };
-  }
   const imageCanvasPos = toCanvasPosition(project.template.image.x, project.template.image.y, project.template.image.side);
   const imageAnchorTop = imageCanvasPos.y * stageScale;
   const imageAnchorBottom = imageAnchorTop + project.template.image.height * stageScale;
-  const imagePanelPos = getPanelPosition({
+  const imagePanelPos = canvasLayout.getPanelPosition({
     anchorX: imageCanvasPos.x * stageScale,
     anchorTop: imageAnchorTop,
     anchorBottom: imageAnchorBottom,
@@ -659,7 +554,7 @@ export function CanvasEditor(props: CanvasEditorProps) {
   const selectedTextPos = selectedText ? toCanvasPosition(selectedText.x, selectedText.y, selectedText.side) : null;
   const textAnchorTop = selectedTextPos ? selectedTextPos.y * stageScale : 0;
   const textAnchorBottom = selectedText ? textAnchorTop + selectedText.height * stageScale : 0;
-  const textPanelPos = getPanelPosition({
+  const textPanelPos = canvasLayout.getPanelPosition({
     anchorX: selectedTextPos ? selectedTextPos.x * stageScale : 0,
     anchorTop: textAnchorTop,
     anchorBottom: textAnchorBottom,
