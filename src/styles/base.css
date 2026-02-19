@@ -295,7 +295,7 @@ main {
 }
 
 .floating-image-panel .emoji-search-results {
-  max-height: clamp(96px, calc(var(--floating-panel-max-height, 360px) - 220px), 234px);
+  max-height: clamp(96px, calc(100dvh - var(--floating-panel-top, 0px) - 232px), 234px);
 }
 
 .emoji-grid {
@@ -396,6 +396,10 @@ input[type='color'] {
   position: fixed;
   z-index: calc(var(--z-modal) + 1);
   max-width: calc(100vw - 24px);
+  max-height: min(
+    var(--floating-panel-max-height, 100dvh),
+    calc(100dvh - var(--floating-panel-top, 0px) - 12px)
+  );
   box-sizing: border-box;
 }
 
