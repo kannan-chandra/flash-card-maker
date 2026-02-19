@@ -78,9 +78,13 @@ export function WordListPanel(props: WordListPanelProps) {
     row.focus({ preventScroll: true });
   }, [selectedRowId, rows.length]);
 
-  useEffect(() => {
-    onDraftRowChange(draftRow);
-  }, [draftRow, onDraftRowChange]);
+  function updateDraftRow(updater: (current: { word: string; subtitle: string }) => { word: string; subtitle: string }) {
+    setDraftRow((current) => {
+      const next = updater(current);
+      onDraftRowChange(next);
+      return next;
+    });
+  }
 
   function scheduleSelectionCommit(rowId: string | undefined) {
     if (selectDebounceTimerRef.current) {
@@ -226,7 +230,9 @@ export function WordListPanel(props: WordListPanelProps) {
       word: draftRow.word,
       subtitle: draftRow.subtitle
     });
-    setDraftRow({ word: '', subtitle: '' });
+    const emptyDraft = { word: '', subtitle: '' };
+    setDraftRow(emptyDraft);
+    onDraftRowChange(emptyDraft);
     focusInput('__draft__', 'word', { arrowDirection: 'down' });
   }
 
@@ -564,7 +570,7 @@ export function WordListPanel(props: WordListPanelProps) {
                   ref={draftWordRef}
                   data-row-id="__draft__"
                   value={draftRow.word}
-                  onChange={(event) => setDraftRow((current) => ({ ...current, word: event.target.value }))}
+                  onChange={(event) => updateDraftRow((current) => ({ ...current, word: event.target.value }))}
                   onFocus={() => commitSelectionNow('__draft__')}
                   onCompositionStart={onCompositionStart}
                   onCompositionEnd={onCompositionEnd}
@@ -580,11 +586,11 @@ export function WordListPanel(props: WordListPanelProps) {
               <td>
                 <div className="subtitle-cell">
                   <input
-                  ref={draftSubtitleRef}
-                  data-row-id="__draft__"
-                  value={draftRow.subtitle}
-                  onChange={(event) => setDraftRow((current) => ({ ...current, subtitle: event.target.value }))}
-                  onFocus={() => commitSelectionNow('__draft__')}
+                    ref={draftSubtitleRef}
+                    data-row-id="__draft__"
+                    value={draftRow.subtitle}
+                    onChange={(event) => updateDraftRow((current) => ({ ...current, subtitle: event.target.value }))}
+                    onFocus={() => commitSelectionNow('__draft__')}
                   onCompositionStart={onCompositionStart}
                   onCompositionEnd={onCompositionEnd}
                     onKeyDown={(event) => {
