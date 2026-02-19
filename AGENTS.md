@@ -27,3 +27,7 @@ When a prompt reports a bug (the word `bug` is mentioned), follow this workflow:
   `narrow desktop viewport arrows keep draft row highlight visible when selected`
   and `mobile arrows keep draft row highlight visible when selected`.
   Final fix commit: `bb9d99e` (ensure selected/focus row styles also color input backgrounds).
+- Up-arrow navigation could leave the selected row just off-screen above the sticky header when list was scrolled:
+  reproducing test in `tests/e2e/wordlist-scroll.spec.ts`:
+  `mobile up arrow keeps newly active row visible when scrolling upward`.
+  Final fix commit: `8fedd22` (reuse keyboard-style one-row scrolling for button-driven selection changes).
