@@ -22,3 +22,8 @@ When a prompt reports a bug (the word `bug` is mentioned), follow this workflow:
   `narrow desktop viewport arrows keep draft row highlight visible when selected`
   and `mobile arrows keep draft row highlight visible when selected`.
   Final fix commit: `c463672`.
+- Row highlight disappeared when navigating with right-side up/down arrows (canvas changed but blue list highlight was gone):
+  reproducing tests in `tests/e2e/wordlist-scroll.spec.ts`:
+  `narrow desktop viewport arrows keep draft row highlight visible when selected`
+  and `mobile arrows keep draft row highlight visible when selected`.
+  Final fix commit: `bb9d99e` (ensure selected/focus row styles also color input backgrounds).
