@@ -4,7 +4,7 @@ import '@fontsource/inter/400.css';
 import '@fontsource/inter/500.css';
 import '@fontsource/inter/600.css';
 import '@fontsource/noto-sans-tamil/400.css';
-import type { RowValidation } from './types';
+import type { FlashcardRow, RowValidation } from './types';
 import { CanvasEditor } from './components/CanvasEditor';
 import { SelectedCardDetails } from './components/SelectedCardDetails';
 import { ExportLayoutPreview } from './components/ExportLayoutPreview';
@@ -27,6 +27,7 @@ function makeRowId(): string {
 }
 
 const ONBOARDING_DISMISSED_KEY = 'flashcard-maker/onboarding-dismissed/v1';
+const DRAFT_ROW_ID = '__draft__';
 
 export default function App() {
   const { sets, project, loading, setActiveSetId, createSet, renameSet, deleteSet, updateActiveSet, patchTemplate, patchTextElement, appendRows, updateRow } =
@@ -45,10 +46,12 @@ export default function App() {
   });
   const [imageIssues, setImageIssues] = useState<Record<string, string>>({});
   const [emojiBulkPromptRowId, setEmojiBulkPromptRowId] = useState<string | null>(null);
+  const [draftRow, setDraftRow] = useState<Pick<FlashcardRow, 'word' | 'subtitle'>>({ word: '', subtitle: '' });
+  const [isDraftRowSelected, setIsDraftRowSelected] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const emojiBulkPromptTimerRef = useRef<number | null>(null);
 
-  const selectedRow = useMemo(() => {
+  const selectedPersistedRow = useMemo(() => {
     if (!project) {
       return undefined;
     }
@@ -60,15 +63,40 @@ export default function App() {
     }
     return project.rows.find((row) => row.id === project.selectedRowId) ?? project.rows[0];
   }, [project]);
-  const selectedRowIndex = useMemo(() => {
-    if (!project || !project.rows.length) {
+  const draftHasContent = Boolean(draftRow.word.trim() || draftRow.subtitle.trim());
+  const selectedRow = useMemo(() => {
+    if (isDraftRowSelected && draftHasContent) {
+      return {
+        id: DRAFT_ROW_ID,
+        word: draftRow.word,
+        subtitle: draftRow.subtitle,
+        imageUrl: ''
+      };
+    }
+    return selectedPersistedRow;
+  }, [draftHasContent, draftRow.subtitle, draftRow.word, isDraftRowSelected, selectedPersistedRow]);
+  const selectedRowIsDraft = selectedRow?.id === DRAFT_ROW_ID;
+  const selectedListIndex = useMemo(() => {
+    if (!project) {
       return -1;
     }
-    if (!selectedRow) {
-      return 0;
+    const maxIndex = draftHasContent ? project.rows.length : project.rows.length - 1;
+    if (maxIndex < 0) {
+      return -1;
     }
-    return project.rows.findIndex((row) => row.id === selectedRow.id);
-  }, [project, selectedRow]);
+    if (selectedRowIsDraft && draftHasContent) {
+      return project.rows.length;
+    }
+    const persistedIndex = project.rows.findIndex((row) => row.id === selectedPersistedRow?.id);
+    if (persistedIndex >= 0) {
+      return persistedIndex;
+    }
+    return project.rows.length ? 0 : -1;
+  }, [draftHasContent, project, selectedPersistedRow?.id, selectedRowIsDraft]);
+  const rowCount = project?.rows.length ?? 0;
+  const maxSelectableIndex = draftHasContent ? rowCount : rowCount - 1;
+  const canMoveSelectedRowUp = selectedListIndex > 0;
+  const canMoveSelectedRowDown = selectedListIndex >= 0 && selectedListIndex < maxSelectableIndex;
   const selectedRowHasImage = hasRowImage(selectedRow);
   const selectedRowEmojiMatches = useMemo(() => {
     if (!selectedRow) {
@@ -106,8 +134,19 @@ export default function App() {
   }, [project]);
 
   useEffect(() => {
-    setImageUrlDraft(selectedRow?.imageUrl ?? '');
-  }, [selectedRow?.id, selectedRow?.imageUrl]);
+    setImageUrlDraft(selectedPersistedRow?.imageUrl ?? '');
+  }, [selectedPersistedRow?.id, selectedPersistedRow?.imageUrl]);
+
+  useEffect(() => {
+    setDraftRow({ word: '', subtitle: '' });
+    setIsDraftRowSelected(false);
+  }, [project?.id]);
+
+  useEffect(() => {
+    if (isDraftRowSelected && !draftHasContent) {
+      setIsDraftRowSelected(false);
+    }
+  }, [draftHasContent, isDraftRowSelected]);
 
   useEffect(
     () => () => {
@@ -191,10 +230,10 @@ export default function App() {
   }
 
   async function onSelectedRowImageUpload(file: File) {
-    if (!selectedRow) {
+    if (!selectedPersistedRow || selectedRowIsDraft) {
       return;
     }
-    await onRowImageUpload(selectedRow.id, file);
+    await onRowImageUpload(selectedPersistedRow.id, file);
   }
 
   function applyEmojiToRow(rowId: string, emoji: string) {
@@ -220,43 +259,60 @@ export default function App() {
   }
 
   function onApplySelectedImageUrl(value?: string) {
-    if (!selectedRow) {
+    if (!selectedPersistedRow || selectedRowIsDraft) {
       return;
     }
     const trimmed = (value ?? imageUrlDraft).trim();
     if (!trimmed) {
       return;
     }
-    updateRow(selectedRow.id, setImageFromUrl(trimmed));
+    updateRow(selectedPersistedRow.id, setImageFromUrl(trimmed));
     clearEmojiBulkPrompt();
   }
 
   function moveSelectedRowBy(offset: -1 | 1) {
-    updateActiveSet((current) => {
-      if (!current.rows.length) {
-        return current;
-      }
-      const currentIndex = current.rows.findIndex((row) => row.id === current.selectedRowId);
-      const fallbackIndex = currentIndex >= 0 ? currentIndex : 0;
-      const nextIndex = Math.min(Math.max(fallbackIndex + offset, 0), current.rows.length - 1);
-      const nextRowId = current.rows[nextIndex]?.id;
-      if (!nextRowId || nextRowId === current.selectedRowId) {
-        return current;
-      }
-      return {
-        ...current,
-        selectedRowId: nextRowId
-      };
-    });
+    if (!project) {
+      return;
+    }
+    const maxIndex = draftHasContent ? project.rows.length : project.rows.length - 1;
+    if (maxIndex < 0) {
+      return;
+    }
+    const currentIndex = selectedListIndex >= 0 ? selectedListIndex : 0;
+    const nextIndex = Math.min(Math.max(currentIndex + offset, 0), maxIndex);
+    if (nextIndex === currentIndex) {
+      return;
+    }
+    if (nextIndex === project.rows.length) {
+      setIsDraftRowSelected(true);
+      return;
+    }
+    const nextRowId = project.rows[nextIndex]?.id;
+    if (!nextRowId) {
+      return;
+    }
+    setIsDraftRowSelected(false);
+    if (nextRowId !== project.selectedRowId) {
+      updateActiveSet((current) => ({ ...current, selectedRowId: nextRowId }));
+    }
   }
 
   function onRemoveSelectedRowImage() {
-    if (!selectedRow) {
+    if (!selectedPersistedRow || selectedRowIsDraft) {
       return;
     }
-    updateRow(selectedRow.id, clearRowImage());
+    updateRow(selectedPersistedRow.id, clearRowImage());
     setImageUrlDraft('');
     clearEmojiBulkPrompt();
+  }
+
+  function onSelectListRow(rowId: string) {
+    if (rowId === DRAFT_ROW_ID) {
+      setIsDraftRowSelected(true);
+      return;
+    }
+    setIsDraftRowSelected(false);
+    updateActiveSet((current) => ({ ...current, selectedRowId: rowId }));
   }
 
   async function generatePdf() {
@@ -594,8 +650,8 @@ export default function App() {
             onCanvasImageDrop: (file) => void onSelectedRowImageUpload(file),
             onMoveSelectedRowUp: () => moveSelectedRowBy(-1),
             onMoveSelectedRowDown: () => moveSelectedRowBy(1),
-            canMoveSelectedRowUp: selectedRowIndex > 0,
-            canMoveSelectedRowDown: selectedRowIndex >= 0 && selectedRowIndex < project.rows.length - 1,
+            canMoveSelectedRowUp,
+            canMoveSelectedRowDown,
             onToggleDoubleSided: (doubleSided) =>
               updateActiveSet((current) => {
                 const currentTemplate = current.template;
@@ -615,11 +671,11 @@ export default function App() {
         >
           <SelectedCardDetails
             data={{
-              selectedRow,
-              selectedRowHasImage,
+              selectedRow: selectedRowIsDraft ? undefined : selectedRow,
+              selectedRowHasImage: selectedRowIsDraft ? false : selectedRowHasImage,
               imageUrlDraft,
-              selectedRowEmojiMatches,
-              showUseEmojiForAll: selectedRow?.id === emojiBulkPromptRowId
+              selectedRowEmojiMatches: selectedRowIsDraft ? [] : selectedRowEmojiMatches,
+              showUseEmojiForAll: !selectedRowIsDraft && selectedRow?.id === emojiBulkPromptRowId
             }}
             actions={{
               onImageUrlDraftChange: setImageUrlDraft,
@@ -636,12 +692,13 @@ export default function App() {
           rows={project.rows}
           validations={validations}
           imageIssues={imageIssues}
-          selectedRowId={selectedRow?.id}
-          onSelectRow={(rowId) => updateActiveSet((current) => ({ ...current, selectedRowId: rowId }))}
+          selectedRowId={selectedRowIsDraft ? DRAFT_ROW_ID : selectedRow?.id}
+          onSelectRow={onSelectListRow}
           onUpdateRow={updateRow}
           onAppendRow={onAppendRow}
           onInsertRowAfter={onInsertRowAfter}
           onDeleteRow={onDeleteRow}
+          onDraftRowChange={setDraftRow}
         />
       </main>
     </div>

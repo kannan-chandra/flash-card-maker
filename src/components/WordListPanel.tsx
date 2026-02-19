@@ -11,6 +11,7 @@ interface WordListPanelProps {
   onAppendRow: (row: Pick<FlashcardRow, 'word' | 'subtitle'>) => void;
   onInsertRowAfter: (rowId: string) => string | undefined;
   onDeleteRow: (rowId: string) => void;
+  onDraftRowChange: (row: Pick<FlashcardRow, 'word' | 'subtitle'>) => void;
 }
 
 export function WordListPanel(props: WordListPanelProps) {
@@ -23,13 +24,15 @@ export function WordListPanel(props: WordListPanelProps) {
     onUpdateRow,
     onAppendRow,
     onInsertRowAfter,
-    onDeleteRow
+    onDeleteRow,
+    onDraftRowChange
   } = props;
   const [draftRow, setDraftRow] = useState({ word: '', subtitle: '' });
   const listTableRef = useRef<HTMLDivElement | null>(null);
   const wordRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const subtitleRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const rowRefs = useRef<Record<string, HTMLTableRowElement | null>>({});
+  const draftRowRef = useRef<HTMLTableRowElement | null>(null);
   const draftWordRef = useRef<HTMLInputElement | null>(null);
   const draftSubtitleRef = useRef<HTMLInputElement | null>(null);
   const selectDebounceTimerRef = useRef<number | null>(null);
@@ -67,13 +70,17 @@ export function WordListPanel(props: WordListPanelProps) {
     if (activeElement && listTableRef.current?.contains(activeElement) && activeElement.tagName === 'INPUT') {
       return;
     }
-    const row = rowRefs.current[selectedRowId];
+    const row = selectedRowId === '__draft__' ? draftRowRef.current : rowRefs.current[selectedRowId];
     if (!row) {
       return;
     }
     row.scrollIntoView({ block: 'nearest' });
     row.focus({ preventScroll: true });
   }, [selectedRowId, rows.length]);
+
+  useEffect(() => {
+    onDraftRowChange(draftRow);
+  }, [draftRow, onDraftRowChange]);
 
   function scheduleSelectionCommit(rowId: string | undefined) {
     if (selectDebounceTimerRef.current) {
@@ -543,13 +550,22 @@ export function WordListPanel(props: WordListPanelProps) {
                 </tr>
               );
             })}
-            <tr className="draft-row">
+            <tr
+              ref={draftRowRef}
+              data-row-id="__draft__"
+              tabIndex={-1}
+              className={`draft-row ${selectedRowId === '__draft__' ? 'selected' : ''}`.trim()}
+              onClick={() => {
+                commitSelectionNow('__draft__');
+              }}
+            >
               <td>
                 <input
                   ref={draftWordRef}
                   data-row-id="__draft__"
                   value={draftRow.word}
                   onChange={(event) => setDraftRow((current) => ({ ...current, word: event.target.value }))}
+                  onFocus={() => commitSelectionNow('__draft__')}
                   onCompositionStart={onCompositionStart}
                   onCompositionEnd={onCompositionEnd}
                   onKeyDown={(event) => {
@@ -564,12 +580,13 @@ export function WordListPanel(props: WordListPanelProps) {
               <td>
                 <div className="subtitle-cell">
                   <input
-                    ref={draftSubtitleRef}
-                    data-row-id="__draft__"
-                    value={draftRow.subtitle}
-                    onChange={(event) => setDraftRow((current) => ({ ...current, subtitle: event.target.value }))}
-                    onCompositionStart={onCompositionStart}
-                    onCompositionEnd={onCompositionEnd}
+                  ref={draftSubtitleRef}
+                  data-row-id="__draft__"
+                  value={draftRow.subtitle}
+                  onChange={(event) => setDraftRow((current) => ({ ...current, subtitle: event.target.value }))}
+                  onFocus={() => commitSelectionNow('__draft__')}
+                  onCompositionStart={onCompositionStart}
+                  onCompositionEnd={onCompositionEnd}
                     onKeyDown={(event) => {
                       onTabNavigation(event, '__draft__', 'subtitle');
                       onArrowNavigation(event, '__draft__', 'subtitle');
