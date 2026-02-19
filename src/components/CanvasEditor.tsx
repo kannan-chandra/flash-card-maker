@@ -236,6 +236,26 @@ export function CanvasEditor(props: CanvasEditorProps) {
   }, [editingTextId]);
 
   useEffect(() => {
+    if (!selectedElement) {
+      return;
+    }
+    const onPointerDown = (event: PointerEvent) => {
+      const target = event.target;
+      if (!(target instanceof Element)) {
+        return;
+      }
+      if (target.closest('.floating-inspector-panel')) {
+        return;
+      }
+      onSelectElement(null);
+    };
+    document.addEventListener('pointerdown', onPointerDown, true);
+    return () => {
+      document.removeEventListener('pointerdown', onPointerDown, true);
+    };
+  }, [onSelectElement, selectedElement]);
+
+  useEffect(() => {
     if (!canvasDebugEnabled) {
       return;
     }
