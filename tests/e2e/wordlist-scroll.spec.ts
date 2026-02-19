@@ -181,6 +181,10 @@ async function getDraftWordCellBackground(page: Page): Promise<string> {
   return page.locator('tr.draft-row td').first().evaluate((cell) => getComputedStyle(cell).backgroundColor);
 }
 
+async function getDraftWordInputBackground(page: Page): Promise<string> {
+  return page.getByLabel('New word').evaluate((input) => getComputedStyle(input).backgroundColor);
+}
+
 test('narrow desktop viewport arrows keep draft row highlight visible when selected', async ({ page }) => {
   await page.setViewportSize({ width: 1024, height: 844 });
   await page.goto('/');
@@ -191,6 +195,7 @@ test('narrow desktop viewport arrows keep draft row highlight visible when selec
   await firstWord.click();
 
   const draftUnselectedBg = await getDraftWordCellBackground(page);
+  const draftUnselectedInputBg = await getDraftWordInputBackground(page);
 
   const navDown = page.locator('.mobile-card-nav-button').nth(1);
   await navDown.click();
@@ -198,8 +203,10 @@ test('narrow desktop viewport arrows keep draft row highlight visible when selec
   const draftRow = page.locator('tr.draft-row');
   await expect(draftRow).toHaveClass(/selected/);
   const draftSelectedBg = await getDraftWordCellBackground(page);
+  const draftSelectedInputBg = await getDraftWordInputBackground(page);
 
   expect(draftSelectedBg).not.toBe(draftUnselectedBg);
+  expect(draftSelectedInputBg).not.toBe(draftUnselectedInputBg);
 });
 
 test('mobile arrows keep draft row highlight visible when selected', async ({ page }) => {
@@ -212,6 +219,7 @@ test('mobile arrows keep draft row highlight visible when selected', async ({ pa
   await firstWord.click();
 
   const draftUnselectedBg = await getDraftWordCellBackground(page);
+  const draftUnselectedInputBg = await getDraftWordInputBackground(page);
 
   const navDown = page.locator('.mobile-card-nav-button').nth(1);
   await navDown.click();
@@ -219,6 +227,8 @@ test('mobile arrows keep draft row highlight visible when selected', async ({ pa
   const draftRow = page.locator('tr.draft-row');
   await expect(draftRow).toHaveClass(/selected/);
   const draftSelectedBg = await getDraftWordCellBackground(page);
+  const draftSelectedInputBg = await getDraftWordInputBackground(page);
 
   expect(draftSelectedBg).not.toBe(draftUnselectedBg);
+  expect(draftSelectedInputBg).not.toBe(draftUnselectedInputBg);
 });
