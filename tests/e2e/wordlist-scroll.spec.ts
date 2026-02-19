@@ -142,3 +142,37 @@ test('mobile viewport: card nav arrows stay within viewport bounds', async ({ pa
   expect(downBox.x + downBox.width).toBeLessThanOrEqual(viewport.width);
   expect(downBox.y + downBox.height).toBeLessThanOrEqual(viewport.height);
 });
+
+test('mobile arrows move row highlight/focus without keeping input cursor active', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/');
+  await dismissFirstLaunchGuide(page);
+  await importCsv(page, makeRowsCsv(6));
+
+  const rows = page.locator('tbody tr').filter({ has: page.locator('input[aria-label="Word"]') });
+  await expect(rows).toHaveCount(6);
+
+  const secondWord = rows.nth(1).getByLabel('Word');
+  await secondWord.click();
+  await expect(secondWord).toBeFocused();
+
+  const navDown = page.locator('.mobile-card-nav-button').nth(1);
+  await navDown.click();
+
+  await expect(rows.nth(2)).toHaveClass(/selected/);
+
+  const activeState = await page.evaluate(() => {
+    const active = document.activeElement as HTMLElement | null;
+    return {
+      tag: active?.tagName ?? null,
+      rowId: active?.getAttribute('data-row-id') ?? null
+    };
+  });
+
+  expect(activeState.tag).not.toBe('INPUT');
+  expect(activeState.rowId).toBeTruthy();
+  expect(activeState.rowId).not.toBe('__draft__');
+
+  const selectedRowId = await rows.nth(2).getAttribute('data-row-id');
+  expect(activeState.rowId).toBe(selectedRowId);
+});
