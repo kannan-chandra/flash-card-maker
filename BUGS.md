@@ -16,3 +16,5 @@
   reproducing test in `tests/e2e/wordlist-scroll.spec.ts`:
   `mobile up arrow keeps newly active row visible when scrolling upward`.
   Final fix commit: `8fedd22` (reuse keyboard-style one-row scrolling for button-driven selection changes).
+
+- If `tests/e2e/wordlist-ime.spec.ts` test `tab then enter from first row moves focus to inserted row word` fails, inspect commit `830d90e`.
