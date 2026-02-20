@@ -25,6 +25,13 @@ async function importCsv(page: Page, value: string) {
   await dialog.getByRole('button', { name: 'Import', exact: true }).click();
 }
 
+async function selectFirstImportedRow(page: Page) {
+  const firstWordInput = page.locator('tbody tr[data-row-id]:not([data-row-id="__draft__"]) input[aria-label="Word"]').first();
+  await expect(firstWordInput).toBeVisible();
+  await firstWordInput.click();
+  await expect(page.locator('tbody tr[data-row-id]:not([data-row-id="__draft__"])').first()).toHaveClass(/selected/);
+}
+
 async function openExportModal(page: Page) {
   await page.getByRole('button', { name: 'Export', exact: true }).click();
   await expect(page.getByRole('dialog', { name: 'Export PDF' })).toBeVisible();
@@ -105,6 +112,7 @@ test('generates downloadable PDF for Tamil text without runtime errors', async (
   await dismissFirstLaunchGuide(page);
 
   await importCsv(page, 'word,subtitle\nசிங்கம்,விலங்கு');
+  await selectFirstImportedRow(page);
   await openImageInspector(page);
 
   const upload = page.getByLabel('Selected row image upload');
@@ -182,6 +190,7 @@ test('can set emoji image for selected row and then remove image', async ({ page
   await dismissFirstLaunchGuide(page);
 
   await importCsv(page, 'word,subtitle\nbaby,one\nlion,two');
+  await selectFirstImportedRow(page);
   await openImageInspector(page);
 
   await page.getByRole('button', { name: /^Use emoji / }).first().click();
@@ -197,6 +206,7 @@ test('offers emoji button for noun objects and vehicles', async ({ page }) => {
   await dismissFirstLaunchGuide(page);
 
   await importCsv(page, 'word,subtitle\nhammer,tool\nbus,vehicle');
+  await selectFirstImportedRow(page);
   await openImageInspector(page);
 
   const emojiChoices = page.getByRole('button', { name: /^Use emoji / });
@@ -209,6 +219,7 @@ test('offers emoji button for Tamil keyword matches', async ({ page }) => {
   await dismissFirstLaunchGuide(page);
 
   await importCsv(page, 'word,subtitle\nநாய்,செல்லப்பிராணி');
+  await selectFirstImportedRow(page);
   await openImageInspector(page);
 
   const emojiChoices = page.getByRole('button', { name: /^Use emoji / });
@@ -221,6 +232,7 @@ test('uses subtitle emoji keywords when word has no match', async ({ page }) => 
   await dismissFirstLaunchGuide(page);
 
   await importCsv(page, 'word,subtitle\nperro,நாய்');
+  await selectFirstImportedRow(page);
   await openImageInspector(page);
 
   const emojiChoices = page.getByRole('button', { name: /^Use emoji / });
@@ -233,6 +245,7 @@ test('generates downloadable PDF in double-sided mode', async ({ page }) => {
   await dismissFirstLaunchGuide(page);
 
   await importCsv(page, 'word,subtitle\nDog,Animal');
+  await selectFirstImportedRow(page);
   await openImageInspector(page);
 
   const upload = page.getByLabel('Selected row image upload');
