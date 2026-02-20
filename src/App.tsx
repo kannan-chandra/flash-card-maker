@@ -347,6 +347,16 @@ export default function App() {
       return false;
     }
     appendRows(rows);
+    if (activeRowId === DRAFT_ROW_ID) {
+      const firstImportedRowId = rows[0]?.id;
+      if (firstImportedRowId) {
+        setActiveRowId(firstImportedRowId);
+        updateActiveSet((current) => ({
+          ...current,
+          selectedRowId: firstImportedRowId
+        }));
+      }
+    }
     trackEvent('rows_imported_csv', {
       rows_added: rows.length,
       has_header: parsed.hasHeader,
