@@ -22,6 +22,7 @@ interface CanvasEditorProps {
     onPatchTextElement: (id: 'text1' | 'text2', patch: Partial<TextElement>) => void;
     onUpdateRow: (rowId: string, patch: Partial<FlashcardRow>) => void;
     onToggleDoubleSided: (value: boolean) => void;
+    onCanvasElementEdited: (elementType: 'image' | 'text1' | 'text2', changeType: 'move' | 'resize' | 'font' | 'align' | 'role') => void;
     onCanvasImageDrop: (file: File) => void;
     onMoveSelectedRowUp: () => void;
     onMoveSelectedRowDown: () => void;
@@ -99,6 +100,7 @@ export function CanvasEditor(props: CanvasEditorProps) {
     onPatchTextElement,
     onUpdateRow,
     onToggleDoubleSided,
+    onCanvasElementEdited,
     onCanvasImageDrop,
     onMoveSelectedRowUp,
     onMoveSelectedRowDown,
@@ -810,6 +812,7 @@ export function CanvasEditor(props: CanvasEditorProps) {
                           side: sideResult.side
                         }
                       });
+                      onCanvasElementEdited('image', 'move');
                     }}
                     onTransformEnd={(event) => {
                       const node = event.target;
@@ -831,6 +834,7 @@ export function CanvasEditor(props: CanvasEditorProps) {
                       });
                       node.scaleX(1);
                       node.scaleY(1);
+                      onCanvasElementEdited('image', 'resize');
                     }}
                   />
                 </>
@@ -890,6 +894,7 @@ export function CanvasEditor(props: CanvasEditorProps) {
                           y: sideResult.y,
                           side: sideResult.side
                         });
+                        onCanvasElementEdited(textElement.id, 'move');
                       }}
                       onTransformEnd={(event) => {
                         const node = event.target;
@@ -909,6 +914,7 @@ export function CanvasEditor(props: CanvasEditorProps) {
                         });
                         node.scaleX(1);
                         node.scaleY(1);
+                        onCanvasElementEdited(textElement.id, 'resize');
                       }}
                       stroke={selectedElement === textElement.id ? '#2563eb' : '#9ca3af'}
                       strokeWidth={1}
@@ -956,6 +962,7 @@ export function CanvasEditor(props: CanvasEditorProps) {
                             y: sideResult.y,
                             side: sideResult.side
                           });
+                          onCanvasElementEdited(textElement.id, 'move');
                         }}
                         onTransformEnd={(event) => {
                           const node = event.target;
@@ -975,6 +982,7 @@ export function CanvasEditor(props: CanvasEditorProps) {
                           });
                           node.scaleX(1);
                           node.scaleY(1);
+                          onCanvasElementEdited(textElement.id, 'resize');
                         }}
                       />
                     )
@@ -1090,7 +1098,10 @@ export function CanvasEditor(props: CanvasEditorProps) {
                       Font
                       <select
                         value={selectedText.fontFamily}
-                        onChange={(event) => onPatchTextElement(selectedText.id, { fontFamily: event.target.value as FontFamily })}
+                        onChange={(event) => {
+                          onPatchTextElement(selectedText.id, { fontFamily: event.target.value as FontFamily });
+                          onCanvasElementEdited(selectedText.id, 'font');
+                        }}
                       >
                         {FONT_FAMILIES.map((font) => (
                           <option key={font} value={font}>
@@ -1106,14 +1117,20 @@ export function CanvasEditor(props: CanvasEditorProps) {
                         min={10}
                         max={120}
                         value={selectedText.fontSize}
-                        onChange={(event) => onPatchTextElement(selectedText.id, { fontSize: Number(event.target.value) || 10 })}
+                        onChange={(event) => {
+                          onPatchTextElement(selectedText.id, { fontSize: Number(event.target.value) || 10 });
+                          onCanvasElementEdited(selectedText.id, 'font');
+                        }}
                       />
                     </label>
                     <label>
                       Align
                       <select
                         value={selectedText.align}
-                        onChange={(event) => onPatchTextElement(selectedText.id, { align: event.target.value as TextElement['align'] })}
+                        onChange={(event) => {
+                          onPatchTextElement(selectedText.id, { align: event.target.value as TextElement['align'] });
+                          onCanvasElementEdited(selectedText.id, 'align');
+                        }}
                       >
                         <option value="left">Left</option>
                         <option value="center">Center</option>

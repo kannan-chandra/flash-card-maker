@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import tamilFontUrl from '@fontsource/noto-sans-tamil/files/noto-sans-tamil-tamil-400-normal.woff?url';
 import '@fontsource/inter/400.css';
 import '@fontsource/inter/500.css';
@@ -16,7 +16,8 @@ import { DEFAULT_TEMPLATE } from './constants/project';
 import { useImage } from './hooks/useImage';
 import { useWorkspace } from './hooks/useWorkspace';
 import { generatePdfBytes } from './services/pdfExport';
-import { parseCsvInput } from './utils/csv';
+import { trackEvent } from './services/analytics';
+import { parseCsvInputWithMeta } from './utils/csv';
 import { createEmojiImageDataUrl, findTopEmojiMatches } from './utils/emoji';
 import { validateRows } from './utils/layout';
 import { clearRowImage, hasRowImage, setImageFromDataUrl, setImageFromUrl } from './utils/rowImage';
@@ -27,6 +28,16 @@ function makeRowId(): string {
 
 const ONBOARDING_DISMISSED_KEY = 'flashcard-maker/onboarding-dismissed/v1';
 const DRAFT_ROW_ID = '__draft__';
+const CANVAS_EDIT_IDLE_MS = 10000;
+
+type CanvasElementType = 'image' | 'text1' | 'text2';
+type CanvasChangeType = 'move' | 'resize' | 'font' | 'align' | 'role';
+
+function getExportPageCount(rowCount: number, preset: 6 | 8 | 15, doubleSided: boolean): number {
+  const perPage = preset;
+  const singleSidePageCount = Math.ceil(rowCount / perPage);
+  return doubleSided ? singleSidePageCount * 2 : singleSidePageCount;
+}
 
 export default function App() {
   const { sets, project, loading, setActiveSetId, createSet, renameSet, deleteSet, updateActiveSet, patchTemplate, patchTextElement, appendRows, updateRow } =
@@ -49,6 +60,11 @@ export default function App() {
   const [activeRowId, setActiveRowId] = useState<string | undefined>(undefined);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const emojiBulkPromptTimerRef = useRef<number | null>(null);
+  const appOpenTrackedRef = useRef(false);
+  const lastTrackedSetIdRef = useRef<string | null>(null);
+  const canvasDirtyRef = useRef<Map<CanvasElementType, Set<CanvasChangeType>>>(new Map());
+  const canvasSessionStartedAtRef = useRef<number | null>(null);
+  const canvasIdleTimerRef = useRef<number | null>(null);
 
   const selectedPersistedRow = useMemo(() => {
     if (!project) {
@@ -81,6 +97,7 @@ export default function App() {
   }, [activeRowId, draftRow.subtitle, draftRow.word, selectedPersistedRow]);
   const selectedRowIsDraft = activeRowId === DRAFT_ROW_ID;
   const rowCount = project?.rows.length ?? 0;
+  const totalCardsAllSets = useMemo(() => sets.reduce((sum, setItem) => sum + setItem.rows.length, 0), [sets]);
   const selectedListIndex = useMemo(() => {
     if (!project || rowCount === 0) {
       return selectedRowIsDraft ? 0 : -1;
@@ -130,6 +147,55 @@ export default function App() {
     }
     return validateRows(project.template, project.rows);
   }, [project]);
+  const overflowCount = useMemo(
+    () => validations.filter((item) => item.wordOverflow || item.subtitleOverflow).length,
+    [validations]
+  );
+
+  const flushCanvasEditSession = useCallback(() => {
+    const changedItems = Array.from(canvasDirtyRef.current.entries()).map(([elementType, changeTypes]) => ({
+      element_type: elementType,
+      change_types: Array.from(changeTypes).sort()
+    }));
+    if (!changedItems.length) {
+      return;
+    }
+
+    const distinctChangeTypes = Array.from(new Set(changedItems.flatMap((item) => item.change_types))).sort().join(',');
+    trackEvent('layout_edit_session_completed', {
+      double_sided: project?.doubleSided ?? false,
+      changed_item_count: changedItems.length,
+      changed_item_types: changedItems.map((item) => item.element_type).join(','),
+      changed_change_types: distinctChangeTypes,
+      changed_items_json: JSON.stringify(changedItems),
+      session_duration_ms: canvasSessionStartedAtRef.current ? Date.now() - canvasSessionStartedAtRef.current : 0
+    });
+
+    canvasDirtyRef.current.clear();
+    canvasSessionStartedAtRef.current = null;
+    if (canvasIdleTimerRef.current !== null) {
+      window.clearTimeout(canvasIdleTimerRef.current);
+      canvasIdleTimerRef.current = null;
+    }
+  }, [project?.doubleSided]);
+
+  const markCanvasElementEdited = useCallback(
+    (elementType: CanvasElementType, changeType: CanvasChangeType) => {
+      if (!canvasSessionStartedAtRef.current) {
+        canvasSessionStartedAtRef.current = Date.now();
+      }
+      const currentChanges = canvasDirtyRef.current.get(elementType) ?? new Set<CanvasChangeType>();
+      currentChanges.add(changeType);
+      canvasDirtyRef.current.set(elementType, currentChanges);
+      if (canvasIdleTimerRef.current !== null) {
+        window.clearTimeout(canvasIdleTimerRef.current);
+      }
+      canvasIdleTimerRef.current = window.setTimeout(() => {
+        flushCanvasEditSession();
+      }, CANVAS_EDIT_IDLE_MS);
+    },
+    [flushCanvasEditSession]
+  );
 
   useEffect(() => {
     setImageUrlDraft(selectedPersistedRow?.imageUrl ?? '');
@@ -166,10 +232,52 @@ export default function App() {
     []
   );
 
+  useEffect(
+    () => () => {
+      flushCanvasEditSession();
+    },
+    [flushCanvasEditSession]
+  );
+
+  useEffect(() => {
+    if (!loading && project?.id) {
+      flushCanvasEditSession();
+    }
+  }, [loading, project?.id, flushCanvasEditSession]);
+
   useEffect(() => {
     const dismissed = window.localStorage.getItem(ONBOARDING_DISMISSED_KEY) === '1';
     setShowOnboarding(!dismissed);
   }, []);
+
+  useEffect(() => {
+    if (loading || !project || appOpenTrackedRef.current) {
+      return;
+    }
+    trackEvent('app_open', {
+      source: document.referrer ? 'referral' : 'direct',
+      has_saved_sets: sets.length > 0,
+      set_count: sets.length,
+      total_cards_all_sets: totalCardsAllSets,
+      active_set_cards: project.rows.length
+    });
+    appOpenTrackedRef.current = true;
+  }, [loading, project, sets.length, totalCardsAllSets]);
+
+  useEffect(() => {
+    if (loading || !project) {
+      return;
+    }
+    if (lastTrackedSetIdRef.current === project.id) {
+      return;
+    }
+    trackEvent('set_selected', {
+      set_age_days: Math.max(0, Math.floor((Date.now() - project.createdAt) / 86400000)),
+      row_count: project.rows.length,
+      double_sided: project.doubleSided
+    });
+    lastTrackedSetIdRef.current = project.id;
+  }, [loading, project]);
 
   function showEmojiBulkPrompt(rowId: string) {
     if (emojiBulkPromptTimerRef.current !== null) {
@@ -196,6 +304,10 @@ export default function App() {
   }
 
   function onCreateSet(name: string) {
+    trackEvent('set_created', {
+      set_name_length: name.trim().length,
+      set_index: sets.length + 1
+    });
     createSet(name);
     setSetsMenuOpen(false);
   }
@@ -204,6 +316,11 @@ export default function App() {
     if (!window.confirm('Delete this set? This only removes it from local browser storage.')) {
       return;
     }
+    const targetSet = sets.find((item) => item.id === setId);
+    trackEvent('set_deleted', {
+      deleted_set_cards: targetSet?.rows.length ?? 0,
+      set_count_before: sets.length
+    });
     deleteSet(setId);
   }
 
@@ -211,13 +328,31 @@ export default function App() {
     renameSet(setId, name);
   }
 
+  function onSelectSet(setId: string) {
+    const selectedSet = sets.find((item) => item.id === setId);
+    trackEvent('set_selected', {
+      set_age_days: selectedSet ? Math.max(0, Math.floor((Date.now() - selectedSet.createdAt) / 86400000)) : undefined,
+      row_count: selectedSet?.rows.length,
+      double_sided: selectedSet?.doubleSided
+    });
+    lastTrackedSetIdRef.current = setId;
+    setActiveSetId(setId);
+  }
+
   function onCsvImport(): boolean {
-    const rows = parseCsvInput(csvInput);
+    const parsed = parseCsvInputWithMeta(csvInput);
+    const rows = parsed.rows;
     if (!rows.length) {
       setPdfStatus('No CSV rows found.');
       return false;
     }
     appendRows(rows);
+    trackEvent('rows_imported_csv', {
+      rows_added: rows.length,
+      has_header: parsed.hasHeader,
+      invalid_rows: parsed.invalidRows,
+      images_with_url_count: parsed.imagesWithUrlCount
+    });
     setCsvInput('');
     setPdfStatus(`Imported ${rows.length} rows from CSV.`);
     return true;
@@ -235,6 +370,10 @@ export default function App() {
       ...current,
       rows: current.rows.map((row) => (row.id === rowId ? { ...row, ...setImageFromDataUrl(dataUrl) } : row))
     }));
+    trackEvent('image_source_set', {
+      source_type: 'upload',
+      success: true
+    });
     clearEmojiBulkPrompt();
   }
 
@@ -248,6 +387,10 @@ export default function App() {
   function applyEmojiToRow(rowId: string, emoji: string) {
     const dataUrl = createEmojiImageDataUrl(emoji);
     updateRow(rowId, setImageFromDataUrl(dataUrl));
+    trackEvent('image_source_set', {
+      source_type: 'emoji',
+      success: true
+    });
     showEmojiBulkPrompt(rowId);
   }
 
@@ -276,6 +419,10 @@ export default function App() {
       return;
     }
     updateRow(selectedPersistedRow.id, setImageFromUrl(trimmed));
+    trackEvent('image_source_set', {
+      source_type: 'url',
+      success: true
+    });
     clearEmojiBulkPrompt();
   }
 
@@ -317,6 +464,16 @@ export default function App() {
     if (rowId === DRAFT_ROW_ID) {
       return;
     }
+    if (project) {
+      const rowIndex = project.rows.findIndex((row) => row.id === rowId);
+      const row = rowIndex >= 0 ? project.rows[rowIndex] : undefined;
+      const validation = validations.find((item) => item.rowId === rowId);
+      trackEvent('preview_row_selected', {
+        row_index: rowIndex,
+        has_image: hasRowImage(row),
+        overflow_flag: Boolean(validation?.wordOverflow || validation?.subtitleOverflow)
+      });
+    }
     updateActiveSet((current) => ({ ...current, selectedRowId: rowId }));
   }
 
@@ -334,6 +491,15 @@ export default function App() {
       setPdfStatus('Add at least one row before generating PDF.');
       return;
     }
+
+    flushCanvasEditSession();
+    const exportStartedAt = performance.now();
+    trackEvent('export_pdf_started', {
+      cards_per_page: project.preset,
+      double_sided: project.doubleSided,
+      row_count: project.rows.length,
+      show_cut_guides: project.showCutGuides
+    });
 
     const setProgress = (percent: number, stage: string) => {
       setPdfProgress({
@@ -353,7 +519,14 @@ export default function App() {
         tamilFontUrl,
         onProgress: setProgress
       });
-    } catch {
+    } catch (error) {
+      const message = error instanceof Error ? error.message.toLowerCase() : '';
+      const errorType = message.includes('font') ? 'font' : 'unknown';
+      trackEvent('export_pdf_failed', {
+        error_type: errorType,
+        row_count: project.rows.length,
+        double_sided: project.doubleSided
+      });
       setPdfStatus('Failed to load Tamil font for PDF export.');
       setPdfProgress({ active: false, percent: 0, stage: '' });
       return;
@@ -372,6 +545,12 @@ export default function App() {
     setPdfProgress({ active: false, percent: 100, stage: '' });
 
     setImageIssues(generated.imageIssues);
+    trackEvent('export_pdf_completed', {
+      duration_ms: Math.round(performance.now() - exportStartedAt),
+      page_count: getExportPageCount(project.rows.length, project.preset, project.doubleSided),
+      image_issue_count: Object.keys(generated.imageIssues).length,
+      overflow_count: overflowCount
+    });
     if (Object.keys(generated.imageIssues).length) {
       setPdfStatus('PDF generated with some image errors. Use local image upload for blocked web images.');
       return;
@@ -387,9 +566,14 @@ export default function App() {
       imageUrl: ''
     };
     appendRows([nextRow]);
+    trackEvent('row_added_manual', {
+      position: 'append',
+      total_rows_after: rowCount + 1
+    });
   }
 
   function onDeleteRow(rowId: string) {
+    const row = project?.rows.find((item) => item.id === rowId);
     updateActiveSet((current) => {
       const rowIndex = current.rows.findIndex((row) => row.id === rowId);
       if (rowIndex < 0) {
@@ -411,6 +595,10 @@ export default function App() {
       const next = { ...current };
       delete next[rowId];
       return next;
+    });
+    trackEvent('row_deleted', {
+      row_had_image: hasRowImage(row),
+      total_rows_after: Math.max((project?.rows.length ?? 1) - 1, 0)
     });
   }
 
@@ -437,6 +625,10 @@ export default function App() {
         rows: nextRows,
         selectedRowId: current.selectedRowId
       };
+    });
+    trackEvent('row_added_manual', {
+      position: 'insert_after',
+      total_rows_after: (project?.rows.length ?? 0) + 1
     });
     return nextInsertedId;
   }
@@ -480,7 +672,7 @@ export default function App() {
         sets={sets}
         activeSetId={project.id}
         onCreateSet={onCreateSet}
-        onSelectSet={setActiveSetId}
+        onSelectSet={onSelectSet}
         onRenameSet={onRenameSet}
         onDeleteSet={onDeleteSet}
         onClose={() => setSetsMenuOpen(false)}
@@ -652,6 +844,7 @@ export default function App() {
             onPatchTemplate: patchTemplate,
             onPatchTextElement: patchTextElement,
             onUpdateRow: updateRow,
+            onCanvasElementEdited: markCanvasElementEdited,
             onCanvasImageDrop: (file) => void onSelectedRowImageUpload(file),
             onMoveSelectedRowUp: () => moveSelectedRowBy(-1),
             onMoveSelectedRowDown: () => moveSelectedRowBy(1),
