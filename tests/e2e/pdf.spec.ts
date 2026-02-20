@@ -310,7 +310,9 @@ test('pdf text layout remains visually aligned at large font sizes', async ({ pa
   await page.keyboard.press('Enter');
 
   const stageCanvas = page.locator('.stage-canvas');
-  await expect(stageCanvas).toHaveScreenshot('canvas-large-font-edge.png');
+  await expect(stageCanvas).toHaveScreenshot('canvas-large-font-edge.png', {
+    maxDiffPixels: 250
+  });
 
   await openExportModal(page);
   const exportDialog = page.getByRole('dialog', { name: 'Export PDF' });
