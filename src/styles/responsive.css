@@ -39,6 +39,7 @@
 
 @media (max-width: 720px) {
   header {
+    min-height: 42px;
     padding-right: 0;
   }
 
