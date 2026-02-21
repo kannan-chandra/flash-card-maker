@@ -38,6 +38,16 @@
 }
 
 @media (max-width: 720px) {
+  header {
+    padding-right: 0;
+  }
+
+  .header-actions {
+    left: 56px;
+    right: 0;
+    justify-content: flex-end;
+  }
+
   header > h1,
   header > p {
     display: none;
