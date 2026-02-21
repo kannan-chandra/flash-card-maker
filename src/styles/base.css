@@ -97,6 +97,10 @@ main {
   gap: 10px;
 }
 
+.site-brand h1 {
+  font-weight: 300;
+}
+
 .site-logo {
   width: 36px;
   height: 36px;
