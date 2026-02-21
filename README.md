@@ -1,4 +1,4 @@
-# Flash Card Maker
+# Swift Flashcards
 
 Frontend-only flashcard generator for GitHub Pages. Users design one master card layout (image + two text boxes), import a row list, preview per-row output, and generate printable PDF sheets.
 
