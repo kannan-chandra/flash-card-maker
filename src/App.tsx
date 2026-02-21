@@ -678,7 +678,6 @@ export default function App() {
             Export
           </button>
         </div>
-        <p>Add a list of words and generate flashcards instantly.</p>
       </header>
 
       {setsMenuOpen && <OverlayBackdrop onClick={() => setSetsMenuOpen(false)} ariaLabel="Close sets menu" />}
