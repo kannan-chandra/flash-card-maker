@@ -40,16 +40,35 @@
 @media (max-width: 720px) {
   header {
     min-height: 42px;
+    padding-left: 0;
     padding-right: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .hamburger-btn {
+    position: static;
+    flex: 0 0 42px;
   }
 
   .header-actions {
-    left: 56px;
-    right: 0;
+    position: static;
+    margin-left: auto;
     justify-content: flex-end;
   }
 
-  .site-brand,
+  .site-brand {
+    display: inline-flex;
+    min-width: 0;
+  }
+
+  .site-brand h1 {
+    margin: 0;
+    font-size: 1.2rem;
+    line-height: 1.1;
+  }
+
   header > p {
     display: none;
   }
