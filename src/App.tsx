@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import tamilFontUrl from '@fontsource/noto-sans-tamil/files/noto-sans-tamil-tamil-400-normal.woff?url';
+import siteLogoUrl from './assets/site-logo.svg';
 import '@fontsource/inter/400.css';
 import '@fontsource/inter/500.css';
 import '@fontsource/inter/600.css';
@@ -664,7 +665,10 @@ export default function App() {
           <span />
           <span />
         </button>
-        <h1>Flash Card Maker</h1>
+        <div className="site-brand">
+          <img src={siteLogoUrl} className="site-logo" alt="" aria-hidden="true" />
+          <h1>Swift Flashcards</h1>
+        </div>
         <div className="header-actions">
           <button type="button" className="header-action-link" onClick={() => setImportModalOpen(true)}>
             Import
@@ -691,9 +695,9 @@ export default function App() {
         <>
           <OverlayBackdrop className="menu-backdrop csv-backdrop" onClick={dismissOnboarding} ariaLabel="Close first launch guide" />
           <Modal className="csv-modal onboarding-modal" ariaLabel="First launch guide">
-            <h3>Welcome to Flash Card Maker</h3>
+            <h3>Swift Flashcards</h3>
             <ol>
-              <li>Make your word list quickly.</li>
+              <li>Build your word list quickly.</li>
               <li>Edit your card layout, with single-sided or double-sided cards.</li>
               <li>Export to PDF in multiple sizes.</li>
             </ol>

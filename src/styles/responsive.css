@@ -49,7 +49,7 @@
     justify-content: flex-end;
   }
 
-  header > h1,
+  .site-brand,
   header > p {
     display: none;
   }
