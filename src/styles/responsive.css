@@ -39,7 +39,7 @@
 
 @media (max-width: 720px) {
   header {
-    min-height: 42px;
+    min-height: 60px;
     padding-left: 0;
     padding-right: 0;
     display: flex;
@@ -59,14 +59,16 @@
   }
 
   .site-brand {
-    display: inline-flex;
-    min-width: 0;
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    margin: 0;
+    pointer-events: none;
   }
 
   .site-brand h1 {
-    margin: 0;
-    font-size: 1.2rem;
-    line-height: 1.1;
+    display: none;
   }
 
   header > p {
