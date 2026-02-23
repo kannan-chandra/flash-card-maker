@@ -12,7 +12,13 @@ async function dismissFirstLaunchGuide(page: Page) {
 }
 
 async function importCsv(page: Page, value: string) {
-  await page.getByRole('button', { name: 'Import', exact: true }).click();
+  const toolbarImport = page.locator('.header-actions').getByRole('button', { name: 'Import', exact: true });
+  if (await toolbarImport.isVisible()) {
+    await toolbarImport.click();
+  } else {
+    await page.getByRole('button', { name: 'Open quick actions' }).click();
+    await page.locator('.header-actions-menu').getByRole('menuitem', { name: 'Import', exact: true }).click();
+  }
   const dialog = page.getByRole('dialog', { name: 'CSV import' });
   await dialog.getByLabel('CSV input').fill(value);
   await dialog.getByRole('button', { name: 'Import', exact: true }).click();
