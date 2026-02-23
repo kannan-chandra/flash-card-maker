@@ -60,12 +60,12 @@ npm run dev
 npm run build
 ```
 
-## Guides (Markdown Articles)
-- `guides/*.md` files are published under `/guides`.
+## Learn (Markdown Articles)
+- `articles/*.md` files are published under `/learn`.
 - Slugs are filename-based (human readable), not UUID-based.
 - Examples:
-  - `guides/getting-started.md` -> `/guides/getting-started`
-  - `guides/my-first-export.md` -> `/guides/my-first-export`
+  - `articles/getting-started.md` -> `/learn/getting-started`
+  - `articles/my-first-export.md` -> `/learn/my-first-export`
 
 ## Browser E2E Test
 ```bash

@@ -1,13 +1,13 @@
 import { marked } from 'marked';
 
-export type GuideArticle = {
+export type Article = {
   slug: string;
   title: string;
   markdown: string;
   html: string;
 };
 
-const guideModules = import.meta.glob('../../guides/*.md', {
+const articleModules = import.meta.glob('../../articles/*.md', {
   eager: true,
   query: '?raw',
   import: 'default'
@@ -31,8 +31,8 @@ function extractTitle(markdown: string, slug: string): string {
   return firstHeading || slugToTitle(slug);
 }
 
-function buildGuides(): GuideArticle[] {
-  const guides = Object.entries(guideModules)
+function buildArticles(): Article[] {
+  const articles = Object.entries(articleModules)
     .map(([path, markdown]) => {
       const slug = path.split('/').pop()?.replace(/\.md$/, '') ?? '';
       if (!slug) {
@@ -46,19 +46,19 @@ function buildGuides(): GuideArticle[] {
         html: marked.parse(markdown) as string
       };
     })
-    .filter((guide): guide is GuideArticle => guide !== null)
+    .filter((article): article is Article => article !== null)
     .sort((a, b) => a.title.localeCompare(b.title));
 
-  return guides;
+  return articles;
 }
 
-const guideArticles = buildGuides();
-const guideBySlug = new Map(guideArticles.map((guide) => [guide.slug, guide]));
+const articles = buildArticles();
+const articlesBySlug = new Map(articles.map((article) => [article.slug, article]));
 
-export function getGuides(): GuideArticle[] {
-  return guideArticles;
+export function getArticles(): Article[] {
+  return articles;
 }
 
-export function getGuideBySlug(slug: string): GuideArticle | undefined {
-  return guideBySlug.get(slug);
+export function getArticleBySlug(slug: string): Article | undefined {
+  return articlesBySlug.get(slug);
 }
