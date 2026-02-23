@@ -28,23 +28,25 @@ export function ArticlesApp() {
   if (isLearnList) {
     return (
       <div className="articles-page">
-        <header className="articles-header">
-          <h1>Learn</h1>
-          <p>Articles are loaded from markdown files in the repo `articles/` directory.</p>
-        </header>
-        <main className="articles-main">
-          {articles.length ? (
-            <ul className="articles-list">
-              {articles.map((article) => (
-                <li key={article.slug}>
-                  <a href={`/learn/${article.slug}`}>{article.title}</a>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p>No articles found.</p>
-          )}
-        </main>
+        <div className="articles-shell">
+          <header className="articles-header">
+            <h1>Learn</h1>
+            <p>Articles are loaded from markdown files in the repo `articles/` directory.</p>
+          </header>
+          <main className="articles-main">
+            {articles.length ? (
+              <ul className="articles-list">
+                {articles.map((article) => (
+                  <li key={article.slug}>
+                    <a href={`/learn/${article.slug}`}>{article.title}</a>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p>No articles found.</p>
+            )}
+          </main>
+        </div>
       </div>
     );
   }
@@ -52,28 +54,32 @@ export function ArticlesApp() {
   if (activeArticle) {
     return (
       <div className="articles-page">
-        <header className="articles-header">
-          <a href="/learn" className="articles-back-link">
-            Back to Learn
-          </a>
-          <h1>{activeArticle.title}</h1>
-        </header>
-        <main className="articles-main">
-          <article className="article-content" dangerouslySetInnerHTML={{ __html: activeArticle.html }} />
-        </main>
+        <div className="articles-shell">
+          <header className="articles-header">
+            <a href="/learn" className="articles-back-link">
+              Back to Learn
+            </a>
+            <h1>{activeArticle.title}</h1>
+          </header>
+          <main className="articles-main">
+            <article className="article-content" dangerouslySetInnerHTML={{ __html: activeArticle.html }} />
+          </main>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="articles-page">
-      <header className="articles-header">
-        <h1>Article Not Found</h1>
-      </header>
-      <main className="articles-main">
-        <p>This article does not exist.</p>
-        <a href="/learn">View all articles</a>
-      </main>
+      <div className="articles-shell">
+        <header className="articles-header">
+          <h1>Article Not Found</h1>
+        </header>
+        <main className="articles-main">
+          <p>This article does not exist.</p>
+          <a href="/learn">View all articles</a>
+        </main>
+      </div>
     </div>
   );
 }
