@@ -93,6 +93,7 @@ main {
 
 .header-actions-compact {
   display: none;
+  z-index: 52;
 }
 
 .header-actions-toggle {
@@ -100,6 +101,8 @@ main {
   width: 32px;
   height: 32px;
   border-radius: 8px;
+  border: 1px solid transparent;
+  background: var(--surface-header-cta);
   padding: 0;
   line-height: 1;
   font-size: 18px;
@@ -117,12 +120,19 @@ main {
   border-radius: var(--radius-md);
   background: var(--color-surface);
   box-shadow: var(--shadow-panel);
-  z-index: var(--z-floating-panel);
+  z-index: 52;
 }
 
 .header-actions-menu > button {
   width: 100%;
   text-align: left;
+}
+
+.header-actions-menu-item {
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
 }
 
 .site-brand {

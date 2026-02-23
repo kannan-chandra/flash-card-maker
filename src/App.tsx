@@ -696,6 +696,7 @@ export default function App() {
               <button
                 type="button"
                 role="menuitem"
+                className="header-action-link header-actions-menu-item"
                 onClick={() => {
                   setImportModalOpen(true);
                   setHeaderActionsOpen(false);
@@ -706,6 +707,7 @@ export default function App() {
               <button
                 type="button"
                 role="menuitem"
+                className="header-action-cta header-actions-menu-item"
                 onClick={() => {
                   setExportModalOpen(true);
                   setHeaderActionsOpen(false);
