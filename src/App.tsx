@@ -667,7 +667,9 @@ export default function App() {
           <span />
         </button>
         <div className="site-brand">
-          <img src={siteLogoUrl} className="site-logo" alt="" aria-hidden="true" />
+          <span className="site-logo-frame" aria-hidden="true">
+            <img src={siteLogoUrl} className="site-logo" alt="" />
+          </span>
           <h1>Swift Flashcards</h1>
         </div>
         <div className="header-actions">
