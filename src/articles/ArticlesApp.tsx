@@ -25,7 +25,7 @@ export function ArticlesApp() {
 
   document.title = pageTitle;
 
-  if (activeSlug && !import.meta.env.DEV) {
+  if (isLearnList && !import.meta.env.DEV) {
     window.location.replace('/');
     return null;
   }
