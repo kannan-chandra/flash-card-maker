@@ -9,7 +9,9 @@
     "build": "tsc --noEmit && vite build",
     "deploy": "npm run build && gh-pages -d dist",
     "preview": "vite preview",
-    "test:e2e": "playwright test",
+    "test:e2e": "npm run test:e2e:dev && npm run test:e2e:prod",
+    "test:e2e:dev": "E2E_ENV=dev playwright test",
+    "test:e2e:prod": "E2E_ENV=prod playwright test tests/e2e/learn-routing.spec.ts",
     "emoji:list": "node scripts/export-emoji-support.mjs"
   },
   "dependencies": {
