@@ -45,6 +45,7 @@ export default function App() {
   const { sets, project, loading, setActiveSetId, createSet, renameSet, deleteSet, updateActiveSet, patchTemplate, patchTextElement, appendRows, updateRow } =
     useWorkspace();
   const [setsMenuOpen, setSetsMenuOpen] = useState(false);
+  const [headerActionsOpen, setHeaderActionsOpen] = useState(false);
   const [exportModalOpen, setExportModalOpen] = useState(false);
   const [importModalOpen, setImportModalOpen] = useState(false);
   const [csvInput, setCsvInput] = useState('');
@@ -679,6 +680,41 @@ export default function App() {
           <button type="button" className="header-action-cta" onClick={() => setExportModalOpen(true)}>
             Export
           </button>
+        </div>
+        <div className="header-actions-compact">
+          <button
+            type="button"
+            className="header-actions-toggle"
+            aria-label="Open quick actions"
+            aria-expanded={headerActionsOpen}
+            onClick={() => setHeaderActionsOpen((current) => !current)}
+          >
+            +
+          </button>
+          {headerActionsOpen ? (
+            <div className="header-actions-menu" role="menu" aria-label="Quick actions">
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  setImportModalOpen(true);
+                  setHeaderActionsOpen(false);
+                }}
+              >
+                Import
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  setExportModalOpen(true);
+                  setHeaderActionsOpen(false);
+                }}
+              >
+                Export
+              </button>
+            </div>
+          ) : null}
         </div>
       </header>
 
