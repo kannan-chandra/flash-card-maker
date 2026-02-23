@@ -89,8 +89,8 @@
 }
 
 .export-modal-preview .export-card-outline {
-  fill: #dbeafe;
-  stroke: #3b82f6;
+  fill: var(--color-teal-soft);
+  stroke: var(--color-teal);
   stroke-width: 1.25;
 }
 
