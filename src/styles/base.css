@@ -65,6 +65,9 @@ main {
   top: 0;
   width: 42px;
   height: 42px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: var(--surface-header-cta);
   padding: 8px;
   display: inline-flex;
   flex-direction: column;
@@ -72,6 +75,10 @@ main {
   justify-content: center;
   gap: 5px;
   color: var(--color-slate-800);
+}
+
+.hamburger-btn:hover {
+  border-color: var(--color-success);
 }
 
 .hamburger-btn span {
