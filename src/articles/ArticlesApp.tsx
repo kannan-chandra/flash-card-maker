@@ -25,6 +25,11 @@ export function ArticlesApp() {
 
   document.title = pageTitle;
 
+  if (activeSlug && !import.meta.env.DEV) {
+    window.location.replace('/');
+    return null;
+  }
+
   if (isLearnList) {
     return (
       <div className="articles-page">
@@ -55,11 +60,6 @@ export function ArticlesApp() {
     return (
       <div className="articles-page">
         <div className="articles-shell">
-          <header className="articles-header">
-            <a href="/learn" className="articles-back-link">
-              Back to Learn
-            </a>
-          </header>
           <main className="articles-main">
             <article className="article-content" dangerouslySetInnerHTML={{ __html: activeArticle.html }} />
           </main>
