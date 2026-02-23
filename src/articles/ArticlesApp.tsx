@@ -59,7 +59,6 @@ export function ArticlesApp() {
             <a href="/learn" className="articles-back-link">
               Back to Learn
             </a>
-            <h1>{activeArticle.title}</h1>
           </header>
           <main className="articles-main">
             <article className="article-content" dangerouslySetInnerHTML={{ __html: activeArticle.html }} />
