@@ -669,8 +669,8 @@ button {
 }
 
 button.primary {
-  background: var(--color-accent);
-  border-color: var(--color-accent-strong);
+  background: var(--color-teal);
+  border-color: var(--color-teal-strong);
   color: var(--color-surface);
 }
 
