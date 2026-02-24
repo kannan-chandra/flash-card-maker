@@ -293,7 +293,9 @@ export default function App() {
     const snapToWholePixel = () => {
       animationFrame = null;
       const left = node.getBoundingClientRect().left;
-      const correctionX = Math.round(left) - left;
+      const devicePixelRatio = Math.max(window.devicePixelRatio || 1, 1);
+      const snappedLeft = Math.round(left * devicePixelRatio) / devicePixelRatio;
+      const correctionX = snappedLeft - left;
       node.style.setProperty('--logo-snap-x', `${correctionX}px`);
     };
 
