@@ -239,6 +239,14 @@ function expectMidpointInsideCanvas(template: TemplateShape, layout: 'vertical' 
   expect(midpoint.y).toBeLessThanOrEqual(contentHeight);
 }
 
+function getCenteredElementPosition(template: TemplateShape, element: { side: 1 | 2; width: number; height: number }) {
+  const sideOffsetX = element.side === 2 ? template.width : 0;
+  return {
+    x: (template.width - element.width) / 2 + sideOffsetX,
+    y: (template.height - element.height) / 2
+  };
+}
+
 test('double-sided vertical layout still allows dragging image and text to other side', async ({ page }) => {
   await setupDoubleSidedCanvas(page, 1400, 900);
   await dragImageToSide(page, 'vertical', 1);
@@ -337,4 +345,51 @@ test('selected image and text boxes can be resized from canvas handles', async (
   }
   expect(text1After.width).toBeGreaterThan(text1.width);
   expect(text1After.height).toBeGreaterThan(text1.height);
+});
+
+test('dragging near center snaps image and text to exact horizontal and vertical center', async ({ page }) => {
+  await page.setViewportSize({ width: 1400, height: 900 });
+  await page.goto('/');
+  await dismissFirstLaunchGuide(page);
+  await importCsv(page, 'word,subtitle\napple,fruit');
+  await page.locator('tbody tr').first().getByLabel('Word').click();
+  const layout: 'vertical' = 'vertical';
+
+  const beforeImage = await readActiveTemplate(page);
+  const imageMid = canvasMidpointForElement(beforeImage, layout, beforeImage.image);
+  await clickCanvasPoint(page, layout, beforeImage, imageMid);
+
+  const imageTarget = getCenteredElementPosition(beforeImage, beforeImage.image);
+  await dragCanvasPointToCanvasPoint(
+    page,
+    layout,
+    imageMid,
+    { x: imageTarget.x + beforeImage.image.width / 2 + 4, y: imageTarget.y + beforeImage.image.height / 2 + 3 },
+    beforeImage
+  );
+  const afterImage = await readActiveTemplate(page);
+  expect(afterImage.image.x).toBeCloseTo((beforeImage.width - beforeImage.image.width) / 2, 3);
+  expect(afterImage.image.y).toBeCloseTo((beforeImage.height - beforeImage.image.height) / 2, 3);
+
+  const textBefore = await readActiveTemplate(page);
+  const text1 = textBefore.textElements.find((item) => item.id === 'text1');
+  if (!text1) {
+    throw new Error('Missing text1');
+  }
+  const textMid = canvasMidpointForElement(textBefore, layout, text1);
+  await clickCanvasPoint(page, layout, textBefore, textMid);
+  const textTarget = getCenteredElementPosition(textBefore, text1);
+  await dragCanvasPointToCanvasPoint(
+    page,
+    layout,
+    textMid,
+    { x: textTarget.x + text1.width / 2 + 4, y: textTarget.y + text1.height / 2 + 3 },
+    textBefore
+  );
+  const textAfter = await readActiveTemplate(page);
+  const text1After = textAfter.textElements.find((item) => item.id === 'text1');
+  if (!text1After) {
+    throw new Error('Missing text1 after center snap');
+  }
+  expect(text1After.x).toBeCloseTo((textAfter.width - text1.width) / 2, 3);
 });

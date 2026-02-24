@@ -127,6 +127,8 @@ export function CanvasEditor(props: CanvasEditorProps) {
   const dragEnterDepthRef = useRef(0);
   const selectionBadgeRectRef = useRef<Konva.Rect>(null);
   const selectionBadgeTextRef = useRef<Konva.Text>(null);
+  const verticalCenterGuideRef = useRef<Konva.Rect>(null);
+  const horizontalCenterGuideRef = useRef<Konva.Rect>(null);
 
   const sideWidth = project.template.width;
   const sideHeight = cardHeight;
@@ -206,6 +208,73 @@ export function CanvasEditor(props: CanvasEditorProps) {
     const canvasPos = toCanvasPosition(x, y, side);
     const clampedCanvasPos = clampCanvasPosition(canvasPos.x, canvasPos.y, width, height);
     return fromCanvasPosition(clampedCanvasPos.x, clampedCanvasPos.y, width, height);
+  }
+  function clearCenterGuides() {
+    const verticalGuide = verticalCenterGuideRef.current;
+    const horizontalGuide = horizontalCenterGuideRef.current;
+    if (!verticalGuide || !horizontalGuide) {
+      return;
+    }
+    verticalGuide.hide();
+    horizontalGuide.hide();
+    verticalGuide.getLayer()?.batchDraw();
+  }
+
+  function applyCenterSnap(canvasX: number, canvasY: number, elementWidth: number, elementHeight: number) {
+    const threshold = 8 / Math.max(stageScale, 0.001);
+    const clamped = clampCanvasPosition(canvasX, canvasY, elementWidth, elementHeight);
+    const side = fromCanvasPosition(clamped.x, clamped.y, elementWidth, elementHeight).side;
+    const sideOffset = getSideOffset(side);
+
+    const centeredX = sideOffset.x + (sideWidth - elementWidth) / 2;
+    const centeredY = sideOffset.y + (sideHeight - elementHeight) / 2;
+
+    let snappedX = clamped.x;
+    let snappedY = clamped.y;
+    const snapToVertical = Math.abs(clamped.x - centeredX) <= threshold;
+    const snapToHorizontal = Math.abs(clamped.y - centeredY) <= threshold;
+    if (snapToVertical) {
+      snappedX = centeredX;
+    }
+    if (snapToHorizontal) {
+      snappedY = centeredY;
+    }
+    const snapped = clampCanvasPosition(snappedX, snappedY, elementWidth, elementHeight);
+
+    const verticalGuide = verticalCenterGuideRef.current;
+    const horizontalGuide = horizontalCenterGuideRef.current;
+    if (verticalGuide && horizontalGuide) {
+      const guideThickness = 2 / Math.max(stageScale, 0.001);
+      if (snapToVertical) {
+        verticalGuide.position({
+          x: sideOffset.x + sideWidth / 2 - guideThickness / 2,
+          y: sideOffset.y
+        });
+        verticalGuide.size({
+          width: guideThickness,
+          height: sideHeight
+        });
+        verticalGuide.show();
+      } else {
+        verticalGuide.hide();
+      }
+      if (snapToHorizontal) {
+        horizontalGuide.position({
+          x: sideOffset.x,
+          y: sideOffset.y + sideHeight / 2 - guideThickness / 2
+        });
+        horizontalGuide.size({
+          width: sideWidth,
+          height: guideThickness
+        });
+        horizontalGuide.show();
+      } else {
+        horizontalGuide.hide();
+      }
+      verticalGuide.getLayer()?.batchDraw();
+    }
+
+    return snapped;
   }
   const canvasDebugEnabled =
     typeof window !== 'undefined' &&
@@ -766,7 +835,7 @@ export function CanvasEditor(props: CanvasEditorProps) {
                     onClick={() => onSelectElement('image')}
                     onTap={() => onSelectElement('image')}
                     onDragMove={(event) => {
-                      const clamped = clampCanvasPosition(
+                      const clamped = applyCenterSnap(
                         event.target.x(),
                         event.target.y(),
                         project.template.image.width,
@@ -793,6 +862,7 @@ export function CanvasEditor(props: CanvasEditorProps) {
                       }
                     }}
                     onDragEnd={(event) => {
+                      clearCenterGuides();
                       const clamped = clampCanvasPosition(
                         event.target.x(),
                         event.target.y(),
@@ -876,7 +946,7 @@ export function CanvasEditor(props: CanvasEditorProps) {
                       onDblClick={() => startEditingText(textElement.id)}
                       onDblTap={() => startEditingText(textElement.id)}
                       onDragMove={(event) => {
-                        const clamped = clampCanvasPosition(event.target.x(), event.target.y(), textElement.width, textElement.height);
+                        const clamped = applyCenterSnap(event.target.x(), event.target.y(), textElement.width, textElement.height);
                         event.target.position(clamped);
                         updateSelectionBadge(clamped.x, clamped.y, textElement.role === 'word' ? 'Word' : 'Subtitle');
                         const sideResult = fromCanvasPosition(clamped.x, clamped.y, textElement.width, textElement.height);
@@ -889,6 +959,7 @@ export function CanvasEditor(props: CanvasEditorProps) {
                         }
                       }}
                       onDragEnd={(event) => {
+                        clearCenterGuides();
                         const clamped = clampCanvasPosition(event.target.x(), event.target.y(), textElement.width, textElement.height);
                         event.target.position(clamped);
                         const sideResult = fromCanvasPosition(clamped.x, clamped.y, textElement.width, textElement.height);
@@ -944,7 +1015,7 @@ export function CanvasEditor(props: CanvasEditorProps) {
                         onDblClick={() => startEditingText(textElement.id)}
                         onDblTap={() => startEditingText(textElement.id)}
                         onDragMove={(event) => {
-                          const clamped = clampCanvasPosition(event.target.x(), event.target.y(), textElement.width, textElement.height);
+                          const clamped = applyCenterSnap(event.target.x(), event.target.y(), textElement.width, textElement.height);
                           event.target.position(clamped);
                           updateSelectionBadge(clamped.x, clamped.y, textElement.role === 'word' ? 'Word' : 'Subtitle');
                           const sideResult = fromCanvasPosition(clamped.x, clamped.y, textElement.width, textElement.height);
@@ -957,6 +1028,7 @@ export function CanvasEditor(props: CanvasEditorProps) {
                           }
                         }}
                         onDragEnd={(event) => {
+                          clearCenterGuides();
                           const clamped = clampCanvasPosition(event.target.x(), event.target.y(), textElement.width, textElement.height);
                           event.target.position(clamped);
                           const sideResult = fromCanvasPosition(clamped.x, clamped.y, textElement.width, textElement.height);
@@ -995,6 +1067,8 @@ export function CanvasEditor(props: CanvasEditorProps) {
 
               <Rect ref={selectionBadgeRectRef} fill="#2563eb" cornerRadius={4} listening={false} visible={false} />
               <Text ref={selectionBadgeTextRef} fill="#ffffff" fontSize={12} fontStyle="bold" listening={false} visible={false} />
+              <Rect ref={verticalCenterGuideRef} fill="#dc2626" listening={false} visible={false} />
+              <Rect ref={horizontalCenterGuideRef} fill="#dc2626" listening={false} visible={false} />
 
               <Transformer ref={transformerRef} rotateEnabled={false} flipEnabled={false} keepRatio={false} />
                 </Layer>
