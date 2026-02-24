@@ -145,11 +145,13 @@ You just have to start.
 
 ---
 
-To help you begin, here is a free PDF of beginner letter flashcards with simple sound guides on the back for parents.
+To help you begin, [here is a free PDF](Letter-Sounds-swiftflashcards.com.pdf) of beginner letter flashcards with simple sound guides on the back for parents.
+
+
 
 The front of each card is a letter (in both uppercase and lowercase). That side is for your child.
 
 The back is a reference word for you to get the correct primary sound for each word.
 
-If you would like to create your own custom flashcards, visit **swiftflashcards.com** to create exactly what your child needs.
+If you would like to create your own custom flashcards, use **swiftflashcards.com** to create exactly what your child needs.
 
