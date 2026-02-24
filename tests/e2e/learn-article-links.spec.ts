@@ -10,6 +10,9 @@ test('article pages load and support file + article links', async ({ page }) => 
     const stylesheets = page.locator('link[rel="stylesheet"]');
     await expect(stylesheets).toHaveCount(1);
     await expect(stylesheets.first()).toHaveAttribute('href', /\/assets\/index-.*\.css$/);
+
+    const bodyOverflow = await page.evaluate(() => getComputedStyle(document.body).overflow);
+    expect(bodyOverflow).not.toBe('hidden');
   }
 
   const pdfLink = page.getByRole('link', { name: 'here is a free printable PDF' });
