@@ -4,8 +4,13 @@ const isProdMode = process.env.E2E_ENV === 'prod';
 
 test('learn routes behave correctly in dev and production', async ({ page }) => {
   await page.goto('/learn');
-  await expect(page).toHaveURL(/\/learn\/?$/);
-  await expect(page.getByRole('heading', { name: 'Learn', level: 1 })).toBeVisible();
+  if (isProdMode) {
+    await expect(page).toHaveURL(/\/$/);
+    await expect(page.getByRole('heading', { name: 'Swift Flashcards', level: 1 })).toBeVisible();
+  } else {
+    await expect(page).toHaveURL(/\/learn\/?$/);
+    await expect(page.getByRole('heading', { name: 'Learn', level: 1 })).toBeVisible();
+  }
 
   await page.goto('/learn/getting-started');
   await expect(page).toHaveURL(/\/learn\/getting-started$/);

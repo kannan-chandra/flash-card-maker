@@ -25,6 +25,11 @@ export function ArticlesApp() {
 
   document.title = pageTitle;
 
+  if (isLearnList && !import.meta.env.DEV) {
+    window.location.replace('/');
+    return null;
+  }
+
   if (isLearnList) {
     return (
       <div className="articles-page">
