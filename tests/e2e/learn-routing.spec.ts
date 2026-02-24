@@ -30,6 +30,10 @@ test('learn routes behave correctly in dev and production', async ({ page }) => 
   expect(response.ok()).toBeTruthy();
   await expect(response.text()).resolves.toContain('sample downloadable file');
 
+  await page.goto('/?redirect=%2Flearn%2Fteach-toddler-to-read-5-minutes');
+  await expect(page).toHaveURL(/\/learn\/teach-toddler-to-read-5-minutes$/);
+  await expect(page.getByRole('heading', { name: 'Teach Your Toddler to Read in 5 Minutes a Day', level: 1 })).toBeVisible();
+
   if (isProdMode) {
     const sitemapResponse = await page.request.get('/sitemap.xml');
     expect(sitemapResponse.ok()).toBeTruthy();
