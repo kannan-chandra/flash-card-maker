@@ -178,6 +178,9 @@ interface PdfPerfDebugConfig {
 }
 
 const BASELINE_NUDGE_LINE_HEIGHT_RATIO = 0.21;
+const PDF_FOOTER_TEXT = 'Made with swiftflashcards.com';
+const PDF_FOOTER_FONT_SIZE = 9;
+const PDF_FOOTER_BOTTOM_MARGIN = 12;
 
 function getPdfTextDebugConfig(): PdfTextDebugConfig {
   if (typeof window === 'undefined') {
@@ -320,6 +323,7 @@ export async function generatePdfBytes(options: GeneratePdfOptions): Promise<Pdf
   const stepY = useEasyCutLayout ? cardHeight : slotHeight + gutter;
   const originX = useEasyCutLayout ? (pageWidth - cols * cardWidth) / 2 : margin + (slotWidth - cardWidth) / 2;
   const originYTop = useEasyCutLayout ? (pageHeight - rows * cardHeight) / 2 : margin + (slotHeight - cardHeight) / 2;
+  const footerFont = doc.embedStandardFont(StandardFonts.Helvetica);
 
   function getCardPosition(rowInPage: number, colInPage: number): { cardX: number; cardY: number } {
     const slotX = originX + colInPage * stepX;
@@ -467,6 +471,17 @@ export async function generatePdfBytes(options: GeneratePdfOptions): Promise<Pdf
     }
   }
 
+  function drawPageFooter(page: ReturnType<typeof doc.getPages>[number]) {
+    const footerWidth = footerFont.widthOfTextAtSize(PDF_FOOTER_TEXT, PDF_FOOTER_FONT_SIZE);
+    page.drawText(PDF_FOOTER_TEXT, {
+      x: (pageWidth - footerWidth) / 2,
+      y: PDF_FOOTER_BOTTOM_MARGIN,
+      size: PDF_FOOTER_FONT_SIZE,
+      font: footerFont,
+      color: rgb(0.45, 0.45, 0.45)
+    });
+  }
+
   for (let pagePairIndex = 0; pagePairIndex < totalPagePairs; pagePairIndex += 1) {
     const frontPage = doc.addPage([pageWidth, pageHeight]);
     const backPage = project.doubleSided ? doc.addPage([pageWidth, pageHeight]) : null;
@@ -492,6 +507,11 @@ export async function generatePdfBytes(options: GeneratePdfOptions): Promise<Pdf
         const mirroredCol = cols - 1 - colInPage;
         await drawCardSide(backPage, row, rowInPage, mirroredCol, 2);
       }
+    }
+
+    drawPageFooter(frontPage);
+    if (backPage) {
+      drawPageFooter(backPage);
     }
   }
 
