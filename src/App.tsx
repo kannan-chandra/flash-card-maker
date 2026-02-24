@@ -68,7 +68,7 @@ export default function App() {
   const canvasDirtyRef = useRef<Map<CanvasElementType, Set<CanvasChangeType>>>(new Map());
   const canvasSessionStartedAtRef = useRef<number | null>(null);
   const canvasIdleTimerRef = useRef<number | null>(null);
-  const siteLogoFrameRef = useRef<HTMLSpanElement>(null);
+  const appRef = useRef<HTMLDivElement>(null);
 
   const selectedPersistedRow = useMemo(() => {
     if (!project) {
@@ -284,26 +284,24 @@ export default function App() {
   }, [loading, project]);
 
   useEffect(() => {
-    const node = siteLogoFrameRef.current;
+    const node = appRef.current;
     if (!node) {
       return;
     }
 
     let animationFrame: number | null = null;
-    const snapToWholePixel = () => {
+    const snapAppToWholePixel = () => {
       animationFrame = null;
       const left = node.getBoundingClientRect().left;
-      const devicePixelRatio = Math.max(window.devicePixelRatio || 1, 1);
-      const snappedLeft = Math.round(left * devicePixelRatio) / devicePixelRatio;
-      const correctionX = snappedLeft - left;
-      node.style.setProperty('--logo-snap-x', `${correctionX}px`);
+      const correctionX = Math.round(left) - left;
+      node.style.setProperty('--app-snap-left', `${correctionX}px`);
     };
 
     const scheduleSnap = () => {
       if (animationFrame !== null) {
         window.cancelAnimationFrame(animationFrame);
       }
-      animationFrame = window.requestAnimationFrame(snapToWholePixel);
+      animationFrame = window.requestAnimationFrame(snapAppToWholePixel);
     };
 
     const resizeObserver = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(scheduleSnap) : null;
@@ -696,7 +694,7 @@ export default function App() {
   }
 
   return (
-    <div className="app">
+    <div ref={appRef} className="app">
       <header>
         <button
           type="button"
@@ -710,7 +708,7 @@ export default function App() {
           <span />
         </button>
         <div className="site-brand">
-          <span ref={siteLogoFrameRef} className="site-logo-frame" aria-hidden="true">
+          <span className="site-logo-frame" aria-hidden="true">
             <img src={siteLogoUrl} className="site-logo" alt="" />
           </span>
           <h1>Swift Flashcards</h1>

@@ -27,6 +27,8 @@ body.app-route {
   display: grid;
   grid-template-rows: auto 1fr;
   overflow: hidden;
+  position: relative;
+  left: var(--app-snap-left, 0px);
 }
 
 header {
@@ -177,7 +179,6 @@ main {
   border-radius: 12px;
   overflow: hidden;
   flex: 0 0 100px;
-  transform: translateX(var(--logo-snap-x, 0px));
 }
 
 .site-logo {
