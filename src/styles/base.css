@@ -177,6 +177,7 @@ main {
   border-radius: 12px;
   overflow: hidden;
   flex: 0 0 100px;
+  transform: translateX(var(--logo-snap-x, 0px));
 }
 
 .site-logo {

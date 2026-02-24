@@ -68,6 +68,7 @@ export default function App() {
   const canvasDirtyRef = useRef<Map<CanvasElementType, Set<CanvasChangeType>>>(new Map());
   const canvasSessionStartedAtRef = useRef<number | null>(null);
   const canvasIdleTimerRef = useRef<number | null>(null);
+  const siteLogoFrameRef = useRef<HTMLSpanElement>(null);
 
   const selectedPersistedRow = useMemo(() => {
     if (!project) {
@@ -281,6 +282,45 @@ export default function App() {
     });
     lastTrackedSetIdRef.current = project.id;
   }, [loading, project]);
+
+  useEffect(() => {
+    const node = siteLogoFrameRef.current;
+    if (!node) {
+      return;
+    }
+
+    let animationFrame: number | null = null;
+    const snapToWholePixel = () => {
+      animationFrame = null;
+      const left = node.getBoundingClientRect().left;
+      const correctionX = Math.round(left) - left;
+      node.style.setProperty('--logo-snap-x', `${correctionX}px`);
+    };
+
+    const scheduleSnap = () => {
+      if (animationFrame !== null) {
+        window.cancelAnimationFrame(animationFrame);
+      }
+      animationFrame = window.requestAnimationFrame(snapToWholePixel);
+    };
+
+    const resizeObserver = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(scheduleSnap) : null;
+    if (resizeObserver) {
+      resizeObserver.observe(document.body);
+      resizeObserver.observe(node);
+    }
+
+    window.addEventListener('resize', scheduleSnap);
+    scheduleSnap();
+
+    return () => {
+      window.removeEventListener('resize', scheduleSnap);
+      resizeObserver?.disconnect();
+      if (animationFrame !== null) {
+        window.cancelAnimationFrame(animationFrame);
+      }
+    };
+  }, [headerActionsOpen, setsMenuOpen]);
 
   function showEmojiBulkPrompt(rowId: string) {
     if (emojiBulkPromptTimerRef.current !== null) {
@@ -668,7 +708,7 @@ export default function App() {
           <span />
         </button>
         <div className="site-brand">
-          <span className="site-logo-frame" aria-hidden="true">
+          <span ref={siteLogoFrameRef} className="site-logo-frame" aria-hidden="true">
             <img src={siteLogoUrl} className="site-logo" alt="" />
           </span>
           <h1>Swift Flashcards</h1>
