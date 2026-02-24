@@ -149,13 +149,7 @@ function getBuiltStylesheetHrefs(outDir: string): string[] {
   return hrefs;
 }
 
-function getBuiltHeadTags(outDir: string): { faviconTags: string[]; analyticsScriptTags: string[] } {
-  const indexHtmlPath = path.join(outDir, 'index.html');
-  if (!existsSync(indexHtmlPath)) {
-    return { faviconTags: [], analyticsScriptTags: [] };
-  }
-
-  const indexHtml = readFileSync(indexHtmlPath, 'utf8');
+function getHeadTagsFromIndexHtml(indexHtml: string): { faviconTags: string[]; analyticsScriptTags: string[] } {
   const faviconTags = indexHtml.match(/<link[^>]*rel=["']icon["'][^>]*>/g) ?? [];
   const externalGtagScriptTags =
     indexHtml.match(/<script[^>]*src=["']https:\/\/www\.googletagmanager\.com\/gtag\/js[^"']*["'][^>]*>\s*<\/script>/g) ?? [];
@@ -166,6 +160,26 @@ function getBuiltHeadTags(outDir: string): { faviconTags: string[]; analyticsScr
     faviconTags,
     analyticsScriptTags: [...externalGtagScriptTags, ...inlineGtagScriptTags]
   };
+}
+
+function getBuiltHeadTags(outDir: string): { faviconTags: string[]; analyticsScriptTags: string[] } {
+  const indexHtmlPath = path.join(outDir, 'index.html');
+  if (!existsSync(indexHtmlPath)) {
+    return { faviconTags: [], analyticsScriptTags: [] };
+  }
+
+  const indexHtml = readFileSync(indexHtmlPath, 'utf8');
+  return getHeadTagsFromIndexHtml(indexHtml);
+}
+
+function getDevHeadTags(): { faviconTags: string[]; analyticsScriptTags: string[] } {
+  const sourceIndexHtmlPath = path.join(projectRoot, 'index.html');
+  if (!existsSync(sourceIndexHtmlPath)) {
+    return { faviconTags: [], analyticsScriptTags: [] };
+  }
+
+  const sourceIndexHtml = readFileSync(sourceIndexHtmlPath, 'utf8');
+  return getHeadTagsFromIndexHtml(sourceIndexHtml);
 }
 
 function buildLearnPageHtml(
@@ -207,6 +221,42 @@ export default defineConfig({
     {
       name: 'articles-files',
       configureServer(server) {
+        server.middlewares.use((req, res, next) => {
+          const requestPath = req.url ? decodeURIComponent(req.url.split('?')[0]) : '';
+          const learnPathPrefix = '/learn/';
+          if (!requestPath.startsWith(learnPathPrefix)) {
+            next();
+            return;
+          }
+
+          const slug = requestPath.slice(learnPathPrefix.length).replace(/\/$/, '');
+          if (!slug || slug.includes('/')) {
+            next();
+            return;
+          }
+
+          const withBase = (pathname: string) => pathname;
+          const articleFiles = new Set(getArticleFiles());
+          const articlePages = getArticlePages(withBase, articleFiles);
+          const article = articlePages.find((entry) => entry.slug === slug);
+          if (!article) {
+            next();
+            return;
+          }
+
+          const stylesheetHrefs = ['/src/styles.css'];
+          const { faviconTags, analyticsScriptTags } = getDevHeadTags();
+          const html = buildLearnPageHtml(
+            `${article.title} | Learn`,
+            article.html,
+            stylesheetHrefs,
+            faviconTags,
+            analyticsScriptTags
+          );
+          res.setHeader('Content-Type', 'text/html; charset=utf-8');
+          res.end(html);
+        });
+
         server.middlewares.use((req, res, next) => {
           const requestPath = req.url ? decodeURIComponent(req.url.split('?')[0]) : '';
           const filePrefix = '/files/';
