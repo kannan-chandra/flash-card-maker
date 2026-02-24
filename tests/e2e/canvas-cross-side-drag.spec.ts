@@ -61,6 +61,49 @@ async function readActiveTemplate(page: Page): Promise<TemplateShape> {
   return template as TemplateShape;
 }
 
+async function readActiveSetFromWorkspace(page: Page): Promise<{
+  template: TemplateShape;
+  singleSidedTemplate: TemplateShape;
+  doubleSidedTemplate: TemplateShape;
+  doubleSided: boolean;
+}> {
+  return page.evaluate(async () => {
+    function openDb(): Promise<IDBDatabase> {
+      return new Promise((resolve, reject) => {
+        const request = indexedDB.open('keyval-store');
+        request.onerror = () => reject(request.error);
+        request.onsuccess = () => resolve(request.result);
+      });
+    }
+    function readWorkspace(db: IDBDatabase): Promise<unknown> {
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction('keyval', 'readonly');
+        const store = tx.objectStore('keyval');
+        const request = store.get('flashcard-maker/workspace/v2');
+        request.onerror = () => reject(request.error);
+        request.onsuccess = () => resolve(request.result);
+      });
+    }
+    const db = await openDb();
+    const workspace = (await readWorkspace(db)) as {
+      sets: Array<{
+        id: string;
+        template: TemplateShape;
+        singleSidedTemplate: TemplateShape;
+        doubleSidedTemplate: TemplateShape;
+        doubleSided: boolean;
+      }>;
+      activeSetId: string;
+    };
+    db.close();
+    const active = workspace.sets.find((setItem) => setItem.id === workspace.activeSetId);
+    if (!active) {
+      throw new Error('No active set found in workspace');
+    }
+    return active;
+  });
+}
+
 function canvasMidpointForElement(
   template: TemplateShape,
   layout: 'vertical' | 'horizontal',
@@ -392,4 +435,39 @@ test('dragging near center snaps image and text to exact horizontal and vertical
     throw new Error('Missing text1 after center snap');
   }
   expect(text1After.x).toBeCloseTo((textAfter.width - text1.width) / 2, 3);
+});
+
+test('single and double-sided template edits stay isolated across mode switches', async ({ page }) => {
+  await page.setViewportSize({ width: 1400, height: 900 });
+  await page.goto('/');
+  await dismissFirstLaunchGuide(page);
+  await importCsv(page, 'word,subtitle\napple,fruit');
+  await page.locator('tbody tr').first().getByLabel('Word').click();
+
+  const singleBefore = await readActiveTemplate(page);
+  const singleStart = canvasMidpointForElement(singleBefore, 'vertical', singleBefore.image);
+  await dragCanvasPointToCanvasPoint(page, 'vertical', singleStart, { x: 120, y: 120 }, singleBefore);
+  const singleEdited = await readActiveTemplate(page);
+  expect(singleEdited.image.x).not.toBeCloseTo(singleBefore.image.x, 4);
+  expect(singleEdited.image.y).not.toBeCloseTo(singleBefore.image.y, 4);
+
+  await page.getByRole('button', { name: 'Double-sided' }).click();
+  const doubleBefore = await readActiveTemplate(page);
+  const doubleStart = canvasMidpointForElement(doubleBefore, 'vertical', doubleBefore.image);
+  await dragCanvasPointToCanvasPoint(page, 'vertical', doubleStart, { x: 220, y: 700 }, doubleBefore);
+  const doubleEdited = await readActiveTemplate(page);
+  expect(doubleEdited.image.x).not.toBeCloseTo(doubleBefore.image.x, 4);
+  expect(doubleEdited.image.y).not.toBeCloseTo(doubleBefore.image.y, 4);
+
+  await page.getByRole('button', { name: 'Single-sided' }).click();
+  const singleAfterToggleBack = await readActiveTemplate(page);
+  expect(singleAfterToggleBack.image.x).toBeCloseTo(singleEdited.image.x, 4);
+  expect(singleAfterToggleBack.image.y).toBeCloseTo(singleEdited.image.y, 4);
+
+  const activeSet = await readActiveSetFromWorkspace(page);
+  expect(activeSet.doubleSided).toBe(false);
+  expect(activeSet.template.image.x).toBeCloseTo(activeSet.singleSidedTemplate.image.x, 4);
+  expect(activeSet.template.image.y).toBeCloseTo(activeSet.singleSidedTemplate.image.y, 4);
+  expect(activeSet.doubleSidedTemplate.image.x).toBeCloseTo(doubleEdited.image.x, 4);
+  expect(activeSet.doubleSidedTemplate.image.y).toBeCloseTo(doubleEdited.image.y, 4);
 });

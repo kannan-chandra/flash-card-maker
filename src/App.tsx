@@ -14,7 +14,7 @@ import { SetsDrawer } from './components/SetsDrawer';
 import { Modal } from './components/ui/Modal';
 import { OverlayBackdrop } from './components/ui/OverlayBackdrop';
 import { WordListPanel } from './components/WordListPanel';
-import { DEFAULT_TEMPLATE } from './constants/project';
+import { DEFAULT_TEMPLATE, setDoubleSided } from './constants/project';
 import { useImage } from './hooks/useImage';
 import { useAppPixelSnap } from './hooks/useAppPixelSnap';
 import { useWorkspace } from './hooks/useWorkspace';
@@ -906,21 +906,7 @@ export default function App() {
             onMoveSelectedRowDown: () => moveSelectedRowBy(1),
             canMoveSelectedRowUp,
             canMoveSelectedRowDown,
-            onToggleDoubleSided: (doubleSided) =>
-              updateActiveSet((current) => {
-                const currentTemplate = current.template;
-                const nextSingleSidedTemplate = current.doubleSided ? current.singleSidedTemplate : currentTemplate;
-                const nextDoubleSidedTemplate = current.doubleSided ? currentTemplate : current.doubleSidedTemplate;
-                const fallbackSingle = nextSingleSidedTemplate ?? currentTemplate;
-                const fallbackDouble = nextDoubleSidedTemplate ?? currentTemplate;
-                return {
-                  ...current,
-                  doubleSided,
-                  singleSidedTemplate: fallbackSingle,
-                  doubleSidedTemplate: fallbackDouble,
-                  template: doubleSided ? fallbackDouble : fallbackSingle
-                };
-              })
+            onToggleDoubleSided: (doubleSided) => updateActiveSet((current) => setDoubleSided(current, doubleSided))
           }}
         >
           <SelectedCardDetails

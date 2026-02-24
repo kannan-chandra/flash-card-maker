@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { makeNewSet, normalizeSet } from '../constants/project';
+import { makeNewSet, normalizeSet, patchTemplateForMode, patchTextElementForMode } from '../constants/project';
 import { loadWorkspace, saveWorkspace } from '../storage';
 import type { CardTemplate, FlashcardRow, FlashcardSet, TextElement } from '../types';
 
@@ -125,48 +125,14 @@ export function useWorkspace(): UseWorkspaceResult {
 
   const patchTemplate = useCallback(
     (patch: Partial<CardTemplate>) => {
-      updateActiveSet((current) => ({
-        ...current,
-        template: {
-          ...current.template,
-          ...patch
-        },
-        singleSidedTemplate: current.doubleSided
-          ? current.singleSidedTemplate
-          : {
-              ...(current.singleSidedTemplate ?? current.template),
-              ...patch
-            },
-        doubleSidedTemplate: current.doubleSided
-          ? {
-              ...(current.doubleSidedTemplate ?? current.template),
-              ...patch
-            }
-          : current.doubleSidedTemplate
-      }));
+      updateActiveSet((current) => patchTemplateForMode(current, patch));
     },
     [updateActiveSet]
   );
 
   const patchTextElement = useCallback(
     (id: 'text1' | 'text2', patch: Partial<TextElement>) => {
-      updateActiveSet((current) => {
-        const nextTextElements = current.template.textElements.map((item) => (item.id === id ? { ...item, ...patch } : item)) as [
-          TextElement,
-          TextElement
-        ];
-        const nextTemplate = {
-          ...current.template,
-          textElements: nextTextElements
-        };
-
-        return {
-          ...current,
-          template: nextTemplate,
-          singleSidedTemplate: current.doubleSided ? current.singleSidedTemplate : nextTemplate,
-          doubleSidedTemplate: current.doubleSided ? nextTemplate : current.doubleSidedTemplate
-        };
-      });
+      updateActiveSet((current) => patchTextElementForMode(current, id, patch));
     },
     [updateActiveSet]
   );

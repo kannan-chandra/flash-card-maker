@@ -105,6 +105,37 @@ function cloneTemplate(template: CardTemplate): CardTemplate {
   };
 }
 
+function getModeTemplatesWithActiveSynced(
+  setItem: Pick<FlashcardSet, 'template' | 'singleSidedTemplate' | 'doubleSidedTemplate' | 'doubleSided'>
+): { singleSidedTemplate: CardTemplate; doubleSidedTemplate: CardTemplate } {
+  const activeTemplate = normalizeTemplate(setItem.template);
+  const fallbackSingle = setItem.singleSidedTemplate ?? (setItem.doubleSided ? SINGLE_SIDED_DEFAULT_TEMPLATE : activeTemplate);
+  const fallbackDouble = setItem.doubleSidedTemplate ?? (setItem.doubleSided ? activeTemplate : DOUBLE_SIDED_DEFAULT_TEMPLATE);
+
+  let singleSidedTemplate = normalizeTemplate(fallbackSingle);
+  let doubleSidedTemplate = normalizeTemplate(fallbackDouble);
+
+  if (setItem.doubleSided) {
+    doubleSidedTemplate = activeTemplate;
+  } else {
+    singleSidedTemplate = activeTemplate;
+  }
+
+  return { singleSidedTemplate, doubleSidedTemplate };
+}
+
+function withDerivedActiveTemplate(
+  setItem: FlashcardSet,
+  modeTemplates: { singleSidedTemplate: CardTemplate; doubleSidedTemplate: CardTemplate }
+): FlashcardSet {
+  return {
+    ...setItem,
+    singleSidedTemplate: modeTemplates.singleSidedTemplate,
+    doubleSidedTemplate: modeTemplates.doubleSidedTemplate,
+    template: setItem.doubleSided ? modeTemplates.doubleSidedTemplate : modeTemplates.singleSidedTemplate
+  };
+}
+
 export const EMPTY_SET_BASE: Omit<FlashcardSet, 'id' | 'name' | 'createdAt'> = {
   template: cloneTemplate(SINGLE_SIDED_DEFAULT_TEMPLATE),
   singleSidedTemplate: cloneTemplate(SINGLE_SIDED_DEFAULT_TEMPLATE),
@@ -178,21 +209,46 @@ export function normalizeTemplate(template: CardTemplate): CardTemplate {
 }
 
 export function normalizeSet(setItem: FlashcardSet): FlashcardSet {
-  const singleSidedTemplate = normalizeTemplate(
-    setItem.singleSidedTemplate ?? (setItem.doubleSided ? SINGLE_SIDED_DEFAULT_TEMPLATE : setItem.template)
-  );
-  const doubleSidedTemplate = normalizeTemplate(
-    setItem.doubleSidedTemplate ?? (setItem.doubleSided ? setItem.template : DOUBLE_SIDED_DEFAULT_TEMPLATE)
-  );
   const doubleSided = setItem.doubleSided ?? false;
-  const normalizedPreset = setItem.preset === 6 || setItem.preset === 8 ? setItem.preset : 15;
-  return {
+  const normalizedPreset: FlashcardSet['preset'] = setItem.preset === 6 || setItem.preset === 8 ? setItem.preset : 15;
+  const normalizedSpacingMode: FlashcardSet['pdfSpacingMode'] = setItem.pdfSpacingMode === 'easy-cut' ? 'easy-cut' : 'with-margin';
+  const withMode: FlashcardSet = {
     ...setItem,
     doubleSided,
     preset: normalizedPreset,
-    pdfSpacingMode: setItem.pdfSpacingMode === 'easy-cut' ? 'easy-cut' : 'with-margin',
-    singleSidedTemplate,
-    doubleSidedTemplate,
-    template: doubleSided ? doubleSidedTemplate : singleSidedTemplate
+    pdfSpacingMode: normalizedSpacingMode
   };
+  return withDerivedActiveTemplate(withMode, getModeTemplatesWithActiveSynced(withMode));
+}
+
+export function setDoubleSided(setItem: FlashcardSet, doubleSided: boolean): FlashcardSet {
+  const modeTemplates = getModeTemplatesWithActiveSynced(setItem);
+  return withDerivedActiveTemplate({ ...setItem, doubleSided }, modeTemplates);
+}
+
+export function patchTemplateForMode(setItem: FlashcardSet, patch: Partial<CardTemplate>): FlashcardSet {
+  const modeTemplates = getModeTemplatesWithActiveSynced(setItem);
+  if (setItem.doubleSided) {
+    modeTemplates.doubleSidedTemplate = normalizeTemplate({ ...modeTemplates.doubleSidedTemplate, ...patch });
+  } else {
+    modeTemplates.singleSidedTemplate = normalizeTemplate({ ...modeTemplates.singleSidedTemplate, ...patch });
+  }
+  return withDerivedActiveTemplate(setItem, modeTemplates);
+}
+
+export function patchTextElementForMode(setItem: FlashcardSet, id: 'text1' | 'text2', patch: Partial<TextElement>): FlashcardSet {
+  const modeTemplates = getModeTemplatesWithActiveSynced(setItem);
+  const activeTemplate = setItem.doubleSided ? modeTemplates.doubleSidedTemplate : modeTemplates.singleSidedTemplate;
+  const nextTextElements = activeTemplate.textElements.map((item) => (item.id === id ? { ...item, ...patch } : item)) as [TextElement, TextElement];
+  const nextActiveTemplate = normalizeTemplate({
+    ...activeTemplate,
+    textElements: nextTextElements
+  });
+
+  if (setItem.doubleSided) {
+    modeTemplates.doubleSidedTemplate = nextActiveTemplate;
+  } else {
+    modeTemplates.singleSidedTemplate = nextActiveTemplate;
+  }
+  return withDerivedActiveTemplate(setItem, modeTemplates);
 }
