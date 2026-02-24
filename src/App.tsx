@@ -307,23 +307,16 @@ export default function App() {
       animationFrame = window.requestAnimationFrame(alignAppLeft);
     };
 
-    const resizeObserver = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(scheduleSnap) : null;
-    if (resizeObserver) {
-      resizeObserver.observe(document.body);
-      resizeObserver.observe(node);
-    }
-
     window.addEventListener('resize', scheduleSnap);
     scheduleSnap();
 
     return () => {
       window.removeEventListener('resize', scheduleSnap);
-      resizeObserver?.disconnect();
       if (animationFrame !== null) {
         window.cancelAnimationFrame(animationFrame);
       }
     };
-  }, [loading, project?.id, headerActionsOpen, setsMenuOpen]);
+  }, [loading, project?.id]);
 
   function showEmojiBulkPrompt(rowId: string) {
     if (emojiBulkPromptTimerRef.current !== null) {
