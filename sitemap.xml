@@ -1,11 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>https://swiftflashcards.com/</loc></url>
-  <url><loc>https://swiftflashcards.com/learn</loc></url>
   <url><loc>https://swiftflashcards.com/learn/getting-started</loc></url>
   <url><loc>https://swiftflashcards.com/learn/make-flashcards-at-home</loc></url>
   <url><loc>https://swiftflashcards.com/learn/teach-toddler-to-read-5-minutes</loc></url>
-  <url><loc>https://swiftflashcards.com/files/.DS_Store</loc></url>
   <url><loc>https://swiftflashcards.com/files/Letter-Sounds-swiftflashcards.com.pdf</loc></url>
   <url><loc>https://swiftflashcards.com/files/sample-download.txt</loc></url>
 </urlset>
