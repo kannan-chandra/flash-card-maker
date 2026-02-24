@@ -65,20 +65,36 @@ main {
   top: 0;
   width: 42px;
   height: 42px;
-  border: 1px solid transparent;
+  border: 1px solid rgba(71, 85, 105, 0.45);
   border-radius: 8px;
-  background: var(--surface-header-cta);
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.68), rgba(226, 232, 240, 0.56));
   padding: 8px;
   display: inline-flex;
   flex-direction: column;
   align-items: stretch;
   justify-content: center;
   gap: 5px;
-  color: var(--color-slate-800);
+  color: #24404a;
+  box-shadow: 0 6px 12px rgba(15, 23, 42, 0.08);
+  transition: border-color 140ms ease, background-color 140ms ease, color 140ms ease, box-shadow 140ms ease;
 }
 
 .hamburger-btn:hover {
-  border-color: var(--color-teal-strong);
+  border-color: rgba(15, 118, 110, 0.72);
+  background: linear-gradient(160deg, rgba(240, 249, 255, 0.86), rgba(226, 232, 240, 0.72));
+  color: #1f3a45;
+}
+
+.hamburger-btn[aria-expanded='true'] {
+  border-color: rgba(125, 211, 252, 0.95);
+  background: linear-gradient(160deg, rgba(36, 64, 74, 0.9), rgba(30, 58, 138, 0.66));
+  color: #e0f2fe;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.22);
+}
+
+.hamburger-btn:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
 }
 
 .hamburger-btn span {
