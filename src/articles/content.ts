@@ -13,10 +13,7 @@ const articleModules = import.meta.glob('../../articles/*.md', {
   import: 'default'
 }) as Record<string, string>;
 
-marked.setOptions({
-  gfm: true,
-  breaks: true
-});
+const ARTICLE_FILES_ROUTE_PREFIX = `${import.meta.env.BASE_URL}files/`;
 
 function slugToTitle(slug: string): string {
   return slug
@@ -31,6 +28,37 @@ function extractTitle(markdown: string, slug: string): string {
   return firstHeading || slugToTitle(slug);
 }
 
+function rewriteArticleFileHref(href: string): string {
+  if (!href || href.startsWith('#') || href.includes('://')) {
+    return href;
+  }
+  if (href.startsWith('/') || href.startsWith('./') || href.startsWith('../')) {
+    return href;
+  }
+  if (href.startsWith('mailto:') || href.startsWith('tel:')) {
+    return href;
+  }
+  if (href.includes('/')) {
+    return href;
+  }
+
+  const [filename, suffix = ''] = href.split(/([?#].*)/, 2);
+  const encodedFilename = encodeURIComponent(filename);
+  return `${ARTICLE_FILES_ROUTE_PREFIX}${encodedFilename}${suffix}`;
+}
+
+function renderArticleMarkdown(markdown: string): string {
+  return marked.parse(markdown, {
+    gfm: true,
+    breaks: true,
+    walkTokens(token) {
+      if (token.type === 'link') {
+        token.href = rewriteArticleFileHref(token.href);
+      }
+    }
+  }) as string;
+}
+
 function buildArticles(): Article[] {
   const articles = Object.entries(articleModules)
     .map(([path, markdown]) => {
@@ -43,7 +71,7 @@ function buildArticles(): Article[] {
         slug,
         title,
         markdown,
-        html: marked.parse(markdown) as string
+        html: renderArticleMarkdown(markdown)
       };
     })
     .filter((article): article is Article => article !== null)

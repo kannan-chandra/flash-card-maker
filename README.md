@@ -66,6 +66,10 @@ npm run build
 - Examples:
   - `articles/getting-started.md` -> `/learn/getting-started`
   - `articles/my-first-export.md` -> `/learn/my-first-export`
+- Optional article downloads:
+  - Put files in `articles/files`.
+  - Link using filename only in markdown, e.g. `[worksheet.pdf](worksheet.pdf)`.
+  - Links are rewritten to `/files/<filename>` and copied into the built site.
 
 ## Browser E2E Test
 ```bash

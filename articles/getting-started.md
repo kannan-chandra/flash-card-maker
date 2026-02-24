@@ -21,3 +21,9 @@ A paragraph with **bold text** and `inline code`.
 - Bullet one
 - Bullet two
 ```
+
+## File links
+
+Put downloadable article files in `articles/files` and link by filename.
+
+- [sample-download.txt](sample-download.txt)
