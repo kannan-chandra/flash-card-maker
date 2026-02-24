@@ -29,4 +29,15 @@ test('learn routes behave correctly in dev and production', async ({ page }) => 
   const response = await page.request.get(downloadUrl.toString());
   expect(response.ok()).toBeTruthy();
   await expect(response.text()).resolves.toContain('sample downloadable file');
+
+  if (isProdMode) {
+    const sitemapResponse = await page.request.get('/sitemap.xml');
+    expect(sitemapResponse.ok()).toBeTruthy();
+    const sitemapXml = await sitemapResponse.text();
+
+    expect(sitemapXml).toContain('<urlset');
+    expect(sitemapXml).toContain('/learn/getting-started</loc>');
+    expect(sitemapXml).toContain('/files/sample-download.txt</loc>');
+    expect(sitemapXml).toContain('/files/Letter-Sounds-swiftflashcards.com.pdf</loc>');
+  }
 });
