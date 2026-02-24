@@ -113,6 +113,58 @@ async function dragCanvasPointToCanvasPoint(
   await page.mouse.up();
 }
 
+function canvasPointToScreenPoint(
+  stageBox: { x: number; y: number; width: number; height: number },
+  layout: 'vertical' | 'horizontal',
+  template: TemplateShape,
+  point: { x: number; y: number }
+) {
+  const contentWidth = layout === 'horizontal' ? template.width * 2 : template.width;
+  const contentHeight = layout === 'horizontal' ? template.height : template.height * 2;
+  return {
+    x: stageBox.x + (point.x / contentWidth) * stageBox.width,
+    y: stageBox.y + (point.y / contentHeight) * stageBox.height
+  };
+}
+
+async function clickCanvasPoint(page: Page, layout: 'vertical' | 'horizontal', template: TemplateShape, point: { x: number; y: number }) {
+  const stage = page.locator('.stage-canvas');
+  const box = await stage.boundingBox();
+  expect(box).toBeTruthy();
+  if (!box) {
+    return;
+  }
+  const screen = canvasPointToScreenPoint(box, layout, template, point);
+  await page.mouse.click(screen.x, screen.y);
+}
+
+async function resizeElementFromBottomRightHandle(
+  page: Page,
+  layout: 'vertical' | 'horizontal',
+  template: TemplateShape,
+  element: { side: 1 | 2; x: number; y: number; width: number; height: number },
+  deltaX: number,
+  deltaY: number
+) {
+  const stage = page.locator('.stage-canvas');
+  const box = await stage.boundingBox();
+  expect(box).toBeTruthy();
+  if (!box) {
+    return;
+  }
+  const sideOffsetX = layout === 'horizontal' && element.side === 2 ? template.width : 0;
+  const sideOffsetY = layout === 'vertical' && element.side === 2 ? template.height : 0;
+  const handlePoint = {
+    x: element.x + element.width + sideOffsetX,
+    y: element.y + element.height + sideOffsetY
+  };
+  const handleScreen = canvasPointToScreenPoint(box, layout, template, handlePoint);
+  await page.mouse.move(handleScreen.x, handleScreen.y);
+  await page.mouse.down();
+  await page.mouse.move(handleScreen.x + deltaX, handleScreen.y + deltaY, { steps: 16 });
+  await page.mouse.up();
+}
+
 async function dragCanvasPointFarOutside(
   page: Page,
   layout: 'vertical' | 'horizontal',
@@ -235,4 +287,54 @@ test('image and text midpoints stay inside canvas when dragged far outside bound
     throw new Error('Missing text1 after drag');
   }
   expectMidpointInsideCanvas(afterText, 'horizontal', text1After);
+});
+
+test('selected image and text boxes can be resized from canvas handles', async ({ page }) => {
+  await setupDoubleSidedCanvas(page, 1400, 900);
+  const layout: 'vertical' = 'vertical';
+
+  const beforeImage = await readActiveTemplate(page);
+  const imageMid = canvasMidpointForElement(beforeImage, layout, beforeImage.image);
+  await clickCanvasPoint(page, layout, beforeImage, imageMid);
+  await resizeElementFromBottomRightHandle(page, layout, beforeImage, beforeImage.image, 40, 30);
+
+  await expect
+    .poll(async () => {
+      const next = await readActiveTemplate(page);
+      return { width: next.image.width, height: next.image.height };
+    })
+    .toMatchObject({
+      width: expect.any(Number),
+      height: expect.any(Number)
+    });
+  const afterImage = await readActiveTemplate(page);
+  expect(afterImage.image.width).toBeGreaterThan(beforeImage.image.width);
+  expect(afterImage.image.height).toBeGreaterThan(beforeImage.image.height);
+
+  const beforeText = afterImage;
+  const text1 = beforeText.textElements.find((item) => item.id === 'text1');
+  if (!text1) {
+    throw new Error('Missing text1');
+  }
+  const textMid = canvasMidpointForElement(beforeText, layout, text1);
+  await clickCanvasPoint(page, layout, beforeText, textMid);
+  await resizeElementFromBottomRightHandle(page, layout, beforeText, text1, 36, 24);
+
+  await expect
+    .poll(async () => {
+      const next = await readActiveTemplate(page);
+      const resized = next.textElements.find((item) => item.id === 'text1');
+      return { width: resized?.width ?? 0, height: resized?.height ?? 0 };
+    })
+    .toMatchObject({
+      width: expect.any(Number),
+      height: expect.any(Number)
+    });
+  const afterText = await readActiveTemplate(page);
+  const text1After = afterText.textElements.find((item) => item.id === 'text1');
+  if (!text1After) {
+    throw new Error('Missing text1 after resize');
+  }
+  expect(text1After.width).toBeGreaterThan(text1.width);
+  expect(text1After.height).toBeGreaterThan(text1.height);
 });

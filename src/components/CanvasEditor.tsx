@@ -263,6 +263,9 @@ export function CanvasEditor(props: CanvasEditorProps) {
       if (!(target instanceof Element)) {
         return;
       }
+      if (editorPanelRef.current?.contains(target)) {
+        return;
+      }
       if (target.closest('.floating-inspector-panel')) {
         return;
       }
