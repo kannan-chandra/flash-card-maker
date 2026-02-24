@@ -25,9 +25,19 @@ export function useWorkspace(): UseWorkspaceResult {
   const [activeSetId, setActiveSetId] = useState<string>('');
   const [loading, setLoading] = useState(true);
 
+  const normalizedActiveSetId = useMemo(() => {
+    if (!sets.length) {
+      return '';
+    }
+    if (sets.some((setItem) => setItem.id === activeSetId)) {
+      return activeSetId;
+    }
+    return sets[0].id;
+  }, [activeSetId, sets]);
+
   const project = useMemo(() => {
-    return sets.find((setItem) => setItem.id === activeSetId) ?? sets[0] ?? null;
-  }, [sets, activeSetId]);
+    return sets.find((setItem) => setItem.id === normalizedActiveSetId) ?? null;
+  }, [normalizedActiveSetId, sets]);
 
   useEffect(() => {
     let cancelled = false;
@@ -37,8 +47,9 @@ export function useWorkspace(): UseWorkspaceResult {
       }
       if (saved?.sets.length) {
         const normalizedSets = saved.sets.map(normalizeSet);
+        const nextActiveSetId = normalizedSets.some((setItem) => setItem.id === saved.activeSetId) ? saved.activeSetId : normalizedSets[0].id;
         setSets(normalizedSets);
-        setActiveSetId(saved.activeSetId);
+        setActiveSetId(nextActiveSetId);
       } else {
         const firstSet = makeNewSet('Set 1', 1);
         setSets([firstSet]);
@@ -52,29 +63,29 @@ export function useWorkspace(): UseWorkspaceResult {
   }, []);
 
   useEffect(() => {
-    if (loading || !sets.length || !activeSetId) {
+    if (loading || !sets.length || !normalizedActiveSetId) {
       return;
     }
-    const nextSets = sets.map((item) => (item.id === activeSetId ? { ...item, updatedAt: Date.now() } : item));
+    const nextSets = sets.map((item) => (item.id === normalizedActiveSetId ? { ...item, updatedAt: Date.now() } : item));
     saveWorkspace({
       sets: nextSets,
-      activeSetId,
+      activeSetId: normalizedActiveSetId,
       updatedAt: Date.now()
     });
-  }, [sets, activeSetId, loading]);
+  }, [sets, normalizedActiveSetId, loading]);
 
   const updateActiveSet = useCallback(
     (updater: (current: FlashcardSet) => FlashcardSet) => {
       setSets((currentSets) =>
         currentSets.map((item) => {
-          if (item.id !== activeSetId) {
+          if (item.id !== normalizedActiveSetId) {
             return item;
           }
           return normalizeSet({ ...updater(item), updatedAt: Date.now() });
         })
       );
     },
-    [activeSetId]
+    [normalizedActiveSetId]
   );
 
   const createSet = useCallback(
@@ -95,13 +106,13 @@ export function useWorkspace(): UseWorkspaceResult {
           setActiveSetId(fallback.id);
           return [fallback];
         }
-        if (setId === activeSetId) {
+        if (setId === normalizedActiveSetId) {
           setActiveSetId(remaining[0].id);
         }
         return remaining;
       });
     },
-    [activeSetId]
+    [normalizedActiveSetId]
   );
 
   const renameSet = useCallback((setId: string, name: string) => {
@@ -194,7 +205,7 @@ export function useWorkspace(): UseWorkspaceResult {
 
   return {
     sets,
-    activeSetId,
+    activeSetId: normalizedActiveSetId,
     loading,
     project,
     setActiveSetId,
