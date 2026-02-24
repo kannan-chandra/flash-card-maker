@@ -42,5 +42,6 @@ test('learn routes behave correctly in dev and production', async ({ page }) => 
     expect(sitemapXml).toContain('/learn/getting-started</loc>');
     expect(sitemapXml).toContain('/files/sample-download.txt</loc>');
     expect(sitemapXml).toContain('/files/Letter-Sounds-swiftflashcards.com.pdf</loc>');
+    expect(sitemapXml).not.toContain('.DS_Store');
   }
 });

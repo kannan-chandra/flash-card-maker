@@ -121,7 +121,9 @@ function getArticleFiles(): string[] {
     return [];
   }
 
-  return readdirSync(articlesFilesDir).filter(Boolean).sort();
+  return readdirSync(articlesFilesDir)
+    .filter((filename) => Boolean(filename) && !filename.startsWith('.'))
+    .sort();
 }
 
 function buildSitemapXml(baseUrl: string, urls: string[]): string {
