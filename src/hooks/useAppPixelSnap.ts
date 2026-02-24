@@ -4,18 +4,12 @@ interface UseAppPixelSnapOptions {
   maxWidth: number;
 }
 
-const ENABLE_APP_PIXEL_SNAP = false;
-
 export function useAppPixelSnap(options: UseAppPixelSnapOptions): RefCallback<HTMLDivElement> {
   const { maxWidth } = options;
   const [node, setNode] = useState<HTMLDivElement | null>(null);
 
   useLayoutEffect(() => {
     if (!node) {
-      return;
-    }
-    if (!ENABLE_APP_PIXEL_SNAP) {
-      node.style.removeProperty('--app-left');
       return;
     }
 
