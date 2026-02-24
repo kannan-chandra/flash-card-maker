@@ -78,7 +78,7 @@ main {
 }
 
 .hamburger-btn:hover {
-  border-color: var(--color-success);
+  border-color: var(--color-teal-strong);
 }
 
 .hamburger-btn span {
@@ -174,7 +174,7 @@ main {
   background: transparent;
   padding: 4px 12px;
   white-space: nowrap;
-  text-decoration-color: var(--color-success);
+  text-decoration-color: var(--color-teal-strong);
   text-underline-offset: 2px;
 }
 
@@ -192,7 +192,7 @@ main {
 }
 
 .header-action-cta:hover {
-  border-color: var(--color-success);
+  border-color: var(--color-teal-strong);
 }
 
 .menu-backdrop {
