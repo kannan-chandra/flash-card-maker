@@ -244,7 +244,7 @@ export default defineConfig({
             return;
           }
 
-          const stylesheetHrefs = ['/src/styles.css'];
+          const stylesheetHrefs = ['/src/styles.css', '/src/articles/articles.css'];
           const { faviconTags, analyticsScriptTags } = getDevHeadTags();
           const html = buildLearnPageHtml(
             `${article.title} | Learn`,
