@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import tamilFontUrl from '@fontsource/noto-sans-tamil/files/noto-sans-tamil-tamil-400-normal.woff?url';
 import siteLogoUrl from './assets/logo-header.png';
 import '@fontsource/inter/300.css';
@@ -283,17 +283,19 @@ export default function App() {
     lastTrackedSetIdRef.current = project.id;
   }, [loading, project]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const node = appRef.current;
     if (!node) {
       return;
     }
 
     let animationFrame: number | null = null;
-    const snapAppToWholePixel = () => {
+    const snapAppToDevicePixel = () => {
       animationFrame = null;
       const left = node.getBoundingClientRect().left;
-      const correctionX = Math.round(left) - left;
+      const devicePixelRatio = Math.max(window.devicePixelRatio || 1, 1);
+      const snappedLeft = Math.round(left * devicePixelRatio) / devicePixelRatio;
+      const correctionX = snappedLeft - left;
       node.style.setProperty('--app-snap-left', `${correctionX}px`);
     };
 
@@ -301,7 +303,7 @@ export default function App() {
       if (animationFrame !== null) {
         window.cancelAnimationFrame(animationFrame);
       }
-      animationFrame = window.requestAnimationFrame(snapAppToWholePixel);
+      animationFrame = window.requestAnimationFrame(snapAppToDevicePixel);
     };
 
     const resizeObserver = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(scheduleSnap) : null;
