@@ -1,8 +1,16 @@
 import { expect, test } from '@playwright/test';
 
+const isProdMode = process.env.E2E_ENV === 'prod';
+
 test('article pages load and support file + article links', async ({ page }) => {
   await page.goto('/learn/teach-toddler-to-read-5-minutes');
   await expect(page.getByRole('heading', { name: 'Teach Your Toddler to Read in 5 Minutes a Day', level: 1 })).toBeVisible();
+
+  if (isProdMode) {
+    const stylesheets = page.locator('link[rel="stylesheet"]');
+    await expect(stylesheets).toHaveCount(1);
+    await expect(stylesheets.first()).toHaveAttribute('href', /\/assets\/index-.*\.css$/);
+  }
 
   const pdfLink = page.getByRole('link', { name: 'here is a free printable PDF' });
   await expect(pdfLink).toBeVisible();

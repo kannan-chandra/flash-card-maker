@@ -133,36 +133,40 @@ function buildSitemapXml(baseUrl: string, urls: string[]): string {
   return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${rows}\n</urlset>\n`;
 }
 
-function buildLearnPageHtml(title: string, bodyContent: string): string {
+function getBuiltStylesheetHrefs(outDir: string): string[] {
+  const indexHtmlPath = path.join(outDir, 'index.html');
+  if (!existsSync(indexHtmlPath)) {
+    return [];
+  }
+
+  const indexHtml = readFileSync(indexHtmlPath, 'utf8');
+  const hrefs: string[] = [];
+  const regex = /<link[^>]*rel=["']stylesheet["'][^>]*href=["']([^"']+)["'][^>]*>/g;
+  let match: RegExpExecArray | null;
+  while ((match = regex.exec(indexHtml)) !== null) {
+    hrefs.push(match[1]);
+  }
+  return hrefs;
+}
+
+function buildLearnPageHtml(title: string, articleHtml: string, stylesheetHrefs: string[]): string {
+  const stylesheetLinks = stylesheetHrefs.map((href) => `    <link rel="stylesheet" href="${href}" />`).join('\n');
   return `<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>${title}</title>
-    <style>
-      :root { color-scheme: light; }
-      body { margin: 0; font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif; background: #f7f9fb; color: #16202a; }
-      .shell { max-width: 860px; margin: 0 auto; padding: 32px 20px 64px; }
-      .content { background: #fff; border: 1px solid #d9e2ea; border-radius: 16px; padding: 28px; box-shadow: 0 8px 30px rgba(0,0,0,0.04); }
-      h1, h2, h3 { line-height: 1.2; color: #0f172a; }
-      h1 { margin-top: 0; font-size: 2rem; }
-      h2 { margin-top: 2rem; font-size: 1.5rem; }
-      p, li { line-height: 1.7; }
-      a { color: #0b5cd6; text-decoration: none; }
-      a:hover { text-decoration: underline; }
-      ul { padding-left: 20px; }
-      code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
-      pre { overflow: auto; background: #f3f7fb; padding: 12px; border-radius: 8px; }
-      hr { border: 0; border-top: 1px solid #e2e8f0; margin: 24px 0; }
-    </style>
+${stylesheetLinks}
   </head>
-  <body>
-    <main class="shell">
-      <article class="content">
-        ${bodyContent}
-      </article>
-    </main>
+  <body class="learn-route">
+    <div class="articles-page">
+      <div class="articles-shell">
+        <main class="articles-main">
+          <article class="article-content">${articleHtml}</article>
+        </main>
+      </div>
+    </div>
   </body>
 </html>
 `;
@@ -212,6 +216,7 @@ export default defineConfig({
         const withBase = (pathname: string) => `${normalizedBasePath}${pathname}`.replace(/\/{2,}/g, '/');
         const articleFiles = new Set(getArticleFiles());
         const articlePages = getArticlePages(withBase, articleFiles);
+        const stylesheetHrefs = getBuiltStylesheetHrefs(outDir);
 
         const learnDir = path.join(outDir, 'learn');
         mkdirSync(learnDir, { recursive: true });
@@ -219,7 +224,11 @@ export default defineConfig({
         articlePages.forEach((article) => {
           const articleDir = path.join(learnDir, article.slug);
           mkdirSync(articleDir, { recursive: true });
-          writeFileSync(path.join(articleDir, 'index.html'), buildLearnPageHtml(`${article.title} | Learn`, article.html), 'utf8');
+          writeFileSync(
+            path.join(articleDir, 'index.html'),
+            buildLearnPageHtml(`${article.title} | Learn`, article.html, stylesheetHrefs),
+            'utf8'
+          );
         });
 
         const articleUrls = articlePages.map((article) => withBase(`/learn/${article.slug}`));
