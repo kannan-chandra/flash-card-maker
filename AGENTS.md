@@ -15,3 +15,12 @@ When a prompt reports a bug (the word `bug` is mentioned), follow this workflow:
 
 ## Bug References
 See `BUGS.md` for historical bug references (repro tests + fix commits).
+
+## Test Failure Protocol (Large Changes)
+When tests fail after a large or architectural change:
+
+1. Treat failing tests as the source of truth for intended behavior.
+2. Do not default to changing tests just to make them pass.
+3. First report the failure clearly (which test failed and why).
+4. If test updates might be needed, ask for explicit confirmation before changing expectations/assertions.
+5. Only change tests after confirmation.
