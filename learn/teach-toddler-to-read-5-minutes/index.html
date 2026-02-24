@@ -11,7 +11,10 @@
       function gtag(){dataLayer.push(arguments);}
       gtag('js', new Date());
 
-      gtag('config', 'G-XTYE3K6B5Y');
+      const isLocalDevHost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+      if (!isLocalDevHost) {
+        gtag('config', 'G-XTYE3K6B5Y');
+      }
     </script>
     <link rel="stylesheet" href="/assets/index-CMPXsMl4.css" />
   </head>
