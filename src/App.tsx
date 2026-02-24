@@ -290,20 +290,21 @@ export default function App() {
     }
 
     let animationFrame: number | null = null;
-    const snapAppToDevicePixel = () => {
+    const alignAppLeft = () => {
       animationFrame = null;
-      const left = node.getBoundingClientRect().left;
       const devicePixelRatio = Math.max(window.devicePixelRatio || 1, 1);
-      const snappedLeft = Math.round(left * devicePixelRatio) / devicePixelRatio;
-      const correctionX = snappedLeft - left;
-      node.style.setProperty('--app-snap-left', `${correctionX}px`);
+      const viewportWidth = document.documentElement.clientWidth;
+      const appWidth = Math.min(1400, viewportWidth);
+      const centeredLeft = Math.max((viewportWidth - appWidth) / 2, 0);
+      const snappedLeft = Math.round(centeredLeft * devicePixelRatio) / devicePixelRatio;
+      node.style.setProperty('--app-left', `${snappedLeft}px`);
     };
 
     const scheduleSnap = () => {
       if (animationFrame !== null) {
         window.cancelAnimationFrame(animationFrame);
       }
-      animationFrame = window.requestAnimationFrame(snapAppToDevicePixel);
+      animationFrame = window.requestAnimationFrame(alignAppLeft);
     };
 
     const resizeObserver = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(scheduleSnap) : null;

@@ -20,7 +20,8 @@ body.app-route {
 
 .app {
   max-width: 1400px;
-  margin: 0 auto;
+  width: min(1400px, 100%);
+  margin: 0;
   padding: var(--app-gutter);
   height: 100vh;
   height: 100dvh;
@@ -28,7 +29,7 @@ body.app-route {
   grid-template-rows: auto 1fr;
   overflow: hidden;
   position: relative;
-  left: var(--app-snap-left, 0px);
+  left: var(--app-left, 0px);
 }
 
 header {
