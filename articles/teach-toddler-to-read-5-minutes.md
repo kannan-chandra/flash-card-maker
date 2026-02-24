@@ -22,7 +22,7 @@ When a child knows that:
 
 They are building the foundation for reading.
 
-Mastering letter sounds is the first and most important step.
+Mastering letter sounds (the foundation of phonics) is the first and most important step.
 
 And it can be taught in tiny daily sessions.
 
@@ -68,9 +68,9 @@ Show several letters your child has practiced before.
 
 Ask, “What sound is this?”
 
-The letters that have a strong and immediate recall, praise them and put the letter aside.
+If the sound is strong and immediate, praise them and set that letter aside.
 
-The ones which they are hesitant about or don't know, add to today's pile.
+If they hesitate or don’t know it, add it to today’s pile.
 
 Once you hit three letters in today's pile, you're done!
 
@@ -121,21 +121,15 @@ Making practice routine keeps it predictable for both you and the child. When it
 
 Reviewing strong sounds every day builds confidence.
 
-At the start of each session, your child is answering correctly.
-They feel capable.
-They feel successful.
+At the start of each session, your child is answering correctly. They feel capable. They feel successful. That confidence carries into the rest of the lesson.
 
-That confidence carries into the rest of the lesson.
+When you identify weak letters, you narrow your focus. 
 
-When you identify weak letters, you narrow your focus.
-
-Instead of teaching everything, you concentrate on just three sounds that need attention.
-
-That means your child gets a few minutes of highly targeted practice.
+Instead of teaching everything, you concentrate on just three sounds that need attention. That means your child gets a few minutes of highly targeted practice.
 
 Five minutes may not sound like much.
 
-But these are five customized, one-on-one minutes. That's more than a child receives in a typical classroom. 
+But these are five personalized, one-on-one minutes. That's more than a child receives in a typical classroom. 
 
 Keeping it short also protects momentum. You get in and out before the child has a chance to get bored.
 
@@ -145,7 +139,7 @@ You just have to start.
 
 ---
 
-To help you begin, [here is a free PDF](Letter-Sounds-swiftflashcards.com.pdf) of beginner letter flashcards with simple sound guides on the back for parents.
+To help you start today, [here is a free printable PDF](Letter-Sounds-swiftflashcards.com.pdf) of beginner letter flashcards with simple sound guides on the back for parents.
 
 
 
@@ -153,5 +147,5 @@ The front of each card is a letter (in both uppercase and lowercase). That side 
 
 The back is a reference word for you to get the correct primary sound for each word.
 
-If you would like to create your own custom flashcards, use **swiftflashcards.com** to create exactly what your child needs.
+If you would like to create your own custom flashcards, use [**swiftflashcards.com**](swiftflashcards.com) to create exactly what your child needs.
 
