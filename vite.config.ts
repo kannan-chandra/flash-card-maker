@@ -214,18 +214,6 @@ export default defineConfig({
         const learnDir = path.join(outDir, 'learn');
         mkdirSync(learnDir, { recursive: true });
 
-        const listMarkup = `
-          <h1>Learn</h1>
-          <p>Browse all articles.</p>
-          <ul>
-            ${articlePages
-              .sort((a, b) => a.title.localeCompare(b.title))
-              .map((article) => `<li><a href="${withBase(`/learn/${article.slug}`)}">${article.title}</a></li>`)
-              .join('\n')}
-          </ul>
-        `;
-        writeFileSync(path.join(learnDir, 'index.html'), buildLearnPageHtml('Learn', listMarkup), 'utf8');
-
         articlePages.forEach((article) => {
           const articleDir = path.join(learnDir, article.slug);
           mkdirSync(articleDir, { recursive: true });
@@ -234,7 +222,7 @@ export default defineConfig({
 
         const articleUrls = articlePages.map((article) => withBase(`/learn/${article.slug}`));
         const fileUrls = Array.from(articleFiles).map((filename) => withBase(`/files/${encodeURIComponent(filename)}`));
-        const uniqueUrls = Array.from(new Set([withBase('/'), withBase('/learn'), ...articleUrls, ...fileUrls]));
+        const uniqueUrls = Array.from(new Set([withBase('/'), ...articleUrls, ...fileUrls]));
         const sitemapXml = buildSitemapXml(baseUrl, uniqueUrls);
         const sitemapOutputPath = path.resolve(projectRoot, 'dist/sitemap.xml');
         writeFileSync(sitemapOutputPath, sitemapXml, 'utf8');
