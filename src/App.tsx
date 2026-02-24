@@ -323,7 +323,7 @@ export default function App() {
         window.cancelAnimationFrame(animationFrame);
       }
     };
-  }, [headerActionsOpen, setsMenuOpen]);
+  }, [loading, project?.id, headerActionsOpen, setsMenuOpen]);
 
   function showEmojiBulkPrompt(rowId: string) {
     if (emojiBulkPromptTimerRef.current !== null) {
