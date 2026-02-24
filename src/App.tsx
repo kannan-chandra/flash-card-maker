@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import tamilFontUrl from '@fontsource/noto-sans-tamil/files/noto-sans-tamil-tamil-400-normal.woff?url';
 import siteLogoUrl from './assets/logo-header.png';
 import '@fontsource/inter/300.css';
@@ -16,6 +16,7 @@ import { OverlayBackdrop } from './components/ui/OverlayBackdrop';
 import { WordListPanel } from './components/WordListPanel';
 import { DEFAULT_TEMPLATE } from './constants/project';
 import { useImage } from './hooks/useImage';
+import { useAppPixelSnap } from './hooks/useAppPixelSnap';
 import { useWorkspace } from './hooks/useWorkspace';
 import { generatePdfBytes } from './services/pdfExport';
 import { trackEvent } from './services/analytics';
@@ -68,7 +69,7 @@ export default function App() {
   const canvasDirtyRef = useRef<Map<CanvasElementType, Set<CanvasChangeType>>>(new Map());
   const canvasSessionStartedAtRef = useRef<number | null>(null);
   const canvasIdleTimerRef = useRef<number | null>(null);
-  const appRef = useRef<HTMLDivElement>(null);
+  const appRef = useAppPixelSnap({ maxWidth: 1400 });
 
   const selectedPersistedRow = useMemo(() => {
     if (!project) {
@@ -282,41 +283,6 @@ export default function App() {
     });
     lastTrackedSetIdRef.current = project.id;
   }, [loading, project]);
-
-  useLayoutEffect(() => {
-    const node = appRef.current;
-    if (!node) {
-      return;
-    }
-
-    let animationFrame: number | null = null;
-    const alignAppLeft = () => {
-      animationFrame = null;
-      const devicePixelRatio = Math.max(window.devicePixelRatio || 1, 1);
-      const viewportWidth = document.documentElement.clientWidth;
-      const appWidth = Math.min(1400, viewportWidth);
-      const centeredLeft = Math.max((viewportWidth - appWidth) / 2, 0);
-      const snappedLeft = Math.round(centeredLeft * devicePixelRatio) / devicePixelRatio;
-      node.style.setProperty('--app-left', `${snappedLeft}px`);
-    };
-
-    const scheduleSnap = () => {
-      if (animationFrame !== null) {
-        window.cancelAnimationFrame(animationFrame);
-      }
-      animationFrame = window.requestAnimationFrame(alignAppLeft);
-    };
-
-    window.addEventListener('resize', scheduleSnap);
-    scheduleSnap();
-
-    return () => {
-      window.removeEventListener('resize', scheduleSnap);
-      if (animationFrame !== null) {
-        window.cancelAnimationFrame(animationFrame);
-      }
-    };
-  }, [loading, project?.id]);
 
   function showEmojiBulkPrompt(rowId: string) {
     if (emojiBulkPromptTimerRef.current !== null) {
