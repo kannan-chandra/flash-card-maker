@@ -149,14 +149,43 @@ function getBuiltStylesheetHrefs(outDir: string): string[] {
   return hrefs;
 }
 
-function buildLearnPageHtml(title: string, articleHtml: string, stylesheetHrefs: string[]): string {
+function getBuiltHeadTags(outDir: string): { faviconTags: string[]; analyticsScriptTags: string[] } {
+  const indexHtmlPath = path.join(outDir, 'index.html');
+  if (!existsSync(indexHtmlPath)) {
+    return { faviconTags: [], analyticsScriptTags: [] };
+  }
+
+  const indexHtml = readFileSync(indexHtmlPath, 'utf8');
+  const faviconTags = indexHtml.match(/<link[^>]*rel=["']icon["'][^>]*>/g) ?? [];
+  const externalGtagScriptTags =
+    indexHtml.match(/<script[^>]*src=["']https:\/\/www\.googletagmanager\.com\/gtag\/js[^"']*["'][^>]*>\s*<\/script>/g) ?? [];
+  const inlineGtagScriptTags =
+    indexHtml.match(/<script>\s*[\s\S]*?gtag\('config'[\s\S]*?<\/script>/g) ?? [];
+
+  return {
+    faviconTags,
+    analyticsScriptTags: [...externalGtagScriptTags, ...inlineGtagScriptTags]
+  };
+}
+
+function buildLearnPageHtml(
+  title: string,
+  articleHtml: string,
+  stylesheetHrefs: string[],
+  faviconTags: string[],
+  analyticsScriptTags: string[]
+): string {
   const stylesheetLinks = stylesheetHrefs.map((href) => `    <link rel="stylesheet" href="${href}" />`).join('\n');
+  const faviconLinks = faviconTags.map((tag) => `    ${tag}`).join('\n');
+  const analyticsScripts = analyticsScriptTags.map((tag) => `    ${tag}`).join('\n');
   return `<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>${title}</title>
+${faviconLinks}
+${analyticsScripts}
 ${stylesheetLinks}
   </head>
   <body class="learn-route">
@@ -217,6 +246,7 @@ export default defineConfig({
         const articleFiles = new Set(getArticleFiles());
         const articlePages = getArticlePages(withBase, articleFiles);
         const stylesheetHrefs = getBuiltStylesheetHrefs(outDir);
+        const { faviconTags, analyticsScriptTags } = getBuiltHeadTags(outDir);
 
         const learnDir = path.join(outDir, 'learn');
         mkdirSync(learnDir, { recursive: true });
@@ -226,7 +256,7 @@ export default defineConfig({
           mkdirSync(articleDir, { recursive: true });
           writeFileSync(
             path.join(articleDir, 'index.html'),
-            buildLearnPageHtml(`${article.title} | Learn`, article.html, stylesheetHrefs),
+            buildLearnPageHtml(`${article.title} | Learn`, article.html, stylesheetHrefs, faviconTags, analyticsScriptTags),
             'utf8'
           );
         });

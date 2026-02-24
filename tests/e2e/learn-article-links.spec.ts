@@ -11,6 +11,15 @@ test('article pages load and support file + article links', async ({ page }) => 
     await expect(stylesheets).toHaveCount(1);
     await expect(stylesheets.first()).toHaveAttribute('href', /\/assets\/index-.*\.css$/);
 
+    const favicon = page.locator('link[rel="icon"]');
+    await expect(favicon).toHaveCount(1);
+    await expect(favicon.first()).toHaveAttribute('href', /\/assets\/favicon-.*\.svg$/);
+
+    const analyticsLoader = page.locator('script[src*="googletagmanager.com/gtag/js"]');
+    await expect(analyticsLoader).toHaveCount(1);
+    const html = await page.content();
+    expect(html).toContain("gtag('config'");
+
     const bodyOverflow = await page.evaluate(() => getComputedStyle(document.body).overflow);
     expect(bodyOverflow).not.toBe('hidden');
   }
