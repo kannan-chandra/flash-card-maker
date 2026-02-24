@@ -159,7 +159,7 @@ function buildLearnPageHtml(title: string, articleHtml: string, stylesheetHrefs:
     <title>${title}</title>
 ${stylesheetLinks}
   </head>
-  <body class="learn-route" style="overflow: auto;">
+  <body class="learn-route">
     <div class="articles-page">
       <div class="articles-shell">
         <main class="articles-main">

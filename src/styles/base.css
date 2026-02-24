@@ -10,9 +10,12 @@ body,
 
 body {
   margin: 0;
-  overflow: hidden;
   background-image: linear-gradient(135deg, var(--gradient-page-stops));
   color: inherit;
+}
+
+body.app-route {
+  overflow: hidden;
 }
 
 .app {

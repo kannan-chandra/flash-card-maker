@@ -7,8 +7,8 @@ import './styles.css';
 
 const pathname = window.location.pathname;
 const isLearnRoute = pathname === '/learn' || pathname.startsWith('/learn/');
-document.body.style.overflow = isLearnRoute ? 'auto' : 'hidden';
 document.body.classList.toggle('learn-route', isLearnRoute);
+document.body.classList.toggle('app-route', !isLearnRoute);
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
