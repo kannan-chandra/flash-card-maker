@@ -141,11 +141,22 @@ You just have to start.
 
 To help you start today, [here is a free printable PDF](Letter-Sounds-swiftflashcards.com.pdf) of beginner letter flashcards with simple sound guides on the back for parents.
 
-
-
 The front of each card is a letter (in both uppercase and lowercase). That side is for your child.
 
 The back is a reference word for you to get the correct primary sound for each word.
 
-If you would like to create your own custom flashcards, use [**swiftflashcards.com**](swiftflashcards.com) to create exactly what your child needs.
+If you want a quick way to put these cards together, I wrote a tutorial on [how you can use playing card sleeves to DIY flashcards](./make-flashcards-at-home).
+
+---
+
+## Create Your Own Flashcards
+
+Create your own flashcards in minutes at [**swiftflashcards.com**](swiftflashcards.com).
+
+Just type your words — one per line — and instantly generate printable flashcards. 
+
+Export double-sided cards in multiple sizes, including a preset that prints standard playing-card size for sleeve use. 
+
+From word list to print-ready PDF in just five minutes.
+
 
