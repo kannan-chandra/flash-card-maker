@@ -61,7 +61,7 @@ npm run build
 ```
 
 ## Learn (Markdown Articles)
-- `articles/*.md` files are published under `/learn`.
+- `articles/*.md` files are build-time rendered to static pages under `/learn`.
 - Slugs are filename-based (human readable), not UUID-based.
 - Examples:
   - `articles/getting-started.md` -> `/learn/getting-started`
@@ -70,6 +70,7 @@ npm run build
   - Put files in `articles/files`.
   - Link using filename only in markdown, e.g. `[worksheet.pdf](worksheet.pdf)`.
   - Links are rewritten to `/files/<filename>` and copied into the built site.
+ - Article-to-article links can use relative filename style, e.g. `[Next](./my-first-export)` or `[Next](my-first-export.md)`.
 
 ## Browser E2E Test
 ```bash

@@ -4,14 +4,8 @@ const isProdMode = process.env.E2E_ENV === 'prod';
 
 test('learn routes behave correctly in dev and production', async ({ page }) => {
   await page.goto('/learn');
-
-  if (isProdMode) {
-    await expect(page).toHaveURL(/\/$/);
-    await expect(page.getByRole('heading', { name: 'Swift Flashcards', level: 1 })).toBeVisible();
-  } else {
-    await expect(page).toHaveURL(/\/learn$/);
-    await expect(page.getByRole('heading', { name: 'Learn', level: 1 })).toBeVisible();
-  }
+  await expect(page).toHaveURL(/\/learn\/?$/);
+  await expect(page.getByRole('heading', { name: 'Learn', level: 1 })).toBeVisible();
 
   await page.goto('/learn/getting-started');
   await expect(page).toHaveURL(/\/learn\/getting-started$/);
@@ -30,7 +24,7 @@ test('learn routes behave correctly in dev and production', async ({ page }) => 
   expect(response.ok()).toBeTruthy();
   await expect(response.text()).resolves.toContain('sample downloadable file');
 
-  await page.goto('/?redirect=%2Flearn%2Fteach-toddler-to-read-5-minutes');
+  await page.goto('/learn/teach-toddler-to-read-5-minutes');
   await expect(page).toHaveURL(/\/learn\/teach-toddler-to-read-5-minutes$/);
   await expect(page.getByRole('heading', { name: 'Teach Your Toddler to Read in 5 Minutes a Day', level: 1 })).toBeVisible();
 

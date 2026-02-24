@@ -14,6 +14,23 @@ const articleModules = import.meta.glob('../../articles/*.md', {
 }) as Record<string, string>;
 
 const ARTICLE_FILES_ROUTE_PREFIX = `${import.meta.env.BASE_URL}files/`;
+const ARTICLE_ROUTE_PREFIX = `${import.meta.env.BASE_URL}learn/`;
+const articleSlugs = new Set(
+  Object.keys(articleModules)
+    .map((path) => path.split('/').pop()?.replace(/\.md$/, '') ?? '')
+    .filter(Boolean)
+);
+
+const articleFiles = import.meta.glob('../../articles/files/*', {
+  eager: true,
+  query: '?url',
+  import: 'default'
+});
+const articleFileNames = new Set(
+  Object.keys(articleFiles)
+    .map((filePath) => filePath.split('/').pop() ?? '')
+    .filter(Boolean)
+);
 
 function slugToTitle(slug: string): string {
   return slug
@@ -32,19 +49,31 @@ function rewriteArticleFileHref(href: string): string {
   if (!href || href.startsWith('#') || href.includes('://')) {
     return href;
   }
-  if (href.startsWith('/') || href.startsWith('./') || href.startsWith('../')) {
-    return href;
-  }
   if (href.startsWith('mailto:') || href.startsWith('tel:')) {
     return href;
   }
-  if (href.includes('/')) {
+
+  const [pathname, suffix = ''] = href.split(/([?#].*)/, 2);
+  if (!pathname) {
     return href;
   }
 
-  const [filename, suffix = ''] = href.split(/([?#].*)/, 2);
-  const encodedFilename = encodeURIComponent(filename);
-  return `${ARTICLE_FILES_ROUTE_PREFIX}${encodedFilename}${suffix}`;
+  if (pathname.startsWith('/learn/')) {
+    const slug = pathname.slice('/learn/'.length).replace(/\/$/, '').replace(/\.md$/, '');
+    return articleSlugs.has(slug) ? `${ARTICLE_ROUTE_PREFIX}${slug}${suffix}` : href;
+  }
+
+  const normalizedPath = pathname.replace(/^(\.\/|\.\.\/)+/, '');
+  const articleCandidate = normalizedPath.replace(/\.md$/, '');
+  if (articleSlugs.has(articleCandidate)) {
+    return `${ARTICLE_ROUTE_PREFIX}${articleCandidate}${suffix}`;
+  }
+
+  if (articleFileNames.has(normalizedPath)) {
+    return `${ARTICLE_FILES_ROUTE_PREFIX}${encodeURIComponent(normalizedPath)}${suffix}`;
+  }
+
+  return href;
 }
 
 function renderArticleMarkdown(markdown: string): string {
